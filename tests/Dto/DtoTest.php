@@ -7,9 +7,14 @@ namespace PhpCollective\Dto\Test\Dto;
 use ArrayObject;
 use InvalidArgumentException;
 use PhpCollective\Dto\Dto\Dto;
+use PhpCollective\Dto\Test\Generator\Fixtures\FromArrayToArrayClass;
+use PhpCollective\Dto\Test\Generator\Fixtures\ToArrayClass;
+use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
+use PhpCollective\Dto\Test\TestDto\CollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableDto;
 use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
+use PhpCollective\Dto\Test\TestDto\SerializableDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -365,5 +370,135 @@ class DtoTest extends TestCase
         $updated = $dto->with('title', 'Updated', ImmutableDto::TYPE_UNDERSCORED);
 
         $this->assertSame('Updated', $updated->getTitle());
+    }
+
+    // ========== COLLECTION TESTS ==========
+
+    public function testCollectionToArray(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto->addItem(SimpleDto::create(['name' => 'Item 2']));
+
+        $array = $dto->toArray();
+
+        $this->assertCount(2, $array['items']);
+        $this->assertSame('Item 1', $array['items'][0]['name']);
+        $this->assertSame('Item 2', $array['items'][1]['name']);
+    }
+
+    public function testCollectionTouchedToArray(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addItem(SimpleDto::create(['name' => 'Item 1']));
+
+        $touched = $dto->touchedToArray();
+
+        $this->assertArrayHasKey('items', $touched);
+        $this->assertCount(1, $touched['items']);
+    }
+
+    public function testEmptyCollectionToArray(): void
+    {
+        $dto = new CollectionDto();
+        $dto->setItems(new ArrayObject());
+
+        $array = $dto->toArray();
+
+        $this->assertSame([], $array['items']);
+    }
+
+    public function testArrayCollectionToArray(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addArrayItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto->addArrayItem(SimpleDto::create(['name' => 'Item 2']));
+
+        $array = $dto->toArray();
+
+        $this->assertCount(2, $array['arrayItems']);
+        $this->assertSame('Item 1', $array['arrayItems'][0]['name']);
+    }
+
+    public function testCollectionFromArray(): void
+    {
+        $dto = new CollectionDto([
+            'items' => [
+                ['name' => 'Item 1', 'count' => 1],
+                ['name' => 'Item 2', 'count' => 2],
+            ],
+        ]);
+
+        $this->assertInstanceOf(ArrayObject::class, $dto->getItems());
+        $this->assertCount(2, $dto->getItems());
+        $this->assertSame('Item 1', $dto->getItems()[0]->getName());
+    }
+
+    public function testArrayCollectionFromArray(): void
+    {
+        $dto = new CollectionDto([
+            'arrayItems' => [
+                ['name' => 'Item 1'],
+                ['name' => 'Item 2'],
+            ],
+        ]);
+
+        $this->assertIsArray($dto->getArrayItems());
+        $this->assertCount(2, $dto->getArrayItems());
+        $this->assertSame('Item 1', $dto->getArrayItems()[0]->getName());
+    }
+
+    // ========== SERIALIZABLE CLASS TESTS ==========
+
+    public function testSerializableFromArrayToArrayClass(): void
+    {
+        $dto = new SerializableDto();
+        $dto->setFromArrayData(new FromArrayToArrayClass('test value'));
+
+        $array = $dto->toArray();
+
+        $this->assertIsArray($array['fromArrayData']);
+        $this->assertSame('test value', $array['fromArrayData']['value']);
+    }
+
+    public function testSerializableToArrayClass(): void
+    {
+        $dto = new SerializableDto();
+        $dto->setToArrayData(new ToArrayClass('test value'));
+
+        $array = $dto->toArray();
+
+        $this->assertIsArray($array['toArrayData']);
+        $this->assertSame('test value', $array['toArrayData']['value']);
+    }
+
+    // ========== UNIT ENUM TESTS ==========
+
+    public function testUnitEnumToArray(): void
+    {
+        $dto = new SerializableDto();
+        $dto->setStatus(UnitEnum::Pending);
+
+        $array = $dto->toArray();
+
+        $this->assertSame('Pending', $array['status']);
+    }
+
+    public function testUnitEnumFromArray(): void
+    {
+        $dto = new SerializableDto([
+            'status' => 'Completed',
+        ]);
+
+        $this->assertSame(UnitEnum::Completed, $dto->getStatus());
+    }
+
+    public function testUnitEnumFromArrayWithEnumInstance(): void
+    {
+        $dto = new SerializableDto([
+            'status' => UnitEnum::Pending,
+        ]);
+
+        $this->assertSame(UnitEnum::Pending, $dto->getStatus());
     }
 }
