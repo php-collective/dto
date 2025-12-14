@@ -104,4 +104,22 @@ NEON;
         $engine->validate(['file1.neon', 'file2.neon']);
         $this->assertTrue(true);
     }
+
+    public function testParseUnionTypes(): void
+    {
+        $engine = new NeonEngine();
+        $neon = <<<'NEON'
+Flexible:
+    fields:
+        id:
+            type: int|string
+            required: true
+        value: int|float|string
+NEON;
+
+        $result = $engine->parse($neon);
+
+        $this->assertSame('int|string', $result['Flexible']['fields']['id']['type']);
+        $this->assertSame('int|float|string', $result['Flexible']['fields']['value']['type']);
+    }
 }
