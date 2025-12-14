@@ -1,0 +1,47 @@
+{
+    "name": "php-collective/dto",
+    "description": "Framework-agnostic Data Transfer Object library with code generation",
+    "license": "MIT",
+    "type": "library",
+    "keywords": [
+        "dto",
+        "data-transfer-object",
+        "code-generation",
+        "php"
+    ],
+    "authors": [
+        {
+            "name": "Mark Scherer",
+            "homepage": "https://github.com/dereuromark",
+            "role": "Maintainer"
+        }
+    ],
+    "homepage": "https://github.com/php-collective/dto",
+    "require": {
+        "php": ">=8.1",
+        "twig/twig": "^3.0",
+        "sebastian/diff": "^5.0 || ^6.0 || ^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0 || ^11.0",
+        "nette/neon": "^3.3"
+    },
+    "suggest": {
+        "nette/neon": "For NEON format support"
+    },
+    "autoload": {
+        "psr-4": {
+            "PhpCollective\\Dto\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PhpCollective\\Dto\\Test\\": "tests/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

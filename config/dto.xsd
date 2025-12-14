@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<xsd:schema
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="php-collective-dto"
+	elementFormDefault="qualified">
+
+	<xsd:element name="dtos">
+		<xsd:complexType>
+			<xsd:sequence>
+				<xsd:element name="dto" maxOccurs="unbounded" minOccurs="0">
+					<xsd:complexType>
+						<xsd:sequence>
+							<xsd:choice minOccurs="0" maxOccurs="unbounded">
+								<xsd:element name="field" maxOccurs="unbounded" minOccurs="0">
+									<xsd:complexType mixed="true">
+										<xsd:attribute type="xsd:string" name="name" use="required"/>
+										<xsd:attribute type="xsd:string" name="type" use="required"/>
+										<xsd:attribute type="xsd:string" name="singular"/>
+										<xsd:attribute type="xsd:boolean" name="collection"/>
+										<xsd:attribute type="xsd:string" name="collectionType" default="\ArrayObject"/>
+										<xsd:attribute type="xsd:boolean" name="associative"/>
+										<xsd:attribute type="xsd:string" name="key"/>
+										<xsd:attribute type="xsd:string" name="factory"/>
+										<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
+										<xsd:attribute type="xsd:boolean" name="required"/>
+										<xsd:attribute type="xsd:string" name="defaultValue"/>
+									</xsd:complexType>
+								</xsd:element>
+							</xsd:choice>
+						</xsd:sequence>
+						<xsd:attribute type="xsd:string" name="name" use="required"/>
+						<xsd:attribute type="xsd:string" name="extends"/>
+						<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
+						<xsd:attribute type="xsd:boolean" name="immutable"/>
+					</xsd:complexType>
+				</xsd:element>
+			</xsd:sequence>
+		</xsd:complexType>
+	</xsd:element>
+</xsd:schema>

@@ -1,0 +1,12 @@
+	/**
+	 * Some data is only for debugging for now.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	protected array $_metadata = [
+{% for field in metaData %}
+		'{{ field.name }}' => [
+			{{- field | stringify | raw -}}
+		],
+{% endfor %}
+	];

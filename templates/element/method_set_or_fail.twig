@@ -1,0 +1,24 @@
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param {{ type }} ${{ name }}
+{% if not typeHint %}
+	 *
+	 * @throws \RuntimeException If value is not present.
+{% endif %}
+	 *
+	 * @return $this
+	 */
+	public function set{{ name[:1]|upper ~ name[1:] }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }}) {
+{% if not typeHint %}
+		if (${{ name }} === null) {
+			throw new \RuntimeException('Value not present (expected to be not null)');
+		}
+{% endif %}
+		$this->{{ name }} = ${{ name }};
+		$this->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+
+		return $this;
+	}

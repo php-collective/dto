@@ -1,0 +1,15 @@
+	/**
+	* @var array<string, array<string, string>>
+	*/
+	protected array $_keyMap = [
+		'underscored' => [
+{% for field in fields %}
+			'{{ field.name | underscore }}' => '{{ field.name }}',
+{% endfor %}
+		],
+		'dashed' => [
+{% for field in fields %}
+			'{{ field.name | underscore | replace({'_': "-"}) }}' => '{{ field.name }}',
+{% endfor %}
+		],
+	];

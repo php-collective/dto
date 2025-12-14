@@ -1,0 +1,4 @@
+ *
+{% for field in fields %}
+ * @property {{ field.type }}{% if field.nullable %}|null{% endif %} ${{ field.name }}
+{% endfor -%}

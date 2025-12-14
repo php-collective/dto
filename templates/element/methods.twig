@@ -1,0 +1,24 @@
+{% for field in fields %}
+{% if immutable %}
+{% include 'element/method_with.twig' with field only %}
+{% else %}
+{% include 'element/method_set.twig' with field only %}
+{% endif %}
+{% if field.nullable and immutable %}
+{% include 'element/method_with_or_fail.twig' with field only %}
+{% elseif field.nullable %}
+{% include 'element/method_set_or_fail.twig' with field only %}
+{% endif %}
+{% include 'element/method_get.twig' with field only %}
+{% if field.nullable %}
+{% include 'element/method_get_or_fail.twig' with field only %}
+{% endif %}
+{% if field.nullable or field.defaultValue is null %}
+{% include 'element/method_has.twig' with field only %}
+{% endif %}
+{% if immutable %}
+{% include 'element/method_with_added.twig' with field only %}
+{% else %}
+{% include 'element/method_add.twig' with field only %}
+{% endif %}
+{% endfor -%}

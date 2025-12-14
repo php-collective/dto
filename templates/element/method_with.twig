@@ -1,0 +1,16 @@
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param {{ type }}{% if nullable %}|null{% endif %} ${{ name }}
+	 *
+	 * @return static
+	 */
+	public function with{{ name[:1]|upper ~ name[1:] }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable %} = null{% endif %}) {
+		$new = clone $this;
+		$new->{{ name }} = ${{ name }};
+		$new->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+
+		return $new;
+	}

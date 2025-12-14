@@ -1,0 +1,29 @@
+<?php{% if strictTypes %} declare(strict_types=1);{% endif %}
+
+/**
+ * !!! Auto generated file. Do not directly modify this file. !!!
+ * You can either version control this or generate the file on the fly prior to usage/deployment.
+ */
+
+namespace {{ namespace }};
+
+{% if extends starts with '\\' %}
+use {{ extends[1:] }};
+{% endif %}
+
+/**
+ * {{ name }} DTO
+{% include 'element/doc.twig' with {'fields': fields} only -%}
+ {% if deprecated is not null %}
+ *
+ * @deprecated {{ deprecated }}
+{% endif %}
+ */
+class {{ className }} extends {% if extends starts with '\\' %}{{ extends[1:] | split('\\') | last }}{% else %}{{ extends }}{% endif %} {
+
+{% include 'element/constants.twig' with {'fields': fields} only %}
+{% include 'element/properties.twig' with {'fields': fields} only -%}
+{% include 'element/metadata.twig' with {'metaData': metaData} only %}
+{% include 'element/map.twig' with {'fields': fields} only %}
+{% include 'element/methods.twig' with {'fields': fields, 'immutable': immutable} only -%}
+}

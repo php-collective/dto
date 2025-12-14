@@ -1,0 +1,29 @@
+{% if collection %}
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+{% if associative %}
+	 * @param string|int $key
+{% endif %}
+	 * @param {{ singularType }}{% if singularNullable %}|null{% endif %} ${{ singular }}
+	 * @return static
+	 */
+	public function withAdded{{ singular[:1]|upper ~ singular[1:] }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }}) {
+		$new = clone $this;
+
+		if ($new->{{ name }} === null) {
+			$new->{{ name }} = {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
+		}
+
+{% if associative %}
+		$new->{{ name }}[$key] = ${{ singular }};
+{% else %}
+		$new->{{ name }}[] = ${{ singular }};
+{% endif %}
+		$new->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+
+		return $new;
+	}
+{% endif -%}

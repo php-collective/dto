@@ -1,0 +1,15 @@
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param {{ type }}{% if nullable %}|null{% endif %} ${{ name }}
+	 *
+	 * @return $this
+	 */
+	public function set{{ name[:1]|upper ~ name[1:] }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable and not scalarAndReturnTypes %} = null{% endif %}) {
+		$this->{{ name }} = ${{ name }};
+		$this->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+
+		return $this;
+	}

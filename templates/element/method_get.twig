@@ -1,0 +1,48 @@
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @return {{ type }}{% if nullable %}|null{% endif %}
+
+	 */
+	public function get{{ name[:1]|upper ~ name[1:] }}(){% if returnTypeHint %}: {% if nullable %}?{% endif %}{{ returnTypeHint }}{% endif %} {
+{% if collection %}
+		if ($this->{{ name }} === null) {
+			return {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
+		}
+
+{% endif %}
+		return $this->{{ name }};
+	}
+{% if associative and singular %}
+
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param string|int $key
+	 *
+	 * @return {% if singularType %}{{ singularType }}{% else %}mixed{% endif %}{% if singularNullable %}|null{% endif %}
+
+{% if not singularNullable %}
+	 *
+	 * @throws \RuntimeException If value with this key is not set.
+{% endif %}
+	 */
+	public function get{{ singular[:1]|upper ~ singular[1:] }}($key){% if singularReturnTypeHint %}: {% if singularNullable %}?{% endif %}{{ singularReturnTypeHint }}{% endif %} {
+{% if singularNullable %}
+		if (!isset($this->{{ name }}[$key])) {
+			return null;
+		}
+
+{% else %}
+		if (!isset($this->{{ name }}[$key])) {
+			throw new \RuntimeException(sprintf('Value not set for field `{{ name }}` and key `%s` (expected to be not null)', $key));
+		}
+
+{% endif %}
+		return $this->{{ name }}[$key];
+	}
+{% endif -%}
