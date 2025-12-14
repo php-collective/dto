@@ -6,7 +6,9 @@
 	 * @return {{ docBlockType ?? type }}{% if nullable %}|null{% endif %}
 
 	 */
-	public function get{{ name[:1]|upper ~ name[1:] }}(){% if returnTypeHint %}: {{ nullableReturnTypeHint ?? returnTypeHint }}{% endif %} {
+	public function get{{ name[:1]|upper ~ name[1:] }}(){% if returnTypeHint %}: {{ nullableReturnTypeHint ?? returnTypeHint }}{% endif %}
+
+	{
 {% if collection %}
 		if ($this->{{ name }} === null) {
 			return {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
@@ -31,7 +33,9 @@
 	 * @throws \RuntimeException If value with this key is not set.
 {% endif %}
 	 */
-	public function get{{ singular[:1]|upper ~ singular[1:] }}($key){% if singularReturnTypeHint %}: {{ singularNullableReturnTypeHint ?? singularReturnTypeHint }}{% endif %} {
+	public function get{{ singular[:1]|upper ~ singular[1:] }}($key){% if singularReturnTypeHint %}: {{ singularNullableReturnTypeHint ?? singularReturnTypeHint }}{% endif %}
+
+	{
 {% if singularNullable %}
 		if (!isset($this->{{ name }}[$key])) {
 			return null;

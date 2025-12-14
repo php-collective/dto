@@ -10,7 +10,8 @@
 	 * @param {% if singularType %}{{ singularType }}{% else %}mixed{% endif %}{% if singularNullable %}|null{% endif %} ${{ singular }}
 	 * @return $this
 	 */
-	public function add{{ singular[:1]|upper ~ singular[1:] }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }}) {
+	public function add{{ singular[:1]|upper ~ singular[1:] }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
+	{
 		if ($this->{{ name }} === null) {
 			$this->{{ name }} = {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
 		}

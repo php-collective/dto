@@ -24,6 +24,11 @@ class DtoBuilder
     protected ?string $deprecated = null;
 
     /**
+     * @var array<string>
+     */
+    protected array $traits = [];
+
+    /**
      * @var array<\PhpCollective\Dto\Config\FieldBuilder>
      */
     protected array $fields = [];
@@ -103,6 +108,18 @@ class DtoBuilder
     }
 
     /**
+     * Add traits to use in this DTO.
+     *
+     * @param string ...$traits Fully qualified trait class names
+     */
+    public function traits(string ...$traits): static
+    {
+        $this->traits = array_merge($this->traits, $traits);
+
+        return $this;
+    }
+
+    /**
      * Get DTO name.
      */
     public function getName(): string
@@ -129,6 +146,10 @@ class DtoBuilder
 
         if ($this->deprecated !== null) {
             $config['deprecated'] = $this->deprecated;
+        }
+
+        if ($this->traits !== []) {
+            $config['traits'] = $this->traits;
         }
 
         $fields = [];

@@ -693,4 +693,131 @@ PHP;
         // Explicit serialize setting should not be overridden by detectSerialize
         $this->assertSame('json', $definitions['Wrapper']['fields']['data']['serialize']);
     }
+
+    // ========== TRAITS TESTS ==========
+
+    public function testDtoWithSingleTrait(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'traits' => 'App\Traits\UserMethods',
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('traits', $definitions['User']);
+        $this->assertSame(['\\App\\Traits\\UserMethods'], $definitions['User']['traits']);
+    }
+
+    public function testDtoWithMultipleTraitsArray(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'traits' => ['App\Traits\UserMethods', 'App\Traits\Timestamps'],
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('traits', $definitions['User']);
+        $this->assertSame(['\\App\\Traits\\UserMethods', '\\App\\Traits\\Timestamps'], $definitions['User']['traits']);
+    }
+
+    public function testDtoWithCommaSeparatedTraits(): void
+    {
+        // This format is useful for XML where arrays aren't natural
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'traits' => 'App\Traits\UserMethods, App\Traits\Timestamps',
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('traits', $definitions['User']);
+        $this->assertSame(['\\App\\Traits\\UserMethods', '\\App\\Traits\\Timestamps'], $definitions['User']['traits']);
+    }
+
+    public function testDtoWithoutTraits(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('traits', $definitions['User']);
+        $this->assertSame([], $definitions['User']['traits']);
+    }
+
+    public function testDtoWithTraitsAlreadyWithBackslash(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'traits' => ['\App\Traits\UserMethods'],
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Should not double up backslashes
+        $this->assertSame(['\\App\\Traits\\UserMethods'], $definitions['User']['traits']);
+    }
 }

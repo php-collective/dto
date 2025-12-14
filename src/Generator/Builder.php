@@ -166,7 +166,11 @@ class Builder
                 'namespace' => $namespace . '\Dto',
                 'className' => $name . $this->getConfigOrFail('suffix'),
                 'extends' => '\\PhpCollective\\Dto\\Dto\\AbstractDto',
+                'traits' => [],
             ];
+
+            // Normalize traits to array format
+            $dto['traits'] = $this->normalizeTraits($dto['traits']);
 
             if (!empty($dto['immutable']) && $dto['extends'] === '\\PhpCollective\\Dto\\Dto\\AbstractDto') {
                 $dto['extends'] = '\\PhpCollective\\Dto\\Dto\\AbstractImmutableDto';
@@ -997,5 +1001,38 @@ class Builder
         }
 
         return null;
+    }
+
+    /**
+     * Normalize traits configuration to an array of fully qualified class names.
+     *
+     * Supports:
+     * - Single string (comma-separated or single trait)
+     * - Array of trait names
+     *
+     * @param array<string>|string|null $traits
+     *
+     * @return array<string>
+     */
+    protected function normalizeTraits(string|array|null $traits): array
+    {
+        if ($traits === null || $traits === '' || $traits === []) {
+            return [];
+        }
+
+        if (is_string($traits)) {
+            // Support comma-separated traits in XML
+            $traits = array_map('trim', explode(',', $traits));
+        }
+
+        // Ensure all traits start with backslash
+        return array_map(function (string $trait): string {
+            $trait = trim($trait);
+            if ($trait !== '' && $trait[0] !== '\\') {
+                return '\\' . $trait;
+            }
+
+            return $trait;
+        }, array_filter($traits));
     }
 }

@@ -489,4 +489,61 @@ XML;
         // The new email field should appear in the diff
         $this->assertStringContainsString('email', $result['output']);
     }
+
+    public function testGenerateWithTraitsXml(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User" traits="App\Traits\UserMethods, App\Traits\Timestamps">
+        <field name="id" type="int"/>
+        <field name="firstName" type="string"/>
+        <field name="lastName" type="string"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/UserDto.php');
+
+        $content = file_get_contents($this->tempDir . '/src/Dto/UserDto.php');
+        $this->assertStringContainsString('use App\Traits\UserMethods;', $content);
+        $this->assertStringContainsString('use App\Traits\Timestamps;', $content);
+    }
+
+    public function testGenerateWithTraitsPhp(): void
+    {
+        $php = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'traits' => ['App\Traits\UserMethods'],
+        'fields' => [
+            'id' => 'int',
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $php);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --format=php',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/UserDto.php');
+
+        $content = file_get_contents($this->tempDir . '/src/Dto/UserDto.php');
+        $this->assertStringContainsString('use App\Traits\UserMethods;', $content);
+    }
 }

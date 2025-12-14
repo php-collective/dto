@@ -32,6 +32,7 @@
 						<xsd:attribute type="xsd:string" name="extends"/>
 						<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
 						<xsd:attribute type="xsd:boolean" name="immutable"/>
+						<xsd:attribute type="xsd:string" name="traits"/>
 					</xsd:complexType>
 				</xsd:element>
 			</xsd:sequence>

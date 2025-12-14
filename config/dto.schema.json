@@ -36,6 +36,22 @@
                 "immutable": {
                     "type": "boolean",
                     "description": "Whether the DTO is immutable (no setters)"
+                },
+                "traits": {
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "description": "Single trait class name"
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "List of trait class names"
+                        }
+                    ],
+                    "description": "Trait(s) to use in the generated DTO class"
                 }
             },
             "additionalProperties": false

@@ -234,6 +234,27 @@ Dto::create('FlyingCar')->extends('Car')->fields(
 Dto::create('OldUser')->deprecated('Use User instead')->fields(...)
 ```
 
+### Using Traits
+
+Add traits to generated DTO classes:
+
+```php
+Dto::create('User')->traits(\App\Dto\Traits\TimestampTrait::class)->fields(
+    Field::int('id')->required(),
+    Field::string('name'),
+)
+
+// Multiple traits
+Dto::create('Article')
+    ->traits(
+        \App\Dto\Traits\TimestampTrait::class,
+        \App\Dto\Traits\SoftDeleteTrait::class,
+    )
+    ->fields(...)
+```
+
+The traits must be fully qualified class names starting with `\`.
+
 ## Complete Example
 
 ```php

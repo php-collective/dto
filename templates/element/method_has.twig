@@ -5,7 +5,9 @@
 {% endif %}
 	 * @return bool
 	 */
-	public function has{{ name[:1]|upper ~ name[1:] }}(){% if scalarAndReturnTypes %}: bool{% endif %} {
+	public function has{{ name[:1]|upper ~ name[1:] }}(){% if scalarAndReturnTypes %}: bool{% endif %}
+
+	{
 {% if collectionType %}
 		if ($this->{{ name }} === null) {
 			return false;
@@ -20,7 +22,7 @@
 		return $this->{{ name }} !== null;
 {% endif %}
 	}
-{%- if associative and singular and not singularNullable%}
+{% if associative and singular and not singularNullable %}
 
 
 	/**
@@ -31,7 +33,9 @@
 	 * @param string|int $key
 	 * @return bool
 	 */
-	public function has{{ singular[:1]|upper ~ singular[1:] }}($key){% if scalarAndReturnTypes %}: bool{% endif %} {
+	public function has{{ singular[:1]|upper ~ singular[1:] }}($key){% if scalarAndReturnTypes %}: bool{% endif %}
+
+	{
 		return isset($this->{{ name }}[$key]);
 	}
-{% endif -%}
+{% endif %}

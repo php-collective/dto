@@ -305,6 +305,42 @@ class BuilderTest extends TestCase
         $this->assertTrue($result['ImmutableUser']['immutable']);
     }
 
+    public function testDtoTraitsSingle(): void
+    {
+        $dto = Dto::create('User')
+            ->traits('App\Traits\UserMethods')
+            ->fields(Field::int('id'));
+
+        $this->assertSame([
+            'traits' => ['App\Traits\UserMethods'],
+            'fields' => [
+                'id' => 'int',
+            ],
+        ], $dto->toArray());
+    }
+
+    public function testDtoTraitsMultiple(): void
+    {
+        $dto = Dto::create('User')
+            ->traits('App\Traits\UserMethods', 'App\Traits\Timestamps')
+            ->fields(Field::int('id'));
+
+        $this->assertSame([
+            'traits' => ['App\Traits\UserMethods', 'App\Traits\Timestamps'],
+            'fields' => [
+                'id' => 'int',
+            ],
+        ], $dto->toArray());
+    }
+
+    public function testDtoTraitsEmpty(): void
+    {
+        $dto = Dto::create('User')->fields(Field::int('id'));
+
+        // No traits key when empty
+        $this->assertArrayNotHasKey('traits', $dto->toArray());
+    }
+
     public function testBenchmarkConfigEquivalence(): void
     {
         // Build using fluent API

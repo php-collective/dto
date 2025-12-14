@@ -11,7 +11,8 @@
 	 *
 	 * @return static
 	 */
-	public function with{{ name[:1]|upper ~ name[1:] }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }}) {
+	public function with{{ name[:1]|upper ~ name[1:] }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }})
+	{
 {% if not typeHint %}
 		if (${{ name }} === null) {
 			throw new \RuntimeException('Value not present (expected to be not null)');

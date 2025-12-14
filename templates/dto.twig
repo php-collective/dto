@@ -19,8 +19,15 @@ use {{ extends[1:] }};
  * @deprecated {{ deprecated }}
 {% endif %}
  */
-class {{ className }} extends {% if extends starts with '\\' %}{{ extends[1:] | split('\\') | last }}{% else %}{{ extends }}{% endif %} {
+class {{ className }} extends {% if extends starts with '\\' %}{{ extends[1:] | split('\\') | last }}{% else %}{{ extends }}{% endif %}
 
+{
+{% if traits is defined and traits is not empty %}
+{% for trait in traits %}
+	use {{ trait[1:] }};
+{% endfor %}
+
+{% endif %}
 {% include 'element/constants.twig' with {'fields': fields} only %}
 {% include 'element/properties.twig' with {'fields': fields} only -%}
 {% include 'element/metadata.twig' with {'metaData': metaData} only %}
