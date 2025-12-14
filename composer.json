@@ -35,6 +35,9 @@
     "suggest": {
         "nette/neon": "For NEON format support"
     },
+    "bin": [
+        "bin/dto"
+    ],
     "autoload": {
         "psr-4": {
             "PhpCollective\\Dto\\": "src/"

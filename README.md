@@ -60,22 +60,37 @@ Create a `dto.xml` configuration file:
 
 ### 2. Generate DTOs
 
+Using the CLI (recommended):
+
+```bash
+# Place dto.xml in config/ directory, then run:
+vendor/bin/dto generate
+
+# Or specify custom paths:
+vendor/bin/dto generate --config-path=dto/ --src-path=app/ --namespace=MyApp
+
+# Preview changes without writing:
+vendor/bin/dto generate --dry-run --verbose
+```
+
+Or programmatically:
+
 ```php
+use PhpCollective\Dto\Engine\XmlEngine;
+use PhpCollective\Dto\Generator\ArrayConfig;
+use PhpCollective\Dto\Generator\Builder;
+use PhpCollective\Dto\Generator\ConsoleIo;
 use PhpCollective\Dto\Generator\Generator;
 use PhpCollective\Dto\Generator\TwigRenderer;
-use PhpCollective\Dto\Generator\Finder;
-use PhpCollective\Dto\Generator\ArrayConfig;
 
-$config = new ArrayConfig([
-    'paths' => ['/path/to/dto/configs'],
-    'namespace' => 'App\\Dto',
-    'targetDir' => '/path/to/generated',
-]);
+$config = new ArrayConfig(['namespace' => 'App']);
+$engine = new XmlEngine();
+$builder = new Builder($engine, $config);
+$renderer = new TwigRenderer(null, $config);
+$io = new ConsoleIo();
 
-$renderer = new TwigRenderer();
-$finder = new Finder($config);
-$generator = new Generator($config, $renderer, $finder);
-$generator->generate();
+$generator = new Generator($builder, $renderer, $io, $config);
+$generator->generate('config/', 'src/');
 ```
 
 ### 3. Use Generated DTOs
@@ -287,7 +302,3 @@ This is the standalone core library. For framework-specific integrations:
 ## Documentation
 
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
