@@ -938,4 +938,170 @@ PHP;
         $this->assertNull($definitions['User']['fields']['name']['mapFrom']);
         $this->assertNull($definitions['User']['fields']['name']['mapTo']);
     }
+
+    // ========== SCALAR AND RETURN TYPES TESTS ==========
+
+    public function testScalarAndReturnTypesEnabledByDefault(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+            'age' => 'int',
+            'active' => 'bool',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // When scalarAndReturnTypes is true (default), typeHint and returnTypeHint should be set
+        $this->assertSame('string', $definitions['User']['fields']['name']['typeHint']);
+        $this->assertSame('string', $definitions['User']['fields']['name']['returnTypeHint']);
+        $this->assertSame('?string', $definitions['User']['fields']['name']['nullableTypeHint']);
+
+        $this->assertSame('int', $definitions['User']['fields']['age']['typeHint']);
+        $this->assertSame('int', $definitions['User']['fields']['age']['returnTypeHint']);
+
+        $this->assertSame('bool', $definitions['User']['fields']['active']['typeHint']);
+        $this->assertSame('bool', $definitions['User']['fields']['active']['returnTypeHint']);
+    }
+
+    public function testScalarAndReturnTypesDisabled(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+            'age' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'scalarAndReturnTypes' => false,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // When scalarAndReturnTypes is false, returnTypeHint and nullableTypeHint should be null
+        $this->assertNull($definitions['User']['fields']['name']['typeHint']);
+        $this->assertNull($definitions['User']['fields']['name']['returnTypeHint']);
+        $this->assertNull($definitions['User']['fields']['name']['nullableTypeHint']);
+
+        $this->assertNull($definitions['User']['fields']['age']['typeHint']);
+        $this->assertNull($definitions['User']['fields']['age']['returnTypeHint']);
+    }
+
+    public function testScalarAndReturnTypesDisabledStillAllowsClassTypes(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Event' => [
+        'fields' => [
+            'name' => 'string',
+            'createdAt' => '\DateTimeImmutable',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'scalarAndReturnTypes' => false,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Scalar types should have no type hints
+        $this->assertNull($definitions['Event']['fields']['name']['typeHint']);
+        $this->assertNull($definitions['Event']['fields']['name']['returnTypeHint']);
+
+        // Class types should still have type hints (classes are always safe)
+        $this->assertSame('\DateTimeImmutable', $definitions['Event']['fields']['createdAt']['typeHint']);
+        // But returnTypeHint requires scalarAndReturnTypes to be true
+        $this->assertNull($definitions['Event']['fields']['createdAt']['returnTypeHint']);
+    }
+
+    public function testRequiredFieldWithScalarTypes(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'id' => [
+                'type' => 'int',
+                'required' => true,
+            ],
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Required field should not have nullableTypeHint
+        $this->assertSame('int', $definitions['User']['fields']['id']['typeHint']);
+        $this->assertSame('int', $definitions['User']['fields']['id']['returnTypeHint']);
+        $this->assertNull($definitions['User']['fields']['id']['nullableTypeHint']);
+        $this->assertFalse($definitions['User']['fields']['id']['nullable']);
+
+        // Non-required field should have nullableTypeHint
+        $this->assertSame('string', $definitions['User']['fields']['name']['typeHint']);
+        $this->assertSame('?string', $definitions['User']['fields']['name']['nullableTypeHint']);
+        $this->assertTrue($definitions['User']['fields']['name']['nullable']);
+    }
+
+    public function testUnionTypeWithScalarTypes(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Response' => [
+        'fields' => [
+            'id' => [
+                'type' => 'int|string',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Union types should use |null instead of ?
+        $this->assertSame('int|string', $definitions['Response']['fields']['id']['typeHint']);
+        $this->assertSame('int|string|null', $definitions['Response']['fields']['id']['nullableTypeHint']);
+    }
 }
