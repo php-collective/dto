@@ -14,9 +14,9 @@ interface RendererInterface
   *
   * @param array<string, mixed> $vars
   *
-  * @return $this
+  * @return void
   */
-    public function set(array $vars): static;
+    public function set(array $vars): void;
 
     /**
      * Render a template with the current variables.
