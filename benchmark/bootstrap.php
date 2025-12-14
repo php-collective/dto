@@ -6,7 +6,14 @@ declare(strict_types=1);
  * Benchmark bootstrap - loads autoloader and defines helper functions.
  */
 
+// Load main project autoloader
 require_once dirname(__DIR__) . '/vendor/autoload.php';
+
+// Load benchmark-specific dependencies if available (for external library comparisons)
+$benchmarkVendor = __DIR__ . '/vendor/autoload.php';
+if (file_exists($benchmarkVendor)) {
+    require_once $benchmarkVendor;
+}
 
 /**
  * Benchmark helper function.

@@ -5,17 +5,26 @@ Performance benchmarks for `php-collective/dto`.
 ## Quick Start
 
 ```bash
-# Generate benchmark DTOs
+# Generate benchmark DTOs (from project root)
 bin/dto generate --config-path=benchmark/config --src-path=benchmark/src --namespace=Benchmark
 
-# Run main benchmark suite
+# Run main benchmark suite (php-collective/dto vs plain PHP vs arrays)
 php benchmark/run.php
 
 # Run with more iterations
 php benchmark/run.php --iterations=100000
+```
 
-# Compare with external libraries
-composer require --dev spatie/data-transfer-object cuyz/valinor
+## External Library Comparison
+
+The external library benchmarks have their own dependencies. To run them:
+
+```bash
+cd benchmark
+composer install
+cd ..
+
+# Run external library comparison
 php benchmark/run-external.php
 ```
 
