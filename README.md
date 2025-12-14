@@ -54,7 +54,7 @@ $car->setOwner(OwnerDto::create(['name' => 'John']));
 $array = $car->toArray();
 ```
 
-See [Quick Start Guide](docs/QuickStart.md) for detailed examples.
+See [Quick Start Guide](docs/README.md) for detailed examples.
 
 ## Features
 
@@ -80,7 +80,7 @@ See [Quick Start Guide](docs/QuickStart.md) for detailed examples.
 
 ## Documentation
 
-- [Quick Start Guide](docs/QuickStart.md) - Getting started with examples
+- [Quick Start Guide](docs/README.md) - Getting started with examples
 - [Configuration Builder](docs/ConfigBuilder.md) - Fluent API for defining DTOs
 - [Examples](docs/Examples.md) - Practical usage patterns
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
