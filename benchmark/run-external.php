@@ -64,6 +64,7 @@ echo "\nChecking available libraries...\n\n";
 // ============================================================================
 
 $libraries = [
+    'spatie/data-transfer-object' => class_exists(\Spatie\DataTransferObject\DataTransferObject::class),
     'cuyz/valinor' => class_exists(\CuyZ\Valinor\MapperBuilder::class),
     'symfony/serializer' => class_exists(\Symfony\Component\Serializer\Serializer::class),
     'jms/serializer' => class_exists(\JMS\Serializer\SerializerBuilder::class),
@@ -86,6 +87,32 @@ $results['php-collective/dto'] = $r = benchmark('php-collective/dto createFromAr
     return \Benchmark\Dto\UserDto::createFromArray($simpleUserData);
 }, $iterations);
 echo formatResult($r) . "\n";
+
+// ============================================================================
+// Spatie Data Transfer Object
+// ============================================================================
+
+if ($libraries['spatie/data-transfer-object']) {
+    printSection('Spatie Data Transfer Object');
+
+    // Define a DTO class extending Spatie's base
+    $spatieUserClass = new class ($simpleUserData) extends \Spatie\DataTransferObject\DataTransferObject {
+        public int $id;
+        public string $name;
+        public string $email;
+        public ?string $phone;
+        public bool $active;
+        /** @var string[] */
+        public array $roles;
+    };
+
+    $spatieClass = get_class($spatieUserClass);
+
+    $results['spatie-dto'] = $r = benchmark('Spatie DTO new()', function () use ($simpleUserData, $spatieClass) {
+        return new $spatieClass($simpleUserData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
 
 // ============================================================================
 // CuyZ/Valinor

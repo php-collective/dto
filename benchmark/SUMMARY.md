@@ -124,12 +124,19 @@ Actual benchmark results (run `php benchmark/run-external.php`):
 
 | Library | Approach | Simple DTO Creation | vs php-collective/dto |
 |---------|----------|---------------------|----------------------|
-| **php-collective/dto** | Code generation | 409,852/s | baseline |
-| **cuyz/valinor** | Runtime mapping | 54,222/s | 7.6x slower |
-| **cuyz/valinor (with setup)** | Runtime mapping | 6,082/s | 67.4x slower |
+| **php-collective/dto** | Code generation | 429,507/s | baseline |
+| **symfony/serializer denormalize()** | Runtime reflection | 110,512/s | 3.9x slower |
+| **symfony/serializer deserialize()** | Runtime reflection | 96,198/s | 4.5x slower |
+| **cuyz/valinor** | Runtime mapping | 54,035/s | 7.9x slower |
+| **spatie/data-transfer-object** | Runtime reflection | 52,901/s | 8.1x slower |
+| **cuyz/valinor (with setup)** | Runtime mapping | 5,459/s | 78.7x slower |
 | **Plain PHP 8.2+** | Manual | ~5,500,000/s | 13x faster |
 
-**Note**: Valinor includes runtime reflection and type validation. The "with setup" benchmark includes mapper creation overhead.
+**Key Insights**:
+- `php-collective/dto` is **4-8x faster** than runtime reflection libraries
+- Code generation eliminates runtime overhead from reflection and type parsing
+- Symfony Serializer is the fastest runtime library due to caching
+- Valinor's "with setup" shows the cost of creating mappers on each request
 
 ---
 
