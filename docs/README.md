@@ -69,6 +69,44 @@ $generator = new Generator($builder, $renderer, $io, $config);
 $generator->generate('config/', 'src/');
 ```
 
+## Deployment Strategies
+
+There are two approaches to deploying generated DTOs:
+
+### Commit DTOs to Version Control (Recommended)
+
+Generate DTOs locally, commit them to your repository, and deploy like any other code:
+
+```bash
+composer require --dev php-collective/dto
+```
+
+**Benefits:**
+- DTOs are reviewed in pull requests
+- No generation step needed on production servers
+- Faster deployments
+- Works with read-only filesystems
+
+**Workflow:**
+1. Modify DTO configuration
+2. Run `vendor/bin/dto generate`
+3. Commit generated files
+4. Deploy as usual
+
+### Runtime Generation on Server
+
+Generate DTOs as part of your deployment process:
+
+```bash
+composer require php-collective/dto
+```
+
+**When to use:**
+- Dynamic DTO definitions
+- Environments where committing generated code isn't desired
+
+**Note:** This requires the library in production and write access to the source directory during deployment.
+
 ## 3. Use Generated DTOs
 
 ```php
