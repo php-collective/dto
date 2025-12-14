@@ -78,7 +78,7 @@ class TwigRenderer implements RendererInterface
     /**
      * @inheritDoc
      */
-    public function set(array $vars): static
+    public function set(array $vars)
     {
         $this->vars = array_merge($this->vars, $vars);
 
