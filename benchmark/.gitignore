@@ -1,0 +1,2 @@
+# Generated DTOs (regenerate with: bin/dto generate --config-path=benchmark/config/ ...)
+src/Generated/
