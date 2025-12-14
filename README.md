@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/php-collective/dto/actions/workflows/ci.yml/badge.svg)](https://github.com/php-collective/dto/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/php-collective/dto/branch/master/graph/badge.svg)](https://codecov.io/gh/php-collective/dto)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Framework-agnostic Data Transfer Object library with **code generation** for PHP.
@@ -13,10 +14,6 @@ Unlike runtime reflection libraries, this library generates optimized DTO classe
 - **Reviewable generated code** in pull requests
 
 See [Motivation](docs/Motivation.md) for why code generation beats runtime reflection.
-
-## Requirements
-
-- PHP 8.2+
 
 ## Installation
 
@@ -381,6 +378,10 @@ This is the standalone core library. For framework-specific integrations:
 - [Examples](docs/Examples.md) - Practical usage patterns and recipes
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
 
-## License
+## Integrations
 
-MIT License. See [LICENSE](LICENSE) for details.
+This is the standalone core library. For framework-specific integrations:
+
+- **CakePHP**: [dereuromark/cakephp-dto](https://github.com/dereuromark/cakephp-dto) - CLI commands, View integration, and CakePHP Collection support
+
+Maybe someone will also add a Symfony, Laravel or ... extension.

@@ -8,10 +8,16 @@ declare(strict_types=1);
  *
  * Usage:
  *   vendor/bin/dto generate [options]
+ *   vendor/bin/dto typescript [options]
+ *
+ * Commands:
+ *   generate    Generate PHP DTOs from configuration (default)
+ *   typescript  Generate TypeScript interfaces from configuration
  *
  * Options:
  *   --config-path=PATH Path to config directory (default: config/)
  *   --src-path=PATH Path to src directory (default: src/)
+ *   --output=PATH Path for TypeScript output (default: types/)
  *   --namespace=NS Namespace for generated DTOs (default: App)
  *   --format=FORMAT Config format: xml, yaml, neon (default: auto-detect)
  *   --dry-run Show what would be generated without writing files
@@ -19,6 +25,13 @@ declare(strict_types=1);
  *   --verbose, -v Verbose output
  *   --quiet, -q Quiet output
  *   --help, -h Show this help
+ *
+ * TypeScript Options:
+ *   --single-file Generate all types in one file (default: true)
+ *   --multi-file Generate each type in separate file
+ *   --readonly Make all fields readonly
+ *   --strict-nulls Use '| null' instead of '?'
+ *   --file-case=CASE File naming: pascal, dashed, snake (default: pascal)
  */
 
 // Find autoloader
@@ -52,13 +65,14 @@ use PhpCollective\Dto\Generator\ConsoleIo;
 use PhpCollective\Dto\Generator\Generator;
 use PhpCollective\Dto\Generator\IoInterface;
 use PhpCollective\Dto\Generator\TwigRenderer;
+use PhpCollective\Dto\Generator\TypeScriptGenerator;
 
 /**
  * Parse command line arguments.
  *
  * @param array<string> $argv
  *
- * @return array{command: string|null, config-path: string, src-path: string, namespace: string, format: string|null, dry-run: bool, force: bool, verbose: bool, quiet: bool, help: bool, confirm: bool}
+ * @return array<string, mixed>
  */
 function parseArgs(array $argv): array
 {
@@ -66,6 +80,7 @@ function parseArgs(array $argv): array
         'command' => null,
         'config-path' => 'config/',
         'src-path' => 'src/',
+        'output' => 'types/',
         'namespace' => 'App',
         'format' => null,
         'dry-run' => false,
@@ -74,6 +89,11 @@ function parseArgs(array $argv): array
         'quiet' => false,
         'help' => false,
         'confirm' => false,
+        // TypeScript options
+        'single-file' => true,
+        'readonly' => false,
+        'strict-nulls' => false,
+        'file-case' => 'pascal',
     ];
 
     array_shift($argv); // Remove script name
@@ -91,14 +111,26 @@ function parseArgs(array $argv): array
             $options['force'] = true;
         } elseif ($arg === '--confirm') {
             $options['confirm'] = true;
+        } elseif ($arg === '--single-file') {
+            $options['single-file'] = true;
+        } elseif ($arg === '--multi-file') {
+            $options['single-file'] = false;
+        } elseif ($arg === '--readonly') {
+            $options['readonly'] = true;
+        } elseif ($arg === '--strict-nulls') {
+            $options['strict-nulls'] = true;
         } elseif (str_starts_with($arg, '--config-path=')) {
             $options['config-path'] = substr($arg, 14);
         } elseif (str_starts_with($arg, '--src-path=')) {
             $options['src-path'] = substr($arg, 11);
+        } elseif (str_starts_with($arg, '--output=')) {
+            $options['output'] = substr($arg, 9);
         } elseif (str_starts_with($arg, '--namespace=')) {
             $options['namespace'] = substr($arg, 12);
         } elseif (str_starts_with($arg, '--format=')) {
             $options['format'] = substr($arg, 9);
+        } elseif (str_starts_with($arg, '--file-case=')) {
+            $options['file-case'] = substr($arg, 12);
         } elseif (!str_starts_with($arg, '-') && $options['command'] === null) {
             $options['command'] = $arg;
         }
@@ -119,25 +151,37 @@ DTO Generator - Generate Data Transfer Objects from configuration files
 
 Usage:
   vendor/bin/dto generate [options]
+  vendor/bin/dto typescript [options]
   vendor/bin/dto [options]
 
 Commands:
-  generate    Generate DTOs from configuration (default)
+  generate    Generate PHP DTOs from configuration (default)
+  typescript  Generate TypeScript interfaces from configuration
 
-Options:
+Common Options:
   --config-path=PATH   Path to config directory (default: config/)
-  --src-path=PATH      Path to src directory (default: src/)
-  --namespace=NS       Namespace for generated DTOs (default: App)
   --format=FORMAT      Config format: xml, yaml, neon, php (default: auto-detect)
-  --dry-run            Show what would be generated without writing files
-  --force              Regenerate all DTOs, ignoring existing
-  --confirm            Validate PHP syntax of generated files
-  --verbose, -v        Verbose output with diffs
+  --verbose, -v        Verbose output
   --quiet, -q          Minimal output
   --help, -h           Show this help
 
+Generate Options:
+  --src-path=PATH      Path to src directory (default: src/)
+  --namespace=NS       Namespace for generated DTOs (default: App)
+  --dry-run            Show what would be generated without writing files
+  --force              Regenerate all DTOs, ignoring existing
+  --confirm            Validate PHP syntax of generated files
+
+TypeScript Options:
+  --output=PATH        Path for TypeScript output (default: types/)
+  --single-file        Generate all types in one file (default)
+  --multi-file         Generate each type in separate file
+  --readonly           Make all fields readonly
+  --strict-nulls       Use '| null' instead of '?'
+  --file-case=CASE     File naming: pascal, dashed, snake (default: pascal)
+
 Examples:
-  # Generate DTOs with defaults (config/ -> src/Dto/)
+  # Generate PHP DTOs with defaults (config/ -> src/Dto/)
   vendor/bin/dto generate
 
   # Specify custom paths and namespace
@@ -146,8 +190,14 @@ Examples:
   # Preview changes without writing
   vendor/bin/dto generate --dry-run --verbose
 
-  # Force regeneration of all DTOs
-  vendor/bin/dto generate --force
+  # Generate TypeScript interfaces
+  vendor/bin/dto typescript --output=frontend/src/types/
+
+  # TypeScript with separate files
+  vendor/bin/dto typescript --multi-file --file-case=dashed
+
+  # TypeScript with readonly interfaces
+  vendor/bin/dto typescript --readonly --strict-nulls
 
 Configuration Formats:
   The generator supports XML (default), YAML, NEON, and PHP formats.
@@ -224,7 +274,7 @@ if ($args['help']) {
 // Default command is generate
 $command = $args['command'] ?? 'generate';
 
-if ($command !== 'generate') {
+if (!in_array($command, ['generate', 'typescript'], true)) {
     fwrite(STDERR, "Unknown command: {$command}\n");
     fwrite(STDERR, "Run 'vendor/bin/dto --help' for usage.\n");
     exit(1);
@@ -232,7 +282,6 @@ if ($command !== 'generate') {
 
 // Normalize paths
 $configPath = rtrim($args['config-path'], '/') . '/';
-$srcPath = rtrim($args['src-path'], '/') . '/';
 
 // Validate paths
 if (!is_dir($configPath)) {
@@ -251,7 +300,47 @@ if ($args['quiet']) {
     $verbosity = IoInterface::VERBOSE;
 }
 
-// Set up components
+$io = new ConsoleIo($verbosity);
+
+// Handle commands
+if ($command === 'typescript') {
+    // TypeScript generation
+    $outputPath = rtrim($args['output'], '/') . '/';
+
+    $namespace = $args['namespace'];
+    $config = new ArrayConfig([
+        'namespace' => $namespace,
+    ]);
+
+    $engine = createEngine($format);
+    $builder = new Builder($engine, $config);
+
+    $io->out("Generating TypeScript from {$configPath} to {$outputPath}", 1, IoInterface::VERBOSE);
+    $io->out("Format: {$format}", 1, IoInterface::VERBOSE);
+    $io->out('', 1, IoInterface::VERBOSE);
+
+    try {
+        $definitions = $builder->build($configPath, []);
+    } catch (Exception $e) {
+        $io->error($e->getMessage());
+        exit(1);
+    }
+
+    $tsGenerator = new TypeScriptGenerator($io, [
+        'singleFile' => $args['single-file'],
+        'fileNameCase' => $args['file-case'],
+        'readonly' => $args['readonly'],
+        'strictNulls' => $args['strict-nulls'],
+    ]);
+
+    $count = $tsGenerator->generate($definitions, $outputPath);
+    $io->out("Generated {$count} TypeScript file(s).");
+
+    exit(0);
+}
+
+// PHP DTO generation
+$srcPath = rtrim($args['src-path'], '/') . '/';
 $namespace = $args['namespace'];
 $config = new ArrayConfig([
     'namespace' => $namespace,
@@ -260,7 +349,6 @@ $config = new ArrayConfig([
 $engine = createEngine($format);
 $builder = new Builder($engine, $config);
 $renderer = new TwigRenderer(null, $config);
-$io = new ConsoleIo($verbosity);
 
 // Create generator and run
 $generator = new Generator($builder, $renderer, $io, $config);
