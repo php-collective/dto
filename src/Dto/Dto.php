@@ -457,7 +457,8 @@ abstract class Dto implements Serializable
     protected function isCustomCollectionType(string $collectionType): bool
     {
         // CakePHP Collection or any custom Traversable that's not ArrayObject
-        return $collectionType !== '\ArrayObject' && !is_subclass_of($collectionType, ArrayObject::class);
+        // is_a() with third param true checks if class is same or subclass
+        return !is_a($collectionType, ArrayObject::class, true);
     }
 
     /**
