@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Test\Config;
 
+use DateTimeImmutable;
 use PhpCollective\Dto\Config\Dto;
 use PhpCollective\Dto\Config\Field;
 use PhpCollective\Dto\Config\Schema;
@@ -113,7 +114,7 @@ class BuilderTest extends TestCase
 
     public function testFieldClass(): void
     {
-        $field = Field::class('createdAt', \DateTimeImmutable::class);
+        $field = Field::class('createdAt', DateTimeImmutable::class);
 
         $this->assertSame('\DateTimeImmutable', $field->toArray());
     }
@@ -302,7 +303,7 @@ class BuilderTest extends TestCase
                 Field::collection('items', 'OrderItem')->singular('item'),
                 Field::float('total')->required(),
                 Field::string('status')->required(),
-                Field::class('createdAt', \DateTimeImmutable::class),
+                Field::class('createdAt', DateTimeImmutable::class),
             ))
             ->dto(Dto::immutable('ImmutableUser')->fields(
                 Field::int('id')->required(),
