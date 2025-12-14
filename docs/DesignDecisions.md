@@ -103,3 +103,10 @@ class UserDto extends AbstractUserDto {
     }
 }
 ```
+
+## Constructor promotion (PHP 8.0+)
+The real value of constructor promotion:
+- Reduces boilerplate in hand-written code
+- Our code is generated - verbosity isn't a maintenance burden
+
+Verdict: Not useful for this library. The flexibility of optional fields and incremental population is more valuable than the syntactic sugar of constructor promotion.
