@@ -23,18 +23,23 @@ composer require php-collective/dto
 
 ## Quick Start
 
-Define DTOs in XML (or YAML, NEON, PHP):
+Define DTOs in PHP (or XML, YAML, NEON):
 
-```xml
-<dtos xmlns="https://github.com/php-collective/dto">
-    <dto name="Car">
-        <field name="color" type="string"/>
-        <field name="owner" type="Owner"/>
-    </dto>
-    <dto name="Owner">
-        <field name="name" type="string"/>
-    </dto>
-</dtos>
+```php
+// config/dto.php
+use PhpCollective\Dto\Config\Dto;
+use PhpCollective\Dto\Config\Field;
+use PhpCollective\Dto\Config\Schema;
+
+return Schema::create()
+    ->dto(Dto::create('Car')->fields(
+        Field::string('color'),
+        Field::dto('owner', 'Owner'),
+    ))
+    ->dto(Dto::create('Owner')->fields(
+        Field::string('name'),
+    ))
+    ->toArray();
 ```
 
 Generate and use:
@@ -55,12 +60,12 @@ See [Quick Start Guide](docs/QuickStart.md) for detailed examples.
 
 - **Types**: `int`, `float`, `string`, `bool`, `array`, `mixed`, DTOs, classes, enums
 - **Union types**: `int|string`, `int|float|string` (PHP 8.0+)
-- **Collections**: `type="Item[]" collection="true"` with add/get/has methods
-- **Associative collections**: keyed access with `associative="true"`
-- **Immutable DTOs**: `immutable="true"` with `with*()` methods
-- **Default values**: `defaultValue="0"`
-- **Required fields**: `required="true"`
-- **Deprecations**: `deprecated="Use newField instead"`
+- **Collections**: `'type' => 'Item[]', 'collection' => true` with add/get/has methods
+- **Associative collections**: keyed access with `'associative' => true`
+- **Immutable DTOs**: `'immutable' => true` with `with*()` methods
+- **Default values**: `'defaultValue' => 0`
+- **Required fields**: `'required' => true`
+- **Deprecations**: `'deprecated' => 'Use newField instead'`
 - **Inflection**: automatic snake_case/camelCase/dash-case conversion
 - **Deep cloning**: `$dto->clone()`
 - **Nested reading**: `$dto->read(['path', 'to', 'field'])`
@@ -68,10 +73,10 @@ See [Quick Start Guide](docs/QuickStart.md) for detailed examples.
 
 ## Configuration Formats
 
-- **XML** (default) - XSD validation, IDE autocomplete
+- **PHP** - native arrays or [fluent builder](docs/ConfigBuilder.md)
+- **XML** - XSD validation, IDE autocomplete
 - **YAML** - requires `pecl install yaml`
 - **NEON** - requires `nette/neon`
-- **PHP** - native arrays or [fluent builder](docs/ConfigBuilder.md)
 
 ## Documentation
 
