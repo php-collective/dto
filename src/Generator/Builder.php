@@ -844,6 +844,14 @@ class Builder
         if ($this->isValidSimpleType($type)) {
             $types = explode('|', $type);
             if (count($types) > 1) {
+                // PHP doesn't support array notation in union types (e.g., string[]|int[] is invalid)
+                // Convert to 'array' if any part uses array notation
+                foreach ($types as $t) {
+                    if (str_ends_with($t, '[]')) {
+                        return 'array';
+                    }
+                }
+
                 // Return union type
                 return $type;
             }

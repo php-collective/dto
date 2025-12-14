@@ -1104,4 +1104,59 @@ PHP;
         $this->assertSame('int|string', $definitions['Response']['fields']['id']['typeHint']);
         $this->assertSame('int|string|null', $definitions['Response']['fields']['id']['nullableTypeHint']);
     }
+
+    public function testArrayUnionTypesConvertToArray(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Mixed' => [
+        'fields' => [
+            'data' => ['type' => 'string[]|int[]'],
+            'items' => ['type' => 'float[]|bool[]'],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // PHP doesn't support array notation in union types (string[]|int[] is invalid)
+        // Should convert to 'array' type hint
+        $this->assertSame('array', $definitions['Mixed']['fields']['data']['typeHint']);
+        $this->assertSame('array', $definitions['Mixed']['fields']['items']['typeHint']);
+
+        // Original type should be preserved for docblock
+        $this->assertSame('string[]|int[]', $definitions['Mixed']['fields']['data']['type']);
+        $this->assertSame('float[]|bool[]', $definitions['Mixed']['fields']['items']['type']);
+    }
+
+    public function testMixedArrayAndScalarUnionTypesConvertToArray(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Response' => [
+        'fields' => [
+            'value' => ['type' => 'string[]|int'],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Mixed array and scalar union should also convert to array
+        $this->assertSame('array', $definitions['Response']['fields']['value']['typeHint']);
+    }
 }

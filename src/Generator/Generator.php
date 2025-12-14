@@ -202,7 +202,7 @@ class Generator
      */
     protected function checkPhpFileSyntax(string $file): bool
     {
-        exec('php -l "' . $file . '"', $output, $returnValue);
+        exec('php -l ' . escapeshellarg($file), $output, $returnValue);
 
         if ($returnValue !== static::CODE_SUCCESS) {
             $this->io->error('PHP file invalid: ' . implode("\n", $output));
