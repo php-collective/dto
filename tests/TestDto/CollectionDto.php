@@ -62,11 +62,11 @@ class CollectionDto extends AbstractDto
     protected array $_keyMap = [
         'underscored' => [
             'items' => 'items',
-            'arrayItems' => 'array_items',
+            'array_items' => 'arrayItems',
         ],
         'dashed' => [
             'items' => 'items',
-            'arrayItems' => 'array-items',
+            'array-items' => 'arrayItems',
         ],
     ];
 

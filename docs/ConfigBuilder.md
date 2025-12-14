@@ -145,9 +145,55 @@ Field::class('money', \Money\Money::class)->factory('Money\Parser::parse')
 
 ### Serialization
 
+Control how complex objects are serialized in `toArray()`:
+
 ```php
+// Serialize to array using toArray() method
 Field::class('data', MyClass::class)->serialize('array')
+
+// Serialize to string using __toString() method
 Field::class('value', Stringable::class)->serialize('string')
+
+// Use FromArrayToArrayInterface for both directions
+Field::class('config', ConfigObject::class)->serialize('FromArrayToArray')
+```
+
+**Serialization modes:**
+
+| Mode | Method Called | Use When |
+|------|---------------|----------|
+| `array` | `->toArray()` | Object has toArray() method |
+| `string` | `->__toString()` | Object implements Stringable |
+| `FromArrayToArray` | `->toArray()` + `::fromArray()` | Object has both methods for round-trip |
+
+**Example with custom class:**
+
+```php
+// Your value object
+class Money implements \Stringable
+{
+    public function __construct(
+        public readonly int $amount,
+        public readonly string $currency,
+    ) {}
+
+    public function toArray(): array
+    {
+        return ['amount' => $this->amount, 'currency' => $this->currency];
+    }
+
+    public function __toString(): string
+    {
+        return $this->amount . ' ' . $this->currency;
+    }
+}
+
+// Configuration
+Field::class('price', Money::class)->serialize('array')
+// toArray() returns: ['price' => ['amount' => 1000, 'currency' => 'USD']]
+
+Field::class('priceDisplay', Money::class)->serialize('string')
+// toArray() returns: ['priceDisplay' => '1000 USD']
 ```
 
 ## DTO Options

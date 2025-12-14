@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Engine;
 
 use InvalidArgumentException;
+use PhpCollective\Dto\Engine\JsonSchemaValidator;
 use PhpCollective\Dto\Engine\NeonEngine;
 use PHPUnit\Framework\TestCase;
 
@@ -98,11 +99,85 @@ NEON;
         $engine->parse('invalid: [not: closed');
     }
 
-    public function testValidateDoesNothing(): void
+    public function testValidateSkipsWhenSchemaValidatorNotAvailable(): void
     {
+        if (JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('Test requires json-schema to NOT be installed');
+        }
+
         $engine = new NeonEngine();
-        $engine->validate(['file1.neon', 'file2.neon']);
+        // Should not throw even with non-existent files when validator not available
+        $engine->validate(['nonexistent.neon']);
         $this->assertTrue(true);
+    }
+
+    public function testValidateValidFile(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $tempDir = sys_get_temp_dir() . '/neon-engine-test-' . uniqid();
+        mkdir($tempDir);
+
+        $neon = <<<'NEON'
+User:
+    fields:
+        id: int
+        name: string
+NEON;
+        $path = $tempDir . '/valid.neon';
+        file_put_contents($path, $neon);
+
+        $engine = new NeonEngine();
+        $engine->validate([$path]);
+        $this->assertTrue(true);
+
+        unlink($path);
+        rmdir($tempDir);
+    }
+
+    public function testValidateInvalidFileThrowsException(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $tempDir = sys_get_temp_dir() . '/neon-engine-test-' . uniqid();
+        mkdir($tempDir);
+
+        $neon = <<<'NEON'
+User:
+    unknownProperty: true
+    fields:
+        id: int
+NEON;
+        $path = $tempDir . '/invalid.neon';
+        file_put_contents($path, $neon);
+
+        $engine = new NeonEngine();
+
+        try {
+            $this->expectException(InvalidArgumentException::class);
+            $this->expectExceptionMessage('unknownProperty');
+            $engine->validate([$path]);
+        } finally {
+            unlink($path);
+            rmdir($tempDir);
+        }
+    }
+
+    public function testValidateUnreadableFileThrowsException(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $engine = new NeonEngine();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot read file');
+        $engine->validate(['/nonexistent/file.neon']);
     }
 
     public function testParseUnionTypes(): void

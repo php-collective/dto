@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Engine;
 
 use InvalidArgumentException;
+use PhpCollective\Dto\Engine\JsonSchemaValidator;
 use PhpCollective\Dto\Engine\YamlEngine;
 use PHPUnit\Framework\TestCase;
 
@@ -105,11 +106,85 @@ YAML;
         $engine->parse('invalid: [not: closed');
     }
 
-    public function testValidateDoesNothing(): void
+    public function testValidateSkipsWhenSchemaValidatorNotAvailable(): void
     {
+        if (JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('Test requires json-schema to NOT be installed');
+        }
+
         $engine = new YamlEngine();
-        $engine->validate(['file1.yml', 'file2.yml']);
+        // Should not throw even with non-existent files when validator not available
+        $engine->validate(['nonexistent.yml']);
         $this->assertTrue(true);
+    }
+
+    public function testValidateValidFile(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $tempDir = sys_get_temp_dir() . '/yaml-engine-test-' . uniqid();
+        mkdir($tempDir);
+
+        $yaml = <<<'YAML'
+User:
+    fields:
+        id: int
+        name: string
+YAML;
+        $path = $tempDir . '/valid.yml';
+        file_put_contents($path, $yaml);
+
+        $engine = new YamlEngine();
+        $engine->validate([$path]);
+        $this->assertTrue(true);
+
+        unlink($path);
+        rmdir($tempDir);
+    }
+
+    public function testValidateInvalidFileThrowsException(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $tempDir = sys_get_temp_dir() . '/yaml-engine-test-' . uniqid();
+        mkdir($tempDir);
+
+        $yaml = <<<'YAML'
+User:
+    unknownProperty: true
+    fields:
+        id: int
+YAML;
+        $path = $tempDir . '/invalid.yml';
+        file_put_contents($path, $yaml);
+
+        $engine = new YamlEngine();
+
+        try {
+            $this->expectException(InvalidArgumentException::class);
+            $this->expectExceptionMessage('unknownProperty');
+            $engine->validate([$path]);
+        } finally {
+            unlink($path);
+            rmdir($tempDir);
+        }
+    }
+
+    public function testValidateUnreadableFileThrowsException(): void
+    {
+        if (!JsonSchemaValidator::isAvailable()) {
+            $this->markTestSkipped('justinrainbow/json-schema not installed');
+        }
+
+        $engine = new YamlEngine();
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Cannot read file');
+        $engine->validate(['/nonexistent/file.yml']);
     }
 
     public function testParseUnionTypes(): void

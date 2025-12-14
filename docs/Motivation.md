@@ -67,8 +67,8 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 | **IDE Autocomplete**    |      Excellent       |        Good        |      Good       |   Good   | Excellent  |
 | **Static Analysis**     |      Excellent       |        Good        |    Excellent    |   Good   | Excellent  |
 | **Runtime Performance** |         Best         |      Moderate      |    Moderate     | Moderate |    Best    |
-| **Validation**          |        Basic         |        Full        |      Good       | Partial  |    None    |
-| **TypeScript Gen**      |          No          |        Yes         |       No        |    No    |     No     |
+| **Validation**          |   Required fields    |        Full        |      Good       | Partial  |    None    |
+| **TypeScript Gen**      |         Yes          |        Yes         |       No        |    No    |     No     |
 | **Collections**         |       Built-in       |      Built-in      |    Built-in     |  Manual  |   Manual   |
 | **Inflection**          |       Built-in       |       Manual       |     Manual      |  Manual  |   Manual   |
 | **Framework**           |         Any          |      Laravel       |       Any       | Symfony  |    Any     |
@@ -91,14 +91,14 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 | Code Review         | Generated code visible     | Magic/runtime     |
 | Inflection Support  | Built-in                   | Usually manual    |
 
-**Gaps to address:**
+**Gaps compared to runtime libraries:**
 
-| Feature        | php-collective/dto | laravel-data | valinor |
-|----------------|:------------------:|:------------:|:-------:|
-| TypeScript Gen |         No         |     Yes      |   No    |
-| Validation     |       Basic        |     Full     |  Good   |
-| Generics       |         No         |   Partial    |   Yes   |
-| Union Types    |      Limited       |     Yes      |   Yes   |
+| Feature           | php-collective/dto | laravel-data | valinor |
+|-------------------|:------------------:|:------------:|:-------:|
+| TypeScript Gen    |        Yes         |     Yes      |   No    |
+| Validation Rules  | Required only      |     Full     |  Good   |
+| PHPDoc Generics   |        Yes         |   Partial    |   Yes   |
+| Union Types       |        Yes         |     Yes      |   Yes   |
 
 **Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance and IDE support.
 

@@ -24,12 +24,45 @@ class NeonEngine implements EngineInterface
     }
 
     /**
+     * Validates files against JSON schema.
+     *
+     * Requires justinrainbow/json-schema to be installed.
+     * If not available, validation is skipped.
+     *
      * @param array<string> $files
+     *
+     * @throws \InvalidArgumentException
      *
      * @return void
      */
     public function validate(array $files): void
     {
+        if (!JsonSchemaValidator::isAvailable()) {
+            return;
+        }
+
+        foreach ($files as $file) {
+            if (!is_readable($file)) {
+                throw new InvalidArgumentException("Cannot read file: {$file}");
+            }
+
+            $content = file_get_contents($file);
+            if ($content === false) {
+                throw new InvalidArgumentException("Cannot read file: {$file}");
+            }
+
+            try {
+                $data = Neon::decode($content);
+            } catch (Exception $e) {
+                throw new InvalidArgumentException("Invalid NEON file: {$file} - " . $e->getMessage(), $e->getCode(), $e);
+            }
+
+            if ($data === null) {
+                throw new InvalidArgumentException("Invalid NEON file: {$file}");
+            }
+
+            JsonSchemaValidator::validate($data, $file);
+        }
     }
 
     /**

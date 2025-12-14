@@ -236,4 +236,166 @@ NEON;
         $this->assertSame(self::CODE_CHANGES, $result['exitCode']);
         $this->assertStringContainsString('Format: neon', $result['output']);
     }
+
+    public function testConfirmFlagValidSyntax(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --confirm',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // --confirm validates syntax, should pass with valid config
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0 when syntax is valid. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/UserDto.php');
+    }
+
+    public function testExitCodeZeroWhenNoChanges(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        // First run to create the file
+        $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Second run - no changes expected
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Normal mode (not verbose), returns 0 even when no changes
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0 in normal mode. Output: ' . $result['output']);
+    }
+
+    public function testExitCodeZeroInNormalModeWithChanges(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Normal mode (not verbose/dry-run), returns 0 even when files are created
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0 in normal mode. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/UserDto.php');
+    }
+
+    public function testExitCodeTwoInDryRunModeWithChanges(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="Product">
+        <field name="sku" type="string"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --dry-run',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Dry-run mode returns CODE_CHANGES (2) when changes would be made
+        $this->assertSame(self::CODE_CHANGES, $result['exitCode'], 'CLI should exit with 2 in dry-run mode. Output: ' . $result['output']);
+        // File should NOT be created
+        $this->assertFileDoesNotExist($this->tempDir . '/src/Dto/ProductDto.php');
+    }
+
+    public function testExitCodeZeroInDryRunModeNoChanges(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="Order">
+        <field name="id" type="int"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        // First run to create the file
+        $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Second run with dry-run - no changes expected
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --dry-run',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Dry-run mode returns 0 when no changes would be made
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0 when no changes. Output: ' . $result['output']);
+    }
+
+    public function testForceRegeneratesAllDtos(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        // First run
+        $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Second run with --force in verbose mode to verify regeneration
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --force --verbose',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // With --force, files are regenerated even when unchanged
+        $this->assertSame(self::CODE_CHANGES, $result['exitCode'], 'CLI should exit with 2 when force regenerating. Output: ' . $result['output']);
+        $this->assertStringContainsString('Creating: User DTO', $result['output']);
+    }
 }

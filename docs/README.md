@@ -3,6 +3,8 @@
 **Documentation:**
 [Configuration Builder](ConfigBuilder.md) |
 [Examples](Examples.md) |
+[Advanced Patterns](AdvancedPatterns.md) |
+[Validation](Validation.md) |
 [Motivation](Motivation.md) |
 [TypeScript Generation](TypeScriptGeneration.md)
 

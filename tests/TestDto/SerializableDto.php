@@ -90,15 +90,15 @@ class SerializableDto extends AbstractDto
      */
     protected array $_keyMap = [
         'underscored' => [
-            'fromArrayData' => 'from_array_data',
-            'toArrayData' => 'to_array_data',
-            'stringData' => 'string_data',
+            'from_array_data' => 'fromArrayData',
+            'to_array_data' => 'toArrayData',
+            'string_data' => 'stringData',
             'status' => 'status',
         ],
         'dashed' => [
-            'fromArrayData' => 'from-array-data',
-            'toArrayData' => 'to-array-data',
-            'stringData' => 'string-data',
+            'from-array-data' => 'fromArrayData',
+            'to-array-data' => 'toArrayData',
+            'string-data' => 'stringData',
             'status' => 'status',
         ],
     ];

@@ -1,0 +1,90 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "$id": "https://github.com/php-collective/dto/config/dto.schema.json",
+    "title": "DTO Configuration Schema",
+    "description": "Schema for validating YAML/NEON DTO configuration files",
+    "type": "object",
+    "additionalProperties": {
+        "$ref": "#/definitions/dto"
+    },
+    "definitions": {
+        "dto": {
+            "type": "object",
+            "properties": {
+                "fields": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "description": "Shorthand: field type only"
+                            },
+                            {
+                                "$ref": "#/definitions/field"
+                            }
+                        ]
+                    }
+                },
+                "extends": {
+                    "type": "string",
+                    "description": "Parent DTO to extend from"
+                },
+                "deprecated": {
+                    "type": "string",
+                    "description": "Deprecation message"
+                },
+                "immutable": {
+                    "type": "boolean",
+                    "description": "Whether the DTO is immutable (no setters)"
+                }
+            },
+            "additionalProperties": false
+        },
+        "field": {
+            "type": "object",
+            "properties": {
+                "type": {
+                    "type": "string",
+                    "description": "The field type (e.g., string, int, bool, array, DTO name)"
+                },
+                "singular": {
+                    "type": "string",
+                    "description": "Singular name for collection item methods"
+                },
+                "collection": {
+                    "type": "boolean",
+                    "description": "Whether the field is a collection"
+                },
+                "collectionType": {
+                    "type": "string",
+                    "description": "Collection class type (default: \\ArrayObject)"
+                },
+                "associative": {
+                    "type": "boolean",
+                    "description": "Whether the collection is associative (keyed)"
+                },
+                "key": {
+                    "type": "string",
+                    "description": "Key field for associative collections"
+                },
+                "factory": {
+                    "type": "string",
+                    "description": "Factory class or method for creating the field value"
+                },
+                "deprecated": {
+                    "type": "string",
+                    "description": "Deprecation message"
+                },
+                "required": {
+                    "type": "boolean",
+                    "description": "Whether the field is required"
+                },
+                "defaultValue": {
+                    "description": "Default value for the field"
+                }
+            },
+            "required": ["type"],
+            "additionalProperties": false
+        }
+    }
+}

@@ -340,31 +340,66 @@ $pagination->setPage(5);
 
 ## Custom Collection Types
 
-### Using Framework Collections
+By default, DTO collections return `ArrayObject`. You can customize this globally to use your framework's collection class, gaining access to powerful collection methods like `filter()`, `map()`, `reduce()`, etc.
+
+### Why Use Custom Collections?
+
+`ArrayObject` is functional but limited. Framework collections provide:
+- Fluent, chainable operations (`->filter()->map()->sum()`)
+- Lazy evaluation (in some implementations)
+- Framework-specific integrations (e.g., Laravel's `pluck()`, CakePHP's `groupBy()`)
+
+### Setting a Global Factory
+
+Set the factory early in your application bootstrap, before any DTOs are instantiated:
 
 ```php
 use PhpCollective\Dto\Dto\Dto;
 
 // CakePHP Collection
-Dto::setCollectionFactory(fn($items) => new \Cake\Collection\Collection($items));
+Dto::setCollectionFactory(fn(array $items) => new \Cake\Collection\Collection($items));
 
 // Laravel Collection
-Dto::setCollectionFactory(fn($items) => collect($items));
+Dto::setCollectionFactory(fn(array $items) => collect($items));
 
 // Doctrine ArrayCollection
-Dto::setCollectionFactory(fn($items) => new \Doctrine\Common\Collections\ArrayCollection($items));
+Dto::setCollectionFactory(fn(array $items) => new \Doctrine\Common\Collections\ArrayCollection($items));
 ```
 
-Then use collection methods naturally:
+### Using Framework Collection Methods
+
+Once set, all DTO collections gain the framework's collection methods:
 
 ```php
+// With Laravel collection factory
+Dto::setCollectionFactory(fn($items) => collect($items));
+
 $cart = new CartDto();
 // ... add items
 
+// Use Laravel collection methods
 $total = $cart->getItems()
     ->filter(fn($item) => $item->getQuantity() > 0)
-    ->reduce(fn($sum, $item) => $sum + $item->getPrice() * $item->getQuantity(), 0);
+    ->sum(fn($item) => $item->getPrice() * $item->getQuantity());
+
+$productNames = $cart->getItems()
+    ->pluck('name')
+    ->unique()
+    ->values();
 ```
+
+### Resetting to Default
+
+```php
+// Reset to default ArrayObject
+Dto::setCollectionFactory(null);
+```
+
+### When to Use
+
+- **API applications**: Laravel/Symfony collections for response transformation
+- **Domain logic**: Filter, aggregate, transform collections fluently
+- **Testing**: Reset factory between tests to avoid state pollution
 
 ## API Response Pattern
 
