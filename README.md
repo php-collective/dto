@@ -264,6 +264,7 @@ The library supports multiple configuration formats:
 - **XML** (default) - with XSD validation and IDE autocomplete
 - **YAML** - requires `symfony/yaml` (included via Twig)
 - **NEON** - requires `nette/neon`
+- **PHP** - native PHP arrays, best IDE support for complex configs
 
 ### YAML Example
 
@@ -293,6 +294,30 @@ Car:
             required: true
 ```
 
+### PHP Example
+
+```php
+<?php
+// config/dto.php
+return [
+    'Car' => [
+        'fields' => [
+            'color' => 'string',
+            'isNew' => 'bool',
+            'owner' => [
+                'type' => 'Owner',
+                'required' => true,
+            ],
+        ],
+    ],
+    'Owner' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+```
+
 ## Integrations
 
 This is the standalone core library. For framework-specific integrations:
@@ -302,3 +327,7 @@ This is the standalone core library. For framework-specific integrations:
 ## Documentation
 
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
+
+## License
+
+MIT License. See [LICENSE](LICENSE) for details.

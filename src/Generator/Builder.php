@@ -10,6 +10,7 @@ use PhpCollective\Dto\Dto\AbstractDto;
 use PhpCollective\Dto\Dto\AbstractImmutableDto;
 use PhpCollective\Dto\Dto\FromArrayToArrayInterface;
 use PhpCollective\Dto\Engine\EngineInterface;
+use PhpCollective\Dto\Engine\FileBasedEngineInterface;
 use PhpCollective\Dto\Utility\Inflector;
 use ReflectionClass;
 use ReflectionEnum;
@@ -132,8 +133,12 @@ class Builder
 
         $config = [];
         foreach ($files as $file) {
-            $content = file_get_contents($file) ?: '';
-            $config[$file] = $this->engine->parse($content);
+            if ($this->engine instanceof FileBasedEngineInterface) {
+                $config[$file] = $this->engine->parseFile($file);
+            } else {
+                $content = file_get_contents($file) ?: '';
+                $config[$file] = $this->engine->parse($content);
+            }
         }
 
         $result = $this->_merge($config);
