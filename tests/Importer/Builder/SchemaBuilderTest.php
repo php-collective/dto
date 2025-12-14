@@ -179,8 +179,9 @@ class SchemaBuilderTest extends TestCase
 
         $this->assertStringContainsString('User:', $output);
         $this->assertStringContainsString('fields:', $output);
-        $this->assertStringContainsString('name:', $output);
-        $this->assertStringContainsString('type: string', $output);
+        // Shorthand format: fieldName: type (no nested type: key when no options)
+        $this->assertStringContainsString('name: string', $output);
+        $this->assertStringContainsString('age: int', $output);
     }
 
     /**
@@ -208,9 +209,9 @@ class SchemaBuilderTest extends TestCase
 
         $output = $this->builder->build('User', $fields, ['format' => 'neon']);
 
-        // NEON is similar to YAML
+        // NEON is similar to YAML - shorthand format
         $this->assertStringContainsString('User:', $output);
-        $this->assertStringContainsString('type: string', $output);
+        $this->assertStringContainsString('name: string', $output);
     }
 
     /**
@@ -224,7 +225,7 @@ class SchemaBuilderTest extends TestCase
 
         $output = $this->builder->build('User', $fields, ['format' => 'php']);
 
-        $this->assertStringContainsString("Field::dto('Address')", $output);
+        $this->assertStringContainsString("Field::dto('address', 'Address')", $output);
     }
 
     /**
@@ -238,7 +239,7 @@ class SchemaBuilderTest extends TestCase
 
         $output = $this->builder->build('Order', $fields, ['format' => 'php']);
 
-        $this->assertStringContainsString("Field::dtos('Item')", $output);
+        $this->assertStringContainsString("Field::collection('items', 'Item')", $output);
     }
 
     /**
@@ -253,8 +254,8 @@ class SchemaBuilderTest extends TestCase
 
         $output = $this->builder->build('Item', $fields, ['format' => 'php']);
 
-        $this->assertStringContainsString('Field::strings', $output);
-        $this->assertStringContainsString('Field::ints', $output);
+        $this->assertStringContainsString("Field::array('tags', 'string')", $output);
+        $this->assertStringContainsString("Field::array('counts', 'int')", $output);
     }
 
     /**

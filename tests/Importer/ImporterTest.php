@@ -153,8 +153,9 @@ class ImporterTest extends TestCase
         $output = $this->importer->buildSchema($definitions, ['format' => 'yaml']);
 
         $this->assertStringContainsString('Object:', $output);
-        $this->assertStringContainsString('name:', $output);
-        $this->assertStringContainsString('type: string', $output);
+        // Shorthand format: fieldName: type (no nested type: key when no options)
+        $this->assertStringContainsString('name: string', $output);
+        $this->assertStringContainsString('age: int', $output);
     }
 
     /**

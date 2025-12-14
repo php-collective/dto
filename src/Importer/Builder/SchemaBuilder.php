@@ -131,7 +131,7 @@ XML;
 
         return <<<XML
 <?xml version="1.0" encoding="UTF-8"?>
-<dtos xmlns="https://php-collective.github.io/dto/schema">
+<dtos xmlns="cakephp-dto">
 {$dtosStr}
 </dtos>
 XML;
@@ -156,9 +156,8 @@ XML;
             $type = $fieldDetails['type'] ?? 'mixed';
             $required = !empty($fieldDetails['required']);
 
-            // Determine the Field:: method to use
-            $method = $this->getFieldMethod($type);
-            $line = "            Field::{$method}('{$fieldName}')";
+            // Build the Field:: call based on type
+            $line = $this->buildFieldPhp($fieldName, $type);
 
             if ($required) {
                 $line .= '->required()';
@@ -181,6 +180,47 @@ XML;
 {$fieldsStr}
         ),
 PHP;
+    }
+
+    /**
+     * Build a Field:: method call for PHP output.
+     *
+     * @param string $fieldName
+     * @param string $type
+     *
+     * @return string
+     */
+    protected function buildFieldPhp(string $fieldName, string $type): string
+    {
+        $indent = '            ';
+
+        // Handle collection types (ending with [])
+        if (str_ends_with($type, '[]')) {
+            $baseType = substr($type, 0, -2);
+            // If it's a DTO type (starts with uppercase or contains /), use collection()
+            if (ctype_upper($baseType[0]) || str_contains($baseType, '/')) {
+                return "{$indent}Field::collection('{$fieldName}', '{$baseType}')";
+            }
+
+            // Scalar arrays
+            return "{$indent}Field::array('{$fieldName}', '{$baseType}')";
+        }
+
+        // Handle single DTO types (starts with uppercase or contains /)
+        if (ctype_upper($type[0]) || str_contains($type, '/')) {
+            return "{$indent}Field::dto('{$fieldName}', '{$type}')";
+        }
+
+        // Handle scalar types
+        return match ($type) {
+            'string' => "{$indent}Field::string('{$fieldName}')",
+            'int' => "{$indent}Field::int('{$fieldName}')",
+            'float' => "{$indent}Field::float('{$fieldName}')",
+            'bool' => "{$indent}Field::bool('{$fieldName}')",
+            'array' => "{$indent}Field::array('{$fieldName}')",
+            'mixed' => "{$indent}Field::mixed('{$fieldName}')",
+            default => "{$indent}Field::of('{$fieldName}', '{$type}')",
+        };
     }
 
     /**
@@ -232,18 +272,27 @@ PHP;
                 continue;
             }
 
-            $lines[] = "    {$fieldName}:";
-            $lines[] = "      type: {$fieldDetails['type']}";
+            $type = $fieldDetails['type'] ?? 'mixed';
+            $hasOptions = !empty($fieldDetails['required']) ||
+                !empty($fieldDetails['singular']) ||
+                !empty($fieldDetails['associative']);
 
-            if (!empty($fieldDetails['required'])) {
-                $lines[] = '      required: true';
-            }
-            if (!empty($fieldDetails['singular'])) {
-                $lines[] = "      singular: {$fieldDetails['singular']}";
-            }
-            if (!empty($fieldDetails['associative'])) {
-                $lines[] = '      associative: true';
-                $lines[] = "      key: {$fieldDetails['associative']}";
+            if ($hasOptions) {
+                $lines[] = "    {$fieldName}:";
+                $lines[] = "      type: {$type}";
+
+                if (!empty($fieldDetails['required'])) {
+                    $lines[] = '      required: true';
+                }
+                if (!empty($fieldDetails['singular'])) {
+                    $lines[] = "      singular: {$fieldDetails['singular']}";
+                }
+                if (!empty($fieldDetails['associative'])) {
+                    $lines[] = '      associative: true';
+                    $lines[] = "      key: {$fieldDetails['associative']}";
+                }
+            } else {
+                $lines[] = "    {$fieldName}: {$type}";
             }
         }
 
@@ -277,8 +326,39 @@ PHP;
      */
     protected function buildNeon(string $name, array $fields): string
     {
-        // NEON format is similar to YAML
-        return $this->buildYaml($name, $fields);
+        $lines = ["{$name}:"];
+        $lines[] = "\tfields:";
+
+        foreach ($fields as $fieldName => $fieldDetails) {
+            if (isset($fieldDetails['_include']) && !$fieldDetails['_include']) {
+                continue;
+            }
+
+            $type = $fieldDetails['type'] ?? 'mixed';
+            $hasOptions = !empty($fieldDetails['required']) ||
+                !empty($fieldDetails['singular']) ||
+                !empty($fieldDetails['associative']);
+
+            if ($hasOptions) {
+                $lines[] = "\t\t{$fieldName}:";
+                $lines[] = "\t\t\ttype: " . $this->quoteNeonValue($type);
+
+                if (!empty($fieldDetails['required'])) {
+                    $lines[] = "\t\t\trequired: true";
+                }
+                if (!empty($fieldDetails['singular'])) {
+                    $lines[] = "\t\t\tsingular: {$fieldDetails['singular']}";
+                }
+                if (!empty($fieldDetails['associative'])) {
+                    $lines[] = "\t\t\tassociative: true";
+                    $lines[] = "\t\t\tkey: {$fieldDetails['associative']}";
+                }
+            } else {
+                $lines[] = "\t\t{$fieldName}: " . $this->quoteNeonValue($type);
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     /**
@@ -290,49 +370,28 @@ PHP;
      */
     protected function buildAllNeon(array $definitions): string
     {
-        return $this->buildAllYaml($definitions);
+        $dtos = [];
+        foreach ($definitions as $name => $fields) {
+            $dtos[] = $this->buildNeon($name, $fields);
+        }
+
+        return implode("\n\n", $dtos) . "\n";
     }
 
     /**
-     * Get the Field:: method name for a type.
+     * Quote NEON value if it contains special characters.
      *
-     * @param string $type
+     * @param string $value
      *
      * @return string
      */
-    protected function getFieldMethod(string $type): string
+    protected function quoteNeonValue(string $value): string
     {
-        // Handle collection types
-        if (str_ends_with($type, '[]')) {
-            $baseType = substr($type, 0, -2);
-            // If it's a DTO type (starts with uppercase), use dtos()
-            if (ctype_upper($baseType[0])) {
-                return "dtos('{$baseType}')";
-            }
-
-            return match ($baseType) {
-                'string' => 'strings',
-                'int' => 'ints',
-                'float' => 'floats',
-                'bool' => 'bools',
-                default => "collection('{$type}')",
-            };
+        if (preg_match('/[\[\]\/\\\\]/', $value)) {
+            return "'{$value}'";
         }
 
-        // Handle DTO types (starts with uppercase)
-        if (ctype_upper($type[0])) {
-            return "dto('{$type}')";
-        }
-
-        return match ($type) {
-            'string' => 'string',
-            'int' => 'int',
-            'float' => 'float',
-            'bool' => 'bool',
-            'array' => 'array',
-            'mixed' => 'mixed',
-            default => "field('{$type}')",
-        };
+        return $value;
     }
 
     /**
