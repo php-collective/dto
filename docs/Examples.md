@@ -513,3 +513,81 @@ Mark fields as deprecated for gradual migration:
 ```
 
 Your IDE will show deprecation warnings when using `getUsername()` or `setUsername()`.
+
+## JSON Serialization
+
+### To JSON
+
+```php
+$dto = new UserDto(['name' => 'John', 'email' => 'john@example.com']);
+
+// Using serialize() - returns JSON string of touched fields
+$json = $dto->serialize();
+// {"name":"John","email":"john@example.com"}
+
+// Using toArray() with json_encode - all fields
+$json = json_encode($dto->toArray());
+
+// Pretty printed
+$json = json_encode($dto->toArray(), JSON_PRETTY_PRINT);
+
+// With key format conversion
+$json = json_encode($dto->toArray(UserDto::TYPE_UNDERSCORED));
+// {"name":"John","email":"john@example.com"}
+```
+
+### From JSON
+
+```php
+// Using fromUnserialized() - static constructor
+$json = '{"name":"John","email":"john@example.com"}';
+$dto = UserDto::fromUnserialized($json);
+
+// Using json_decode + constructor
+$data = json_decode($json, true);
+$dto = new UserDto($data);
+
+// With ignoreMissing for partial JSON
+$partialJson = '{"name":"John"}';
+$dto = new UserDto(json_decode($partialJson, true), ignoreMissing: true);
+```
+
+### API Response Pattern
+
+```php
+class ApiController
+{
+    public function show(int $id): JsonResponse
+    {
+        $user = $this->userRepository->find($id);
+        $dto = UserDto::createFromArray($user->toArray());
+
+        return new JsonResponse($dto->toArray(UserDto::TYPE_UNDERSCORED));
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $dto = new UserDto(
+            $request->json()->all(),
+            ignoreMissing: true,
+        );
+
+        $user = $this->userService->create($dto);
+
+        return new JsonResponse(
+            UserDto::createFromArray($user->toArray())->toArray(),
+            201,
+        );
+    }
+}
+```
+
+### Debugging with JSON
+
+```php
+// Quick debug output
+echo json_encode($dto->toArray(), JSON_PRETTY_PRINT);
+
+// Or use __toString which returns JSON
+echo $dto;  // Calls serialize() internally
+```

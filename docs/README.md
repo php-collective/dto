@@ -5,8 +5,13 @@
 [Examples](Examples.md) |
 [Advanced Patterns](AdvancedPatterns.md) |
 [Validation](Validation.md) |
-[Motivation](Motivation.md) |
-[TypeScript Generation](TypeScriptGeneration.md)
+[CLI Reference](CliReference.md) |
+[Testing](Testing.md) |
+[Troubleshooting](Troubleshooting.md) |
+[Performance](Performance.md) |
+[Migration](Migration.md) |
+[TypeScript Generation](TypeScriptGeneration.md) |
+[Motivation](Motivation.md)
 
 ---
 

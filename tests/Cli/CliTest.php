@@ -398,4 +398,95 @@ XML;
         $this->assertSame(self::CODE_CHANGES, $result['exitCode'], 'CLI should exit with 2 when force regenerating. Output: ' . $result['output']);
         $this->assertStringContainsString('Creating: User DTO', $result['output']);
     }
+
+    public function testGenerateWithNestedDtoSubfolder(): void
+    {
+        // Create config/dto/ subfolder with multiple XML files
+        mkdir($this->tempDir . '/config/dto', 0777, true);
+
+        $userXml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+        $orderXml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="Order">
+        <field name="orderId" type="int"/>
+        <field name="total" type="float"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto/user.xml', $userXml);
+        file_put_contents($this->tempDir . '/config/dto/order.xml', $orderXml);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/UserDto.php');
+        $this->assertFileExists($this->tempDir . '/src/Dto/OrderDto.php');
+
+        // Verify both DTOs have correct content
+        $userContent = file_get_contents($this->tempDir . '/src/Dto/UserDto.php');
+        $this->assertStringContainsString('class UserDto', $userContent);
+
+        $orderContent = file_get_contents($this->tempDir . '/src/Dto/OrderDto.php');
+        $this->assertStringContainsString('class OrderDto', $orderContent);
+    }
+
+    public function testVerboseShowsDiffOnModification(): void
+    {
+        // Create initial config
+        $xml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $xml);
+
+        // First run to create the file
+        $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        // Modify config - add a new field
+        $modifiedXml = <<<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="User">
+        <field name="id" type="int"/>
+        <field name="email" type="string"/>
+    </dto>
+</dtos>
+XML;
+        file_put_contents($this->tempDir . '/config/dto.xml', $modifiedXml);
+
+        // Second run with --verbose should show diff
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --verbose',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        $this->assertSame(self::CODE_CHANGES, $result['exitCode']);
+        $this->assertStringContainsString('Changes in User DTO:', $result['output']);
+        // Diff output should show added lines with + prefix
+        $this->assertStringContainsString('|', $result['output']);
+        // The new email field should appear in the diff
+        $this->assertStringContainsString('email', $result['output']);
+    }
 }

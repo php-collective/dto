@@ -95,7 +95,7 @@ Field::class('money', \Money\Money::class)->factory('fromArray')
 Field::enum('status', \App\Enum\OrderStatus::class)
 ```
 
-### Union Types (PHP 8.0+)
+### Union Types
 
 ```php
 Field::union('id', 'int', 'string')              // int|string

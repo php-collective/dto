@@ -432,3 +432,229 @@ $dto2 = new UserDto(['id' => 1, 'name' => 'John']);
 // Compare by value using toArray()
 $areEqual = $dto1->toArray() === $dto2->toArray(); // true
 ```
+
+## Data Transformation Patterns
+
+Unlike some runtime DTO libraries that offer "data pipes" for transforming data before/after hydration, php-collective/dto uses code generation. Here are patterns to achieve similar functionality.
+
+### Pre-Processing (Transform Before DTO Creation)
+
+Transform input data before passing to the DTO constructor:
+
+```php
+class UserDtoFactory
+{
+    public static function fromRequest(array $data): UserDto
+    {
+        // Normalize/transform data before DTO creation
+        $normalized = [
+            'name' => trim($data['name'] ?? ''),
+            'email' => strtolower(trim($data['email'] ?? '')),
+            'phone' => self::normalizePhone($data['phone'] ?? null),
+            'createdAt' => new DateTimeImmutable($data['created_at'] ?? 'now'),
+        ];
+
+        return new UserDto($normalized);
+    }
+
+    private static function normalizePhone(?string $phone): ?string
+    {
+        if ($phone === null) {
+            return null;
+        }
+        // Remove non-digits
+        return preg_replace('/[^0-9]/', '', $phone);
+    }
+}
+
+// Usage
+$dto = UserDtoFactory::fromRequest($request->all());
+```
+
+### Post-Processing (Transform After DTO Creation)
+
+Apply transformations after the DTO is created:
+
+```php
+class UserDtoTransformer
+{
+    public static function withDefaults(UserDto $dto): UserDto
+    {
+        if (!$dto->hasRole()) {
+            $dto->setRole('user');
+        }
+        if (!$dto->hasCreatedAt()) {
+            $dto->setCreatedAt(new DateTimeImmutable());
+        }
+        return $dto;
+    }
+
+    public static function sanitize(UserDto $dto): UserDto
+    {
+        $dto->setName(htmlspecialchars($dto->getName() ?? ''));
+        $dto->setBio(strip_tags($dto->getBio() ?? ''));
+        return $dto;
+    }
+}
+
+// Usage
+$dto = new UserDto($data);
+$dto = UserDtoTransformer::withDefaults($dto);
+$dto = UserDtoTransformer::sanitize($dto);
+```
+
+### Pipeline Pattern
+
+Chain multiple transformations:
+
+```php
+class DtoPipeline
+{
+    /** @var array<callable> */
+    private array $pipes = [];
+
+    public function pipe(callable $transformation): self
+    {
+        $this->pipes[] = $transformation;
+        return $this;
+    }
+
+    public function process(array $data, string $dtoClass): object
+    {
+        // Pre-processing pipes on raw data
+        foreach ($this->pipes as $pipe) {
+            if ($this->isPreProcessor($pipe)) {
+                $data = $pipe($data);
+            }
+        }
+
+        $dto = new $dtoClass($data);
+
+        // Post-processing pipes on DTO
+        foreach ($this->pipes as $pipe) {
+            if ($this->isPostProcessor($pipe)) {
+                $dto = $pipe($dto);
+            }
+        }
+
+        return $dto;
+    }
+}
+
+// Usage
+$pipeline = (new DtoPipeline())
+    ->pipe(fn(array $data) => array_map('trim', $data))  // Pre: trim all strings
+    ->pipe(fn(UserDto $dto) => $dto->setCreatedAt(new DateTimeImmutable()));  // Post: set timestamp
+
+$dto = $pipeline->process($inputData, UserDto::class);
+```
+
+### Service Layer Approach
+
+Encapsulate transformation logic in a service:
+
+```php
+class UserService
+{
+    public function createFromRegistration(array $formData): UserDto
+    {
+        // Pre-process
+        $data = $this->normalizeRegistrationData($formData);
+
+        // Create DTO
+        $dto = new UserDto($data);
+
+        // Post-process
+        $dto->setRole('user');
+        $dto->setStatus('pending');
+        $dto->setCreatedAt(new DateTimeImmutable());
+
+        return $dto;
+    }
+
+    public function createFromApiImport(array $apiData): UserDto
+    {
+        // Different transformation for API imports
+        $data = $this->mapApiFields($apiData);
+        $dto = new UserDto($data, ignoreMissing: true);
+        $dto->setSource('api');
+
+        return $dto;
+    }
+
+    private function normalizeRegistrationData(array $data): array
+    {
+        return [
+            'name' => ucwords(strtolower(trim($data['name'] ?? ''))),
+            'email' => strtolower(trim($data['email'] ?? '')),
+            'password' => $data['password'] ?? null,
+        ];
+    }
+
+    private function mapApiFields(array $apiData): array
+    {
+        return [
+            'name' => $apiData['full_name'] ?? $apiData['name'] ?? '',
+            'email' => $apiData['email_address'] ?? $apiData['email'] ?? '',
+            'externalId' => $apiData['id'] ?? null,
+        ];
+    }
+}
+```
+
+### Output Transformation
+
+Transform DTO output for different contexts:
+
+```php
+class UserDtoPresenter
+{
+    public static function forApi(UserDto $dto): array
+    {
+        $data = $dto->toArray(UserDto::TYPE_UNDERSCORED);
+
+        // Remove sensitive fields
+        unset($data['password'], $data['api_key']);
+
+        // Add computed fields
+        $data['full_name'] = $dto->getFirstName() . ' ' . $dto->getLastName();
+        $data['avatar_url'] = self::avatarUrl($dto->getEmail());
+
+        return $data;
+    }
+
+    public static function forAdmin(UserDto $dto): array
+    {
+        $data = $dto->toArray();
+
+        // Include audit fields for admin view
+        $data['lastLoginFormatted'] = $dto->getLastLogin()?->format('Y-m-d H:i');
+        $data['accountAge'] = $dto->getCreatedAt()?->diff(new DateTimeImmutable())->days;
+
+        return $data;
+    }
+
+    private static function avatarUrl(?string $email): string
+    {
+        if (!$email) {
+            return '/images/default-avatar.png';
+        }
+        return 'https://gravatar.com/avatar/' . md5(strtolower($email));
+    }
+}
+
+// Usage
+return response()->json(UserDtoPresenter::forApi($userDto));
+```
+
+### Why No Built-in Pipes?
+
+php-collective/dto intentionally keeps DTOs as pure data containers without transformation logic:
+
+1. **Separation of concerns**: DTOs hold data; services transform it
+2. **Testability**: Transformation logic can be unit tested independently
+3. **Flexibility**: Different contexts can use different transformations
+4. **Performance**: No overhead from pipe chain evaluation
+5. **Clarity**: Explicit transformation code is easier to understand and debug
+
+The patterns above achieve the same results while keeping your code explicit and maintainable.

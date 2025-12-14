@@ -15,7 +15,7 @@ use PhpCollective\Dto\Generator\TypeScriptGenerator;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Tests for PHP 8.0+ union type support.
+ * Tests for PHP union type support.
  */
 class UnionTypeTest extends TestCase
 {
@@ -86,7 +86,7 @@ PHP;
         $this->assertSame('int|string', $fields['value']['type']);
         $this->assertSame('int|float|string', $fields['data']['type']);
 
-        // TypeHint should be the union type for PHP 8.0+
+        // TypeHint should be the union type
         $this->assertSame('int|string', $fields['value']['typeHint']);
         $this->assertSame('int|float|string', $fields['data']['typeHint']);
 

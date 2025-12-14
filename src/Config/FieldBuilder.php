@@ -144,7 +144,7 @@ class FieldBuilder
     }
 
     /**
-     * Create a union type field (PHP 8.0+).
+     * Create a union type field.
      *
      * @example Field::union('id', 'int', 'string') // Creates 'int|string'
      * @example Field::union('value', 'int', 'float', 'string') // Creates 'int|float|string'

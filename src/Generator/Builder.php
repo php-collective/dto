@@ -535,7 +535,7 @@ class Builder
 
                 // Pre-compute nullable return type hint (for getters)
                 if ($fields[$key]['nullable']) {
-                    // For union types (PHP 8.0+), use |null suffix instead of ? prefix
+                    // For union types, use |null suffix instead of ? prefix
                     if ($this->isUnionType($fields[$key]['typeHint'])) {
                         $fields[$key]['nullableReturnTypeHint'] = $fields[$key]['typeHint'] . '|null';
                     } else {
@@ -545,7 +545,7 @@ class Builder
             }
 
             if ($fields[$key]['typeHint'] && $this->config['scalarAndReturnTypes'] && $fields[$key]['nullable']) {
-                // For union types (PHP 8.0+), use |null suffix instead of ? prefix
+                // For union types, use |null suffix instead of ? prefix
                 if ($this->isUnionType($fields[$key]['typeHint'])) {
                     $fields[$key]['nullableTypeHint'] = $fields[$key]['typeHint'] . '|null';
                 } else {
@@ -832,11 +832,11 @@ class Builder
      */
     protected function typehint(string $type): ?string
     {
-        // Handle simple type unions (PHP 8.0+)
+        // Handle simple type unions
         if ($this->isValidSimpleType($type)) {
             $types = explode('|', $type);
             if (count($types) > 1) {
-                // Return union type for PHP 8.0+
+                // Return union type
                 return $type;
             }
         }

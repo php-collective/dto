@@ -271,7 +271,7 @@ class TypeScriptGenerator
      */
     protected function mapScalarType(string $type): string
     {
-        // Handle union types (PHP 8.0+)
+        // Handle union types
         if (str_contains($type, '|')) {
             $types = explode('|', $type);
             $mappedTypes = array_map(fn ($t) => $this->mapSingleScalarType(trim($t)), $types);
