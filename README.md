@@ -50,7 +50,7 @@ vendor/bin/dto generate
 
 ```php
 $car = CarDto::createFromArray(['color' => 'red']);
-$car->setOwner(new OwnerDto(['name' => 'John']));
+$car->setOwner(OwnerDto::create(['name' => 'John']));
 $array = $car->toArray();
 ```
 
