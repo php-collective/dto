@@ -25,5 +25,6 @@ class {{ className }} extends {% if extends starts with '\\' %}{{ extends[1:] | 
 {% include 'element/properties.twig' with {'fields': fields} only -%}
 {% include 'element/metadata.twig' with {'metaData': metaData} only %}
 {% include 'element/map.twig' with {'fields': fields} only %}
+{% include 'element/optimizations.twig' with {'fields': fields, 'immutable': immutable} only %}
 {% include 'element/methods.twig' with {'fields': fields, 'immutable': immutable} only -%}
 }
