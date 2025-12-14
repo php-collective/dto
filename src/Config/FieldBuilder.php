@@ -1,0 +1,308 @@
+<?php
+
+declare(strict_types=1);
+
+namespace PhpCollective\Dto\Config;
+
+/**
+ * Fluent builder for DTO field configuration.
+ *
+ * @example
+ * Field::string('email')->required()
+ * Field::int('id')->required()
+ * Field::dto('address', 'Address')
+ * Field::collection('items', 'Item')->singular('item')
+ */
+class FieldBuilder
+{
+    protected string $name;
+
+    protected string $type;
+
+    protected bool $required = false;
+
+    protected mixed $defaultValue = null;
+
+    protected bool $hasDefaultValue = false;
+
+    protected bool $collection = false;
+
+    protected ?string $collectionType = null;
+
+    protected ?string $singular = null;
+
+    protected bool $associative = false;
+
+    protected ?string $key = null;
+
+    protected ?string $deprecated = null;
+
+    protected ?string $factory = null;
+
+    protected ?string $serialize = null;
+
+    public function __construct(string $name, string $type)
+    {
+        $this->name = $name;
+        $this->type = $type;
+    }
+
+    /**
+     * Create a string field.
+     */
+    public static function string(string $name): static
+    {
+        return new static($name, 'string');
+    }
+
+    /**
+     * Create an integer field.
+     */
+    public static function int(string $name): static
+    {
+        return new static($name, 'int');
+    }
+
+    /**
+     * Create a float field.
+     */
+    public static function float(string $name): static
+    {
+        return new static($name, 'float');
+    }
+
+    /**
+     * Create a boolean field.
+     */
+    public static function bool(string $name): static
+    {
+        return new static($name, 'bool');
+    }
+
+    /**
+     * Create an array field.
+     */
+    public static function array(string $name, ?string $elementType = null): static
+    {
+        $type = $elementType ? $elementType . '[]' : 'array';
+
+        return new static($name, $type);
+    }
+
+    /**
+     * Create a field referencing another DTO.
+     */
+    public static function dto(string $name, string $dtoName): static
+    {
+        return new static($name, $dtoName);
+    }
+
+    /**
+     * Create a collection field.
+     */
+    public static function collection(string $name, string $elementType): static
+    {
+        $field = new static($name, $elementType . '[]');
+        $field->collection = true;
+
+        return $field;
+    }
+
+    /**
+     * Create a field with a class type (e.g., DateTimeImmutable).
+     */
+    public static function class(string $name, string $className): static
+    {
+        // Ensure FQCN starts with backslash
+        if (!str_starts_with($className, '\\')) {
+            $className = '\\' . $className;
+        }
+
+        return new static($name, $className);
+    }
+
+    /**
+     * Create an enum field.
+     */
+    public static function enum(string $name, string $enumClass): static
+    {
+        if (!str_starts_with($enumClass, '\\')) {
+            $enumClass = '\\' . $enumClass;
+        }
+
+        return new static($name, $enumClass);
+    }
+
+    /**
+     * Create a mixed type field.
+     */
+    public static function mixed(string $name): static
+    {
+        return new static($name, 'mixed');
+    }
+
+    /**
+     * Create a field with explicit type.
+     */
+    public static function of(string $name, string $type): static
+    {
+        return new static($name, $type);
+    }
+
+    /**
+     * Mark field as required.
+     */
+    public function required(): static
+    {
+        $this->required = true;
+
+        return $this;
+    }
+
+    /**
+     * Set default value.
+     */
+    public function default(mixed $value): static
+    {
+        $this->defaultValue = $value;
+        $this->hasDefaultValue = true;
+
+        return $this;
+    }
+
+    /**
+     * Mark as collection (ArrayObject).
+     */
+    public function asCollection(?string $collectionType = null): static
+    {
+        $this->collection = true;
+        $this->collectionType = $collectionType;
+
+        return $this;
+    }
+
+    /**
+     * Set singular name for collection add methods.
+     */
+    public function singular(string $name): static
+    {
+        $this->singular = $name;
+
+        return $this;
+    }
+
+    /**
+     * Mark collection as associative.
+     */
+    public function associative(?string $key = null): static
+    {
+        $this->associative = true;
+        $this->key = $key;
+
+        return $this;
+    }
+
+    /**
+     * Mark field as deprecated.
+     */
+    public function deprecated(string $message = ''): static
+    {
+        $this->deprecated = $message ?: 'true';
+
+        return $this;
+    }
+
+    /**
+     * Set factory method for instantiation.
+     */
+    public function factory(string $method): static
+    {
+        $this->factory = $method;
+
+        return $this;
+    }
+
+    /**
+     * Set serialization mode.
+     */
+    public function serialize(string $mode): static
+    {
+        $this->serialize = $mode;
+
+        return $this;
+    }
+
+    /**
+     * Get field name.
+     */
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    /**
+     * Build the field configuration array.
+     *
+     * @return array<string, mixed>|string
+     */
+    public function toArray(): array|string
+    {
+        // Simple case: just a type string
+        if (
+            !$this->required &&
+            !$this->hasDefaultValue &&
+            !$this->collection &&
+            $this->singular === null &&
+            !$this->associative &&
+            $this->deprecated === null &&
+            $this->factory === null &&
+            $this->serialize === null
+        ) {
+            return $this->type;
+        }
+
+        $config = ['type' => $this->type];
+
+        if ($this->required) {
+            $config['required'] = true;
+        }
+
+        if ($this->hasDefaultValue) {
+            $config['defaultValue'] = $this->defaultValue;
+        }
+
+        if ($this->collection) {
+            $config['collection'] = true;
+        }
+
+        if ($this->collectionType !== null) {
+            $config['collectionType'] = $this->collectionType;
+        }
+
+        if ($this->singular !== null) {
+            $config['singular'] = $this->singular;
+        }
+
+        if ($this->associative) {
+            $config['associative'] = true;
+        }
+
+        if ($this->key !== null) {
+            $config['key'] = $this->key;
+        }
+
+        if ($this->deprecated !== null) {
+            $config['deprecated'] = $this->deprecated;
+        }
+
+        if ($this->factory !== null) {
+            $config['factory'] = $this->factory;
+        }
+
+        if ($this->serialize !== null) {
+            $config['serialize'] = $this->serialize;
+        }
+
+        return $config;
+    }
+}

@@ -344,6 +344,31 @@ return [
 ];
 ```
 
+### PHP Fluent Builder
+
+For better IDE autocomplete and type safety, use the fluent builder API:
+
+```php
+<?php
+// config/dto.php
+use PhpCollective\Dto\Config\Dto;
+use PhpCollective\Dto\Config\Field;
+use PhpCollective\Dto\Config\Schema;
+
+return Schema::create()
+    ->dto(Dto::create('Car')->fields(
+        Field::string('color'),
+        Field::bool('isNew'),
+        Field::dto('owner', 'Owner')->required(),
+    ))
+    ->dto(Dto::create('Owner')->fields(
+        Field::string('name'),
+    ))
+    ->toArray();
+```
+
+See [Configuration Builder](docs/ConfigBuilder.md) for full documentation.
+
 ## Integrations
 
 This is the standalone core library. For framework-specific integrations:
@@ -352,6 +377,7 @@ This is the standalone core library. For framework-specific integrations:
 
 ## Documentation
 
+- [Configuration Builder](docs/ConfigBuilder.md) - Fluent API for defining DTOs
 - [Examples](docs/Examples.md) - Practical usage patterns and recipes
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
 

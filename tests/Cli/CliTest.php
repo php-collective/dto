@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 class CliTest extends TestCase
 {
     protected string $binPath;
+
     protected string $tempDir;
 
     protected function setUp(): void
@@ -40,6 +41,8 @@ class CliTest extends TestCase
 
     /**
      * Exit code when changes were made (in verbose/dry-run mode).
+     *
+     * @var int
      */
     protected const CODE_CHANGES = 2;
 
