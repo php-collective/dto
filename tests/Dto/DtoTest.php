@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Test\Dto;
 
+use ArrayIterator;
 use ArrayObject;
 use InvalidArgumentException;
 use PhpCollective\Dto\Dto\Dto;
@@ -21,6 +22,7 @@ use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
 use PhpCollective\Dto\Test\TestDto\SerializableDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
+use PhpCollective\Dto\Test\TestDto\TraversableDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -897,5 +899,167 @@ class DtoTest extends TestCase
 
         // Non-associative collection, items are added by index
         $this->assertCount(2, $dto->getArrayItems());
+    }
+
+    public function testCustomCollectionFactoryNotCalledForArrayObject(): void
+    {
+        // Custom collection factory is only called for non-ArrayObject collection types
+        // CollectionDto uses ArrayObject, so the standard createCollection() is used
+        $factoryCalled = false;
+        Dto::setCollectionFactory(function (array $items) use (&$factoryCalled) {
+            $factoryCalled = true;
+
+            return new ArrayObject($items);
+        });
+
+        $dto = new CollectionDto([
+            'items' => [
+                ['name' => 'Item 1'],
+            ],
+        ]);
+
+        // Factory NOT called because CollectionDto uses ArrayObject collectionType
+        $this->assertFalse($factoryCalled);
+        $this->assertInstanceOf(ArrayObject::class, $dto->getItems());
+    }
+
+    public function testAbstractDtoUnserializeModifiesSelf(): void
+    {
+        // AbstractDto::unserialize() modifies $this and returns $this
+        // (unlike Dto::unserialize() which returns a clone)
+        $dto = new SimpleDto(['name' => 'Original']);
+        $json = '{"name":"FromJson","count":42}';
+
+        $result = $dto->unserialize($json);
+
+        // Result is the same instance (AbstractDto behavior)
+        $this->assertSame($dto, $result);
+
+        // DTO was modified in place
+        $this->assertSame('FromJson', $dto->getName());
+        $this->assertSame(42, $dto->getCount());
+    }
+
+    public function testAbstractDtoUnserializeWithIgnoreMissing(): void
+    {
+        $dto = new SimpleDto();
+        $json = '{"name":"Test","unknownField":"ignored"}';
+
+        // Should not throw with ignoreMissing
+        $result = $dto->unserialize($json, true);
+
+        $this->assertSame('Test', $result->getName());
+    }
+
+    public function testCloneWithScalarCollectionValues(): void
+    {
+        // Test clone handles non-DTO values in collections
+        $dto = new CollectionDto();
+        $dto->setItems(new ArrayObject(['string1', 'string2', 123]));
+
+        $clone = $dto->clone();
+
+        $this->assertNotSame($dto->getItems(), $clone->getItems());
+        $this->assertSame('string1', $clone->getItems()[0]);
+        $this->assertSame(123, $clone->getItems()[2]);
+    }
+
+    public function testCloneTraversableWithCustomIterator(): void
+    {
+        // Test cloneTraversable() with a custom Traversable (not ArrayObject)
+        $dto = new TraversableDto();
+        $dto->setItems(new ArrayIterator([
+            new SimpleDto(['name' => 'Item 1']),
+            new SimpleDto(['name' => 'Item 2']),
+        ]));
+
+        $clone = $dto->clone();
+
+        // Clone should have different Traversable instance
+        $this->assertNotSame($dto->getItems(), $clone->getItems());
+
+        // Items should be cloned too
+        $originalItems = iterator_to_array($dto->getItems());
+        $clonedItems = iterator_to_array($clone->getItems());
+
+        $this->assertNotSame($originalItems[0], $clonedItems[0]);
+        $this->assertSame('Item 1', $clonedItems[0]->getName());
+
+        // Modifying clone should not affect original
+        $clonedItems[0]->setName('Modified');
+        $this->assertSame('Item 1', $originalItems[0]->getName());
+    }
+
+    public function testCloneTraversableUsesCollectionFactory(): void
+    {
+        // When collection factory is set, cloneTraversable uses it
+        $factoryCalled = false;
+        Dto::setCollectionFactory(function (array $items) use (&$factoryCalled) {
+            $factoryCalled = true;
+
+            return new ArrayIterator($items);
+        });
+
+        $dto = new TraversableDto();
+        $dto->setItems(new ArrayIterator([
+            new SimpleDto(['name' => 'Item 1']),
+        ]));
+
+        $clone = $dto->clone();
+
+        // Factory should be called during clone
+        $this->assertTrue($factoryCalled);
+        $this->assertInstanceOf(ArrayIterator::class, $clone->getItems());
+    }
+
+    public function testCloneTraversableWithoutFactoryReturnsArrayObject(): void
+    {
+        // Without collection factory, cloneTraversable returns ArrayObject
+        Dto::setCollectionFactory(null);
+
+        $dto = new TraversableDto();
+        $dto->setItems(new ArrayIterator([
+            new SimpleDto(['name' => 'Item 1']),
+        ]));
+
+        $clone = $dto->clone();
+
+        // Without factory, falls back to ArrayObject
+        $this->assertInstanceOf(ArrayObject::class, $clone->getItems());
+    }
+
+    public function testCloneTraversableWithPlainObjects(): void
+    {
+        // Test cloneTraversable with non-DTO objects
+        $dto = new TraversableDto();
+        $dto->setItems(new ArrayIterator([
+            new PlainClass('value1'),
+            new PlainClass('value2'),
+        ]));
+
+        $clone = $dto->clone();
+
+        $originalItems = iterator_to_array($dto->getItems());
+        $clonedItems = iterator_to_array($clone->getItems());
+
+        // Plain objects should be cloned
+        $this->assertNotSame($originalItems[0], $clonedItems[0]);
+        $this->assertSame('value1', $clonedItems[0]->value);
+    }
+
+    public function testCloneTraversableWithScalarValues(): void
+    {
+        // Test cloneTraversable with scalar values
+        $dto = new TraversableDto();
+        $dto->setItems(new ArrayIterator(['a', 'b', 123, true]));
+
+        $clone = $dto->clone();
+
+        $clonedItems = iterator_to_array($clone->getItems());
+
+        $this->assertSame('a', $clonedItems[0]);
+        $this->assertSame('b', $clonedItems[1]);
+        $this->assertSame(123, $clonedItems[2]);
+        $this->assertTrue($clonedItems[3]);
     }
 }
