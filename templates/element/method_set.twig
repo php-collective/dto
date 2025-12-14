@@ -3,7 +3,7 @@
 	 * @deprecated {{ deprecated }}
 	 *
 {% endif %}
-	 * @param {{ type }}{% if nullable %}|null{% endif %} ${{ name }}
+	 * @param {{ docBlockType ?? type }}{% if nullable %}|null{% endif %} ${{ name }}
 	 *
 	 * @return $this
 	 */

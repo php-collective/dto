@@ -3,7 +3,7 @@
 	 * @deprecated {{ deprecated }}
 	 *
 {% endif %}
-	 * @return {{ type }}{% if nullable %}|null{% endif %}
+	 * @return {{ docBlockType ?? type }}{% if nullable %}|null{% endif %}
 
 	 */
 	public function get{{ name[:1]|upper ~ name[1:] }}(){% if returnTypeHint %}: {% if nullable %}?{% endif %}{{ returnTypeHint }}{% endif %} {

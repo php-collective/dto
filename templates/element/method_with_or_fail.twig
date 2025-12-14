@@ -3,7 +3,7 @@
 	 * @deprecated {{ deprecated }}
 	 *
 {% endif %}
-	 * @param {{ type }} ${{ name }}
+	 * @param {{ docBlockType ?? type }} ${{ name }}
 {% if not typeHint %}
 	 *
 	 * @throws \RuntimeException If value is not present.
