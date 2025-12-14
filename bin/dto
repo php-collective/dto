@@ -1,0 +1,281 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * Standalone CLI for DTO generation.
+ *
+ * Usage:
+ *   vendor/bin/dto generate [options]
+ *
+ * Options:
+ *   --config-path=PATH Path to config directory (default: config/)
+ *   --src-path=PATH Path to src directory (default: src/)
+ *   --namespace=NS Namespace for generated DTOs (default: App)
+ *   --format=FORMAT Config format: xml, yaml, neon (default: auto-detect)
+ *   --dry-run Show what would be generated without writing files
+ *   --force Regenerate all DTOs, ignoring existing
+ *   --verbose, -v Verbose output
+ *   --quiet, -q Quiet output
+ *   --help, -h Show this help
+ */
+
+// Find autoloader
+$autoloaderPaths = [
+    __DIR__ . '/../vendor/autoload.php', // Development
+    __DIR__ . '/../../../autoload.php', // Installed as dependency
+];
+
+$autoloader = null;
+foreach ($autoloaderPaths as $path) {
+    if (file_exists($path)) {
+        $autoloader = require $path;
+
+        break;
+    }
+}
+
+if ($autoloader === null) {
+    fwrite(STDERR, "Could not find autoloader. Run 'composer install' first.\n");
+    exit(1);
+}
+
+use PhpCollective\Dto\Engine\EngineInterface;
+use PhpCollective\Dto\Engine\NeonEngine;
+use PhpCollective\Dto\Engine\PhpEngine;
+use PhpCollective\Dto\Engine\XmlEngine;
+use PhpCollective\Dto\Engine\YamlEngine;
+use PhpCollective\Dto\Generator\ArrayConfig;
+use PhpCollective\Dto\Generator\Builder;
+use PhpCollective\Dto\Generator\ConsoleIo;
+use PhpCollective\Dto\Generator\Generator;
+use PhpCollective\Dto\Generator\IoInterface;
+use PhpCollective\Dto\Generator\TwigRenderer;
+
+/**
+ * Parse command line arguments.
+ *
+ * @param array<string> $argv
+ *
+ * @return array{command: string|null, config-path: string, src-path: string, namespace: string, format: string|null, dry-run: bool, force: bool, verbose: bool, quiet: bool, help: bool, confirm: bool}
+ */
+function parseArgs(array $argv): array
+{
+    $options = [
+        'command' => null,
+        'config-path' => 'config/',
+        'src-path' => 'src/',
+        'namespace' => 'App',
+        'format' => null,
+        'dry-run' => false,
+        'force' => false,
+        'verbose' => false,
+        'quiet' => false,
+        'help' => false,
+        'confirm' => false,
+    ];
+
+    array_shift($argv); // Remove script name
+
+    foreach ($argv as $arg) {
+        if ($arg === '--help' || $arg === '-h') {
+            $options['help'] = true;
+        } elseif ($arg === '--verbose' || $arg === '-v') {
+            $options['verbose'] = true;
+        } elseif ($arg === '--quiet' || $arg === '-q') {
+            $options['quiet'] = true;
+        } elseif ($arg === '--dry-run') {
+            $options['dry-run'] = true;
+        } elseif ($arg === '--force') {
+            $options['force'] = true;
+        } elseif ($arg === '--confirm') {
+            $options['confirm'] = true;
+        } elseif (str_starts_with($arg, '--config-path=')) {
+            $options['config-path'] = substr($arg, 14);
+        } elseif (str_starts_with($arg, '--src-path=')) {
+            $options['src-path'] = substr($arg, 11);
+        } elseif (str_starts_with($arg, '--namespace=')) {
+            $options['namespace'] = substr($arg, 12);
+        } elseif (str_starts_with($arg, '--format=')) {
+            $options['format'] = substr($arg, 9);
+        } elseif (!str_starts_with($arg, '-') && $options['command'] === null) {
+            $options['command'] = $arg;
+        }
+    }
+
+    return $options;
+}
+
+/**
+ * Show help message.
+ *
+ * @return void
+ */
+function showHelp(): void
+{
+    echo <<<HELP
+DTO Generator - Generate Data Transfer Objects from configuration files
+
+Usage:
+  vendor/bin/dto generate [options]
+  vendor/bin/dto [options]
+
+Commands:
+  generate    Generate DTOs from configuration (default)
+
+Options:
+  --config-path=PATH   Path to config directory (default: config/)
+  --src-path=PATH      Path to src directory (default: src/)
+  --namespace=NS       Namespace for generated DTOs (default: App)
+  --format=FORMAT      Config format: xml, yaml, neon, php (default: auto-detect)
+  --dry-run            Show what would be generated without writing files
+  --force              Regenerate all DTOs, ignoring existing
+  --confirm            Validate PHP syntax of generated files
+  --verbose, -v        Verbose output with diffs
+  --quiet, -q          Minimal output
+  --help, -h           Show this help
+
+Examples:
+  # Generate DTOs with defaults (config/ -> src/Dto/)
+  vendor/bin/dto generate
+
+  # Specify custom paths and namespace
+  vendor/bin/dto generate --config-path=dto/ --src-path=app/ --namespace=MyApp
+
+  # Preview changes without writing
+  vendor/bin/dto generate --dry-run --verbose
+
+  # Force regeneration of all DTOs
+  vendor/bin/dto generate --force
+
+Configuration Formats:
+  The generator supports XML (default), YAML, NEON, and PHP formats.
+  Place your DTO definitions in:
+    - Single file: config/dto.xml (or .yaml, .neon, .php)
+    - Multiple files: config/dto/*.xml (or .yaml, .neon, .php)
+
+
+HELP;
+}
+
+/**
+ * Detect config format from files in the config path.
+ *
+ * @param string $configPath
+ *
+ * @return string
+ */
+function detectFormat(string $configPath): string
+{
+    // Format => file extensions to check
+    $formats = [
+        'xml' => ['xml'],
+        'yaml' => ['yaml', 'yml'],
+        'neon' => ['neon'],
+        'php' => ['php'],
+    ];
+
+    foreach ($formats as $format => $extensions) {
+        foreach ($extensions as $ext) {
+            // Check for single file
+            if (file_exists($configPath . 'dto.' . $ext)) {
+                return $format;
+            }
+            // Check for directory
+            $dir = $configPath . 'dto/';
+            if (is_dir($dir)) {
+                $files = glob($dir . '*.' . $ext);
+                if ($files !== [] && $files !== false) {
+                    return $format;
+                }
+            }
+        }
+    }
+
+    return 'xml'; // Default
+}
+
+/**
+ * Create engine for the specified format.
+ *
+ * @param string $format
+ *
+ * @return \PhpCollective\Dto\Engine\EngineInterface
+ */
+function createEngine(string $format): EngineInterface
+{
+    return match ($format) {
+        'yaml' => new YamlEngine(),
+        'neon' => new NeonEngine(),
+        'php' => new PhpEngine(),
+        default => new XmlEngine(),
+    };
+}
+
+// Parse arguments
+$args = parseArgs($argv);
+
+if ($args['help']) {
+    showHelp();
+    exit(0);
+}
+
+// Default command is generate
+$command = $args['command'] ?? 'generate';
+
+if ($command !== 'generate') {
+    fwrite(STDERR, "Unknown command: {$command}\n");
+    fwrite(STDERR, "Run 'vendor/bin/dto --help' for usage.\n");
+    exit(1);
+}
+
+// Normalize paths
+$configPath = rtrim($args['config-path'], '/') . '/';
+$srcPath = rtrim($args['src-path'], '/') . '/';
+
+// Validate paths
+if (!is_dir($configPath)) {
+    fwrite(STDERR, "Config path does not exist: {$configPath}\n");
+    exit(1);
+}
+
+// Detect or use specified format
+$format = $args['format'] ?? detectFormat($configPath);
+
+// Determine verbosity level
+$verbosity = IoInterface::NORMAL;
+if ($args['quiet']) {
+    $verbosity = IoInterface::QUIET;
+} elseif ($args['verbose']) {
+    $verbosity = IoInterface::VERBOSE;
+}
+
+// Set up components
+$namespace = $args['namespace'];
+$config = new ArrayConfig([
+    'namespace' => $namespace,
+]);
+
+$engine = createEngine($format);
+$builder = new Builder($engine, $config);
+$renderer = new TwigRenderer(null, $config);
+$io = new ConsoleIo($verbosity);
+
+// Create generator and run
+$generator = new Generator($builder, $renderer, $io, $config);
+
+$io->out("Generating DTOs from {$configPath} to {$srcPath}Dto/", 1, IoInterface::VERBOSE);
+$io->out("Namespace: {$namespace}\\Dto", 1, IoInterface::VERBOSE);
+$io->out("Format: {$format}", 1, IoInterface::VERBOSE);
+$io->out('', 1, IoInterface::VERBOSE);
+
+$exitCode = $generator->generate($configPath, $srcPath, [
+    'force' => $args['force'],
+    'dryRun' => $args['dry-run'],
+    'confirm' => $args['confirm'],
+    'verbose' => $args['verbose'],
+    'namespace' => $namespace,
+]);
+
+exit($exitCode);
