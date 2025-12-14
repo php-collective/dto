@@ -107,6 +107,22 @@ composer require php-collective/dto
 
 **Note:** This requires the library in production and write access to the source directory during deployment.
 
+### Exclude Generated DTOs from Static Analysis
+
+Generated DTOs should be excluded from phpcs, phpstan, and similar tools:
+
+**phpcs.xml:**
+```xml
+<exclude-pattern>src/Dto/*</exclude-pattern>
+```
+
+**phpstan.neon:**
+```neon
+parameters:
+    excludePaths:
+        - src/Dto/*
+```
+
 ## 3. Use Generated DTOs
 
 ```php
