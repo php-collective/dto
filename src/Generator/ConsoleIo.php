@@ -12,11 +12,25 @@ class ConsoleIo implements IoInterface
     protected int $verbosity;
 
     /**
-     * @param int $verbosity Verbosity level (QUIET, NORMAL, VERBOSE)
+     * @var resource
      */
-    public function __construct(int $verbosity = self::NORMAL)
+    protected $stdout;
+
+    /**
+     * @var resource
+     */
+    protected $stderr;
+
+    /**
+     * @param int $verbosity Verbosity level (QUIET, NORMAL, VERBOSE)
+     * @param resource|null $stdout Output stream (defaults to STDOUT)
+     * @param resource|null $stderr Error stream (defaults to STDERR)
+     */
+    public function __construct(int $verbosity = self::NORMAL, $stdout = null, $stderr = null)
     {
         $this->verbosity = $verbosity;
+        $this->stdout = $stdout ?? STDOUT;
+        $this->stderr = $stderr ?? STDERR;
     }
 
     /**
@@ -57,11 +71,11 @@ class ConsoleIo implements IoInterface
     public function error(?string $message = null, int $newlines = 1): ?int
     {
         $output = $message ?? '';
-        if ($this->supportsColor(STDERR)) {
+        if ($this->supportsColor($this->stderr)) {
             $output = "\033[31m" . $output . "\033[0m";
         }
 
-        return $this->write($output, $newlines, STDERR);
+        return $this->write($output, $newlines, $this->stderr);
     }
 
     /**
@@ -74,7 +88,7 @@ class ConsoleIo implements IoInterface
         }
 
         $output = $message ?? '';
-        if ($this->supportsColor(STDOUT)) {
+        if ($this->supportsColor($this->stdout)) {
             $output = "\033[32m" . $output . "\033[0m";
         }
 
@@ -96,18 +110,18 @@ class ConsoleIo implements IoInterface
      *
      * @param array<string>|string $message
      * @param int $newlines
-     * @param resource $stream
+     * @param resource|null $stream
      *
      * @return int
      */
-    protected function write(array|string $message, int $newlines = 1, $stream = STDOUT): int
+    protected function write(array|string $message, int $newlines = 1, $stream = null): int
     {
         if (is_array($message)) {
             $message = implode(PHP_EOL, $message);
         }
 
         $message .= str_repeat(PHP_EOL, $newlines);
-        fwrite($stream, $message);
+        fwrite($stream ?? $this->stdout, $message);
 
         return strlen($message);
     }
