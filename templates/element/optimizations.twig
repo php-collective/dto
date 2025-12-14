@@ -1,0 +1,127 @@
+	/**
+	 * Whether this DTO is immutable.
+	 */
+	protected const IS_IMMUTABLE = {{ immutable ? 'true' : 'false' }};
+
+	/**
+	 * Pre-computed setter method names for fast lookup.
+	 *
+	 * @var array<string, string>
+	 */
+	protected static array $_setters = [
+{% for field in fields %}
+		'{{ field.name }}' => '{% if immutable %}with{% else %}set{% endif %}{{ field.name | capitalize }}',
+{% endfor %}
+	];
+
+	/**
+	 * Optimized array assignment without dynamic method calls.
+	 *
+	 * @param array<string, mixed> $data
+	 *
+	 * @return void
+	 */
+	protected function setFromArrayFast(array $data): void
+	{
+{% for field in fields %}
+{% if field.dto %}
+		if (isset($data['{{ field.name }}'])) {
+			$value = $data['{{ field.name }}'];
+			if (is_array($value)) {
+				$value = new {{ field.typeHint }}($value);
+			}
+			$this->{{ field.name }} = $value;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% elseif field.collection and field.collectionType != 'array' %}
+		if (isset($data['{{ field.name }}'])) {
+			$collection = new {{ field.collectionType }}();
+			foreach ($data['{{ field.name }}'] as $item) {
+{% if field.singularClass is defined and field.singularClass %}
+				if (is_array($item)) {
+					$item = new {{ field.singularClass }}($item);
+				}
+{% endif %}
+				$collection->append($item);
+			}
+			$this->{{ field.name }} = $collection;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% elseif field.collection and field.collectionType == 'array' and field.singularClass is defined and field.singularClass %}
+		if (isset($data['{{ field.name }}'])) {
+			$collection = [];
+			foreach ($data['{{ field.name }}'] as $key => $item) {
+				if (is_array($item)) {
+					$item = new {{ field.singularClass }}($item);
+				}
+				$collection[$key] = $item;
+			}
+			$this->{{ field.name }} = $collection;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% else %}
+		if (isset($data['{{ field.name }}'])) {
+			$this->{{ field.name }} = $data['{{ field.name }}'];
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% endif %}
+{% endfor %}
+	}
+{% set fieldsWithDefaults = [] %}
+{% for field in fields %}
+{% if field.defaultValue is not null %}
+{% set fieldsWithDefaults = fieldsWithDefaults | merge([field]) %}
+{% endif %}
+{% endfor %}
+
+	/**
+	 * Optimized setDefaults - only processes fields with default values.
+	 *
+	 * @return $this
+	 */
+	protected function setDefaults()
+	{
+{% if fieldsWithDefaults | length > 0 %}
+{% for field in fieldsWithDefaults %}
+		if ($this->{{ field.name }} === null) {
+			$this->{{ field.name }} = {{ field.defaultValue | json_encode }};
+		}
+{% endfor %}
+{% endif %}
+
+		return $this;
+	}
+{% set requiredFields = [] %}
+{% for field in fields %}
+{% if field.required %}
+{% set requiredFields = requiredFields | merge([field]) %}
+{% endif %}
+{% endfor %}
+
+	/**
+	 * Optimized validate - only checks required fields.
+	 *
+	 * @throws \InvalidArgumentException
+	 *
+	 * @return void
+	 */
+	protected function validate(): void
+	{
+{% if requiredFields | length > 0 %}
+{% set checks = [] %}
+{% for field in requiredFields %}
+{% set checks = checks | merge(['$this->' ~ field.name ~ ' === null']) %}
+{% endfor %}
+		if ({{ checks | join(' || ') }}) {
+			$errors = [];
+{% for field in requiredFields %}
+			if ($this->{{ field.name }} === null) {
+				$errors[] = '{{ field.name }}';
+			}
+{% endfor %}
+			if ($errors) {
+				throw new \InvalidArgumentException('Required fields missing: ' . implode(', ', $errors));
+			}
+		}
+{% endif %}
+	}

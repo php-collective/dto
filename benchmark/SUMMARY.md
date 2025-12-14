@@ -11,12 +11,12 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 ## Quick Summary
 
 | Approach                | Simple DTO | Complex Nested | Property Access | toArray() | JSON |
-|-------------------------|-----------|----------------|-----------------|-----------|------|
-| php-collective/dto      | 452K/s | 72K/s | 4.3M/s | 285K/s | 182K/s |
-| Plain PHP readonly DTOs | 5.5M/s | 546K/s | 8.5M/s | 1.1M/s | 469K/s |
-| Plain array             | 66M/s | 66M/s | 5.9M/s | 76M/s | 910K/s |
+|-------------------------|------------|----------------|-----------------|-----------|------|
+| php-collective/dto      | 3.08M/s    | 500K/s         | 4.9M/s          | 288K/s    | 205K/s |
+| Plain PHP readonly DTOs | 4.96M/s    | 492K/s         | 7.5M/s          | 1.3M/s    | 476K/s |
+| Plain array             | 62M/s      | 73M/s          | 6.1M/s          | 66M/s     | 945K/s |
 
-**Key Finding**: `php-collective/dto` is ~12x slower than plain PHP readonly DTOs for creation, but provides significant developer experience benefits (IDE autocomplete, type safety, generated code review).
+**Key Finding**: After optimizations, `php-collective/dto` is only ~1.6x slower than plain PHP readonly DTOs for creation, while providing significant developer experience benefits (IDE autocomplete, type safety, generated code review).
 
 ---
 
@@ -26,13 +26,13 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain nested array (baseline) | 0.02 µs | 66,302,885/s | 147x |
-| Plain PHP readonly DTO | 0.18 µs | 5,451,163/s | 12.1x |
-| Plain PHP DTO::fromArray() | 0.20 µs | 5,052,718/s | 11.2x |
-| **php-collective/dto new()** | **2.21 µs** | **452,391/s** | **1x** |
-| php-collective/dto createFromArray() | 2.51 µs | 398,937/s | 0.88x |
+| Plain nested array (baseline) | 0.02 µs | 61,979,757/s | 20x |
+| Plain PHP readonly DTO | 0.20 µs | 4,959,353/s | 1.6x |
+| Plain PHP DTO::fromArray() | 0.22 µs | 4,560,165/s | 1.5x |
+| **php-collective/dto new()** | **0.32 µs** | **3,077,193/s** | **1x** |
+| php-collective/dto createFromArray() | 0.35 µs | 2,884,460/s | 0.94x |
 
-**Analysis**: The library has overhead from metadata processing and field validation. Plain PHP is faster but requires manual boilerplate.
+**Analysis**: With optimizations, the gap with plain PHP is minimal. Direct property assignment in `setFromArrayFast()` eliminates dynamic method call overhead.
 
 ---
 
@@ -40,11 +40,11 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain nested array | 0.02 µs | 66,475,218/s | 929x |
-| Plain PHP nested DTOs | 1.83 µs | 545,629/s | 7.6x |
-| **php-collective/dto nested** | **13.97 µs** | **71,566/s** | **1x** |
+| Plain nested array | 0.01 µs | 73,219,306/s | 146x |
+| Plain PHP nested DTOs | 2.03 µs | 491,757/s | 0.98x |
+| **php-collective/dto nested** | **2.00 µs** | **501,211/s** | **1x** |
 
-**Analysis**: Nested DTO creation shows more overhead due to recursive instantiation and collection handling. Still processes 72K complex objects per second.
+**Analysis**: For nested DTOs, php-collective/dto is now **equal to or faster than** plain PHP DTOs! The optimized code generation produces highly efficient nested instantiation.
 
 ---
 
@@ -52,9 +52,9 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain PHP property access | 0.12 µs | 8,505,535/s | 2.0x |
-| Plain array access | 0.17 µs | 5,863,765/s | 1.4x |
-| **php-collective/dto getters** | **0.23 µs** | **4,325,022/s** | **1x** |
+| Plain PHP property access | 0.13 µs | 7,456,921/s | 1.5x |
+| Plain array access | 0.15 µs | 6,510,497/s | 1.3x |
+| **php-collective/dto getters** | **0.20 µs** | **4,949,099/s** | **1x** |
 
 **Analysis**: Getter method calls are nearly as fast as direct property access. The small overhead is negligible in real applications.
 
@@ -64,11 +64,11 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain array (no conversion) | 0.01 µs | 75,575,507/s | 265x |
-| Plain PHP toArray() | 0.90 µs | 1,104,989/s | 3.9x |
-| **php-collective/dto toArray()** | **3.51 µs** | **284,654/s** | **1x** |
+| Plain array (no conversion) | 0.02 µs | 65,627,133/s | 229x |
+| Plain PHP toArray() | 0.78 µs | 1,280,233/s | 4.5x |
+| **php-collective/dto toArray()** | **3.47 µs** | **288,312/s** | **1x** |
 
-**Analysis**: Serialization includes nested DTO handling and metadata processing. Consider caching for repeated serialization.
+**Analysis**: Serialization includes nested DTO handling and metadata processing.
 
 ---
 
@@ -76,11 +76,11 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain array -> JSON | 1.10 µs | 909,717/s | 5.0x |
-| Plain PHP DTO -> JSON | 2.13 µs | 469,169/s | 2.6x |
-| **php-collective/dto -> JSON** | **5.50 µs** | **181,720/s** | **1x** |
+| Plain array -> JSON | 1.06 µs | 944,738/s | 4.6x |
+| Plain PHP DTO -> JSON | 2.10 µs | 476,015/s | 2.3x |
+| **php-collective/dto -> JSON** | **4.87 µs** | **205,162/s** | **1x** |
 
-**Analysis**: JSON serialization combines toArray() overhead with json_encode(). Still achieves 182K JSON documents per second.
+**Analysis**: JSON serialization combines toArray() overhead with json_encode(). Still achieves 205K JSON documents per second.
 
 ---
 
@@ -88,11 +88,11 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec | Relative |
 |-----------|----------|---------|----------|
-| Plain PHP DTO template render | 0.78 µs | 1,282,572/s | 1.5x |
-| Plain array template render | 0.84 µs | 1,186,342/s | 1.4x |
-| **php-collective/dto template render** | **1.15 µs** | **867,660/s** | **1x** |
+| Plain PHP DTO template render | 0.70 µs | 1,432,142/s | 1.7x |
+| Plain array template render | 0.83 µs | 1,201,853/s | 1.4x |
+| **php-collective/dto template render** | **1.17 µs** | **853,060/s** | **1x** |
 
-**Analysis**: In template rendering scenarios, the difference becomes minimal. Getter overhead is amortized across multiple operations.
+**Analysis**: In template rendering scenarios, the difference is minimal. Getter overhead is amortized across multiple operations.
 
 ---
 
@@ -100,10 +100,10 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec |
 |-----------|----------|---------|
-| Mutable DTO: setName() | 0.04 µs | 24,117,423/s |
-| Immutable DTO: withName() | 0.13 µs | 7,922,311/s |
+| Mutable DTO: setName() | 0.05 µs | 20,671,065/s |
+| Immutable DTO: withName() | 0.14 µs | 7,203,345/s |
 
-**Analysis**: Immutable operations are ~3x slower due to object cloning, but still very fast at 7.9M ops/sec.
+**Analysis**: Immutable operations are ~3x slower due to object cloning, but still very fast at 7.2M ops/sec.
 
 ---
 
@@ -111,8 +111,8 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 | Benchmark | Avg Time | Ops/sec |
 |-----------|----------|---------|
-| Plain array append | 0.07 µs | 13,707,662/s |
-| php-collective/dto addItem() | 3.99 µs | 250,756/s |
+| Plain array append | 0.07 µs | 13,490,343/s |
+| php-collective/dto addItem() | 0.94 µs | 1,065,594/s |
 
 **Analysis**: Collection operations include type validation and ArrayObject management.
 
@@ -124,42 +124,42 @@ Actual benchmark results (run `php benchmark/run-external.php`):
 
 ### Simple DTO Creation
 
-| Library                              | Ops/sec     | vs php-collective/dto |
-|--------------------------------------|-------------|----------------------|
-| **php-collective/dto**               | 445,348/s   | baseline             |
-| **symfony/serializer denormalize()** | 108,970/s   | 4.1x slower          |
-| **symfony/serializer deserialize()** | 96,705/s    | 4.6x slower          |
-| **cuyz/valinor**                     | 53,706/s    | 8.3x slower          |
-| **spatie/data-transfer-object**      | 54,467/s    | 8.2x slower          |
-| **cuyz/valinor (with setup)**        | 5,615/s     | 79x slower           |
-| **spatie/laravel-data**              | N/A         | Requires Laravel     |
-| **Plain PHP 8.2+**                   | ~5,500,000/s| 13x faster           |
+| Library                              | Ops/sec       | vs php-collective/dto |
+|--------------------------------------|---------------|----------------------|
+| **php-collective/dto**               | 2,784,222/s   | baseline             |
+| **symfony/serializer denormalize()** | 97,534/s      | 28x slower           |
+| **symfony/serializer deserialize()** | 80,641/s      | 35x slower           |
+| **cuyz/valinor**                     | 51,255/s      | 54x slower           |
+| **spatie/data-transfer-object**      | 50,215/s      | 55x slower           |
+| **cuyz/valinor (with setup)**        | 4,254/s       | 654x slower          |
+| **spatie/laravel-data**              | N/A           | Requires Laravel     |
+| **Plain PHP 8.2+**                   | ~4,960,000/s  | 1.8x faster          |
 
 ### Complex Nested DTO Creation
 
-| Library                  | Ops/sec   | Notes                              |
-|--------------------------|-----------|-----------------------------------|
-| **php-collective/dto**   | 76,277/s  | Full nested Order with User, Address, Items |
+| Library                  | Ops/sec   | Notes                                      |
+|--------------------------|-----------|-------------------------------------------|
+| **php-collective/dto**   | 392,763/s | Full nested Order with User, Address, Items |
 
 ### Read Operations (10 property reads)
 
 | Library                        | Ops/sec      | Notes                    |
 |--------------------------------|--------------|--------------------------|
-| **spatie/data-transfer-object**| 18,983,329/s | Direct property access   |
-| **php-collective/dto**         | 5,732,459/s  | Getter methods           |
+| **spatie/data-transfer-object**| 17,971,906/s | Direct property access   |
+| **php-collective/dto**         | 5,397,513/s  | Getter methods           |
 
 ### Realistic Scenario (1 Create + 10 Reads)
 
-| Library                        | Ops/sec   | vs php-collective/dto |
-|--------------------------------|-----------|----------------------|
-| **php-collective/dto**         | 370,562/s | baseline             |
-| **symfony/serializer**         | 103,256/s | 3.6x slower          |
-| **spatie/data-transfer-object**| 52,286/s  | 7.1x slower          |
+| Library                        | Ops/sec     | vs php-collective/dto |
+|--------------------------------|-------------|----------------------|
+| **php-collective/dto**         | 1,483,882/s | baseline             |
+| **symfony/serializer**         | 80,966/s    | 18x slower           |
+| **spatie/data-transfer-object**| 40,141/s    | 37x slower           |
 
 **Key Insights**:
-- `php-collective/dto` is **4-8x faster** than runtime reflection libraries for creation
+- `php-collective/dto` is **28-55x faster** than runtime reflection libraries for creation
 - Read performance: Spatie's direct property access is faster, but getter overhead is minimal
-- **Realistic scenario**: php-collective/dto is 3.6-7x faster than alternatives when combining create + read
+- **Realistic scenario**: php-collective/dto is 18-37x faster than alternatives when combining create + read
 - Code generation eliminates runtime overhead from reflection and type parsing
 - `spatie/laravel-data` requires Laravel framework and cannot run standalone
 
@@ -169,15 +169,15 @@ Actual benchmark results (run `php benchmark/run-external.php`):
 
 ### Scenarios Where php-collective/dto Excels
 
-1. **API Response Serialization** (182K JSON/s)
+1. **API Response Serialization** (205K JSON/s)
    - More than sufficient for most web applications
    - Typical API handles 1K-10K requests/second
 
-2. **Template Rendering** (868K/s)
+2. **Template Rendering** (853K/s)
    - Minimal overhead in view layer
    - Getter calls are negligible vs I/O
 
-3. **Batch Processing** (72K complex DTOs/s)
+3. **Batch Processing** (500K complex DTOs/s)
    - Can process millions of records per minute
    - Consider streaming for very large datasets
 
@@ -223,8 +223,8 @@ bin/dto generate --config-path=benchmark/config --src-path=benchmark/src --names
 # Full benchmark suite
 php benchmark/run.php
 
-# Compare with external libraries
-composer require --dev cuyz/valinor
+# Compare with external libraries (install dependencies first)
+cd benchmark && composer install && cd ..
 php benchmark/run-external.php
 
 # With custom iterations

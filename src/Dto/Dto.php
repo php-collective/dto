@@ -198,7 +198,12 @@ abstract class Dto implements Serializable
     public function __construct(?array $data = null, bool $ignoreMissing = false, ?string $type = null)
     {
         if ($data) {
-            $this->setFromArray($data, $ignoreMissing, $type);
+            // Use optimized fast path when available (no special type, no ignoreMissing)
+            if (!$ignoreMissing && $type === null && method_exists($this, 'setFromArrayFast')) {
+                $this->setFromArrayFast($data);
+            } else {
+                $this->setFromArray($data, $ignoreMissing, $type);
+            }
         }
 
         $this->setDefaults();

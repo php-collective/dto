@@ -1,0 +1,30 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Force LF for all text files
+*.php text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.neon text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.twig text eol=lf
+*.xsd text eol=lf
+*.dist text eol=lf
+.editorconfig text eol=lf
+.gitattributes text eol=lf
+.gitignore text eol=lf
+
+# Exclude from export (composer --prefer-dist)
+/.github export-ignore
+/benchmark export-ignore
+/docs export-ignore
+/tests export-ignore
+.editorconfig export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+phpcs.xml export-ignore
+phpstan.neon export-ignore
+phpunit.xml.dist export-ignore
