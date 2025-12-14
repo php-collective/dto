@@ -95,6 +95,17 @@ Field::class('money', \Money\Money::class)->factory('fromArray')
 Field::enum('status', \App\Enum\OrderStatus::class)
 ```
 
+### Union Types (PHP 8.0+)
+
+```php
+Field::union('id', 'int', 'string')              // int|string
+Field::union('value', 'int', 'float', 'string')  // int|float|string
+Field::union('id', 'int', 'string')->required()  // Required union type
+
+// Or using of() for explicit union strings
+Field::of('mixed', 'int|string|null')
+```
+
 ### Custom Types
 
 ```php
@@ -216,12 +227,12 @@ return Schema::create()
         Field::enum('status', \App\Enum\OrderStatus::class)->required(),
     ))
 
-    // Order item
+    // Order item with union type for flexible pricing
     ->dto(Dto::create('OrderItem')->fields(
-        Field::int('productId')->required(),
+        Field::union('productId', 'int', 'string')->required(),  // Flexible ID
         Field::string('name')->required(),
         Field::int('quantity')->required(),
-        Field::float('price')->required(),
+        Field::union('price', 'int', 'float')->required(),  // Price as int or float
     ))
 
     // Immutable event

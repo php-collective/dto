@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Config;
 
 use DateTimeImmutable;
+use InvalidArgumentException;
 use PhpCollective\Dto\Config\Dto;
 use PhpCollective\Dto\Config\Field;
 use PhpCollective\Dto\Config\Schema;
@@ -134,6 +135,38 @@ class BuilderTest extends TestCase
             'type' => 'string',
             'deprecated' => 'Use newField instead',
         ], $field->toArray());
+    }
+
+    public function testFieldUnion(): void
+    {
+        $field = Field::union('id', 'int', 'string');
+
+        $this->assertSame('id', $field->getName());
+        $this->assertSame('int|string', $field->toArray());
+    }
+
+    public function testFieldUnionWithThreeTypes(): void
+    {
+        $field = Field::union('value', 'int', 'float', 'string');
+
+        $this->assertSame('int|float|string', $field->toArray());
+    }
+
+    public function testFieldUnionRequired(): void
+    {
+        $field = Field::union('id', 'int', 'string')->required();
+
+        $this->assertSame([
+            'type' => 'int|string',
+            'required' => true,
+        ], $field->toArray());
+    }
+
+    public function testFieldUnionRequiresAtLeastTwoTypes(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Union types require at least 2 types');
+        Field::union('value', 'int');
     }
 
     public function testFieldFactory(): void

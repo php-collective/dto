@@ -271,6 +271,29 @@ class TypeScriptGenerator
      */
     protected function mapScalarType(string $type): string
     {
+        // Handle union types (PHP 8.0+)
+        if (str_contains($type, '|')) {
+            $types = explode('|', $type);
+            $mappedTypes = array_map(fn ($t) => $this->mapSingleScalarType(trim($t)), $types);
+
+            // Deduplicate (e.g., int|float both map to number)
+            $mappedTypes = array_unique($mappedTypes);
+
+            return implode(' | ', $mappedTypes);
+        }
+
+        return $this->mapSingleScalarType($type);
+    }
+
+    /**
+     * Map a single scalar or class type.
+     *
+     * @param string $type
+     *
+     * @return string
+     */
+    protected function mapSingleScalarType(string $type): string
+    {
         // Check scalar types
         $lowerType = strtolower($type);
         if (isset(self::TYPE_MAP[$lowerType])) {

@@ -132,6 +132,8 @@ $touched = $carDto->touchedToArray();   // Only fields that were set
 
 **Scalar types:** `int`, `float`, `string`, `bool`, `callable`, `resource`, `iterable`, `object`, `mixed`
 
+**Union types (PHP 8.0+):** `int|string`, `int|float|string`, etc.
+
 **Array types:** `array`, `string[]`, `int[]`, etc.
 
 **Objects:**
@@ -143,6 +145,39 @@ $touched = $carDto->touchedToArray();   // Only fields that were set
 - `collection="true"` - as `\ArrayObject` (recommended)
 - `collectionType="array"` - as plain array
 - `collectionType="\Custom\Collection"` - custom collection class
+
+### Union Types
+
+PHP 8.0+ union types are fully supported:
+
+```xml
+<dto name="Product">
+    <field name="id" type="int|string" required="true"/>
+    <field name="price" type="int|float"/>
+</dto>
+```
+
+```yaml
+Product:
+    fields:
+        id:
+            type: int|string
+            required: true
+        price: int|float
+```
+
+Generated PHP with proper type hints:
+
+```php
+class ProductDto extends AbstractDto
+{
+    public function setId(int|string $id): self { ... }
+    public function getId(): int|string { ... }
+
+    public function setPrice(int|float|null $price = null): self { ... }
+    public function getPrice(): int|float|null { ... }
+}
+```
 
 ### Immutable DTOs
 

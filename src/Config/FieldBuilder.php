@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Config;
 
+use InvalidArgumentException;
+
 /**
  * Fluent builder for DTO field configuration.
  *
@@ -139,6 +141,23 @@ class FieldBuilder
     public static function mixed(string $name): static
     {
         return new static($name, 'mixed');
+    }
+
+    /**
+     * Create a union type field (PHP 8.0+).
+     *
+     * @example Field::union('id', 'int', 'string') // Creates 'int|string'
+     * @example Field::union('value', 'int', 'float', 'string') // Creates 'int|float|string'
+     *
+     * @throws \InvalidArgumentException
+     */
+    public static function union(string $name, string ...$types): static
+    {
+        if (count($types) < 2) {
+            throw new InvalidArgumentException('Union types require at least 2 types');
+        }
+
+        return new static($name, implode('|', $types));
     }
 
     /**

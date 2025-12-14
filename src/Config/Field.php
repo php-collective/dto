@@ -17,6 +17,7 @@ namespace PhpCollective\Dto\Config;
  * @method static \PhpCollective\Dto\Config\FieldBuilder class(string $name, string $className)
  * @method static \PhpCollective\Dto\Config\FieldBuilder enum(string $name, string $enumClass)
  * @method static \PhpCollective\Dto\Config\FieldBuilder mixed(string $name)
+ * @method static \PhpCollective\Dto\Config\FieldBuilder union(string $name, string ...$types)
  * @method static \PhpCollective\Dto\Config\FieldBuilder of(string $name, string $type)
  */
 class Field extends FieldBuilder
