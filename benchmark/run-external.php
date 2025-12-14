@@ -11,6 +11,12 @@ declare(strict_types=1);
  * Usage: php benchmark/run-external.php [--iterations=N]
  */
 
+// Conditional use statements moved here (only used if library is installed)
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
+use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
+use Symfony\Component\Serializer\Serializer;
+
 require_once __DIR__ . '/bootstrap.php';
 
 // Autoload benchmark classes
@@ -77,7 +83,7 @@ echo "\n";
 printSection('php-collective/dto (Reference)');
 
 $results['php-collective/dto'] = $r = benchmark('php-collective/dto createFromArray()', function () use ($simpleUserData) {
-    return \Benchmark\Generated\Dto\UserDto::createFromArray($simpleUserData);
+    return \Benchmark\Dto\UserDto::createFromArray($simpleUserData);
 }, $iterations);
 echo formatResult($r) . "\n";
 
@@ -90,7 +96,7 @@ if ($libraries['cuyz/valinor']) {
 
     // Valinor requires a mapper - expensive to create, so we create once
     $mapper = (new \CuyZ\Valinor\MapperBuilder())
-        ->enableFlexibleCasting()
+        ->allowPermissiveTypes()
         ->mapper();
 
     // Define a simple target class for Valinor
@@ -129,11 +135,6 @@ if ($libraries['cuyz/valinor']) {
 
 if ($libraries['symfony/serializer']) {
     printSection('Symfony Serializer');
-
-    use Symfony\Component\Serializer\Encoder\JsonEncoder;
-    use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
-    use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
-    use Symfony\Component\Serializer\Serializer;
 
     // Create serializer once
     $serializer = new Serializer(

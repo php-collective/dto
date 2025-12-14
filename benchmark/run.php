@@ -105,13 +105,13 @@ echo formatResult($r) . "\n";
 
 // php-collective/dto
 $results[] = $r = benchmark('php-collective/dto new()', function () use ($simpleUserData) {
-    return new \Benchmark\Generated\Dto\UserDto($simpleUserData);
+    return new \Benchmark\Dto\UserDto($simpleUserData);
 }, $iterations);
 echo formatResult($r) . "\n";
 
 // php-collective/dto createFromArray
 $results[] = $r = benchmark('php-collective/dto createFromArray()', function () use ($simpleUserData) {
-    return \Benchmark\Generated\Dto\UserDto::createFromArray($simpleUserData);
+    return \Benchmark\Dto\UserDto::createFromArray($simpleUserData);
 }, $iterations);
 echo formatResult($r) . "\n";
 
@@ -135,7 +135,7 @@ echo formatResult($r) . "\n";
 
 // php-collective/dto nested
 $results[] = $r = benchmark('php-collective/dto nested', function () use ($complexOrderData) {
-    return new \Benchmark\Generated\Dto\OrderDto($complexOrderData);
+    return new \Benchmark\Dto\OrderDto($complexOrderData);
 }, $iterations);
 echo formatResult($r) . "\n";
 
@@ -152,7 +152,7 @@ echo formatResult($r) . "\n";
 printSection('3. Property Access (10 reads)');
 
 $plainUser = \Benchmark\PlainDto\UserDto::fromArray($simpleUserData);
-$generatedUser = new \Benchmark\Generated\Dto\UserDto($simpleUserData);
+$generatedUser = new \Benchmark\Dto\UserDto($simpleUserData);
 
 $results[] = $r = benchmark('Plain PHP property access', function () use ($plainUser) {
     $a = $plainUser->id;
@@ -209,7 +209,7 @@ echo formatResult($r) . "\n";
 printSection('4. Serialization - toArray()');
 
 $plainOrder = \Benchmark\PlainDto\OrderDto::fromArray($complexOrderData);
-$generatedOrder = new \Benchmark\Generated\Dto\OrderDto($complexOrderData);
+$generatedOrder = new \Benchmark\Dto\OrderDto($complexOrderData);
 
 $results[] = $r = benchmark('Plain PHP toArray()', function () use ($plainOrder) {
     return $plainOrder->toArray();
@@ -301,7 +301,7 @@ echo formatResult($r) . "\n";
 
 printSection('7. Mutable vs Immutable Operations');
 
-$mutableUser = new \Benchmark\Generated\Dto\UserDto($simpleUserData);
+$mutableUser = new \Benchmark\Dto\UserDto($simpleUserData);
 $immutableUserData = [
     'id' => 1,
     'name' => 'John Doe',
@@ -309,7 +309,7 @@ $immutableUserData = [
     'phone' => '+1234567890',
     'active' => true,
 ];
-$immutableUser = new \Benchmark\Generated\Dto\ImmutableUserDto($immutableUserData);
+$immutableUser = new \Benchmark\Dto\ImmutableUserDto($immutableUserData);
 
 $results[] = $r = benchmark('Mutable DTO: setName()', function () use ($mutableUser) {
     $mutableUser->setName('Jane Doe');
@@ -330,14 +330,14 @@ echo formatResult($r) . "\n";
 printSection('8. Collection Operations');
 
 $results[] = $r = benchmark('php-collective/dto addItem()', function () use ($generatedOrder) {
-    $order = new \Benchmark\Generated\Dto\OrderDto([
+    $order = new \Benchmark\Dto\OrderDto([
         'id' => 1,
         'customer' => $generatedOrder->getCustomer(),
         'shippingAddress' => $generatedOrder->getShippingAddress(),
         'total' => 0,
         'status' => 'new',
     ]);
-    $order->addItem(new \Benchmark\Generated\Dto\OrderItemDto([
+    $order->addItem(new \Benchmark\Dto\OrderItemDto([
         'productId' => 99,
         'name' => 'Test',
         'quantity' => 1,
