@@ -6,6 +6,7 @@ namespace PhpCollective\Dto\Test\TestDto;
 
 use PhpCollective\Dto\Dto\AbstractDto;
 use PhpCollective\Dto\Test\Generator\Fixtures\FromArrayToArrayClass;
+use PhpCollective\Dto\Test\Generator\Fixtures\StringableClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\ToArrayClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
 
@@ -17,6 +18,8 @@ class SerializableDto extends AbstractDto
     protected ?FromArrayToArrayClass $fromArrayData = null;
 
     protected ?ToArrayClass $toArrayData = null;
+
+    protected ?StringableClass $stringData = null;
 
     protected ?UnitEnum $status = null;
 
@@ -52,6 +55,20 @@ class SerializableDto extends AbstractDto
             'isClass' => true,
             'enum' => null,
         ],
+        'stringData' => [
+            'type' => StringableClass::class,
+            'required' => false,
+            'defaultValue' => null,
+            'dto' => false,
+            'collectionType' => null,
+            'singularType' => null,
+            'associative' => false,
+            'key' => null,
+            'serialize' => 'string',
+            'factory' => null,
+            'isClass' => true,
+            'enum' => null,
+        ],
         'status' => [
             'type' => UnitEnum::class,
             'required' => false,
@@ -75,11 +92,13 @@ class SerializableDto extends AbstractDto
         'underscored' => [
             'fromArrayData' => 'from_array_data',
             'toArrayData' => 'to_array_data',
+            'stringData' => 'string_data',
             'status' => 'status',
         ],
         'dashed' => [
             'fromArrayData' => 'from-array-data',
             'toArrayData' => 'to-array-data',
+            'stringData' => 'string-data',
             'status' => 'status',
         ],
     ];
@@ -118,6 +137,24 @@ class SerializableDto extends AbstractDto
     public function hasToArrayData(): bool
     {
         return $this->toArrayData !== null;
+    }
+
+    public function getStringData(): ?StringableClass
+    {
+        return $this->stringData;
+    }
+
+    public function setStringData(?StringableClass $stringData): self
+    {
+        $this->stringData = $stringData;
+        $this->_touchedFields['stringData'] = true;
+
+        return $this;
+    }
+
+    public function hasStringData(): bool
+    {
+        return $this->stringData !== null;
     }
 
     public function getStatus(): ?UnitEnum

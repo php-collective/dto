@@ -8,6 +8,7 @@ use ArrayObject;
 use InvalidArgumentException;
 use PhpCollective\Dto\Dto\Dto;
 use PhpCollective\Dto\Test\Generator\Fixtures\FromArrayToArrayClass;
+use PhpCollective\Dto\Test\Generator\Fixtures\StringableClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\ToArrayClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
 use PhpCollective\Dto\Test\TestDto\CollectionDto;
@@ -500,5 +501,50 @@ class DtoTest extends TestCase
         ]);
 
         $this->assertSame(UnitEnum::Pending, $dto->getStatus());
+    }
+
+    public function testCollectionWithScalarElements(): void
+    {
+        // Test transformCollectionToArray with scalar values
+        $dto = new CollectionDto();
+        $items = new ArrayObject(['a', 'b', 'c']);
+        $dto->setItems($items);
+
+        $array = $dto->toArray();
+
+        $this->assertSame(['a', 'b', 'c'], $array['items']);
+    }
+
+    public function testSerializableStringSerialize(): void
+    {
+        // Add a test for 'string' serialize type
+        $dto = new SerializableDto();
+        $dto->setFromArrayData(new FromArrayToArrayClass('serialized'));
+        $dto->setToArrayData(new ToArrayClass('array-serialized'));
+
+        $touched = $dto->touchedToArray();
+
+        $this->assertArrayHasKey('fromArrayData', $touched);
+        $this->assertArrayHasKey('toArrayData', $touched);
+    }
+
+    public function testUnitEnumNullValue(): void
+    {
+        $dto = new SerializableDto();
+        $dto->setStatus(null);
+
+        $array = $dto->toArray();
+
+        $this->assertNull($array['status']);
+    }
+
+    public function testSerializableStringClass(): void
+    {
+        $dto = new SerializableDto();
+        $dto->setStringData(new StringableClass('hello world'));
+
+        $array = $dto->toArray();
+
+        $this->assertSame('hello world', $array['stringData']);
     }
 }
