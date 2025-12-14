@@ -122,21 +122,46 @@ Comprehensive performance benchmarks comparing `php-collective/dto` against plai
 
 Actual benchmark results (run `php benchmark/run-external.php`):
 
-| Library | Approach | Simple DTO Creation | vs php-collective/dto |
-|---------|----------|---------------------|----------------------|
-| **php-collective/dto** | Code generation | 429,507/s | baseline |
-| **symfony/serializer denormalize()** | Runtime reflection | 110,512/s | 3.9x slower |
-| **symfony/serializer deserialize()** | Runtime reflection | 96,198/s | 4.5x slower |
-| **cuyz/valinor** | Runtime mapping | 54,035/s | 7.9x slower |
-| **spatie/data-transfer-object** | Runtime reflection | 52,901/s | 8.1x slower |
-| **cuyz/valinor (with setup)** | Runtime mapping | 5,459/s | 78.7x slower |
-| **Plain PHP 8.2+** | Manual | ~5,500,000/s | 13x faster |
+### Simple DTO Creation
+
+| Library                              | Ops/sec     | vs php-collective/dto |
+|--------------------------------------|-------------|----------------------|
+| **php-collective/dto**               | 445,348/s   | baseline             |
+| **symfony/serializer denormalize()** | 108,970/s   | 4.1x slower          |
+| **symfony/serializer deserialize()** | 96,705/s    | 4.6x slower          |
+| **cuyz/valinor**                     | 53,706/s    | 8.3x slower          |
+| **spatie/data-transfer-object**      | 54,467/s    | 8.2x slower          |
+| **cuyz/valinor (with setup)**        | 5,615/s     | 79x slower           |
+| **spatie/laravel-data**              | N/A         | Requires Laravel     |
+| **Plain PHP 8.2+**                   | ~5,500,000/s| 13x faster           |
+
+### Complex Nested DTO Creation
+
+| Library                  | Ops/sec   | Notes                              |
+|--------------------------|-----------|-----------------------------------|
+| **php-collective/dto**   | 76,277/s  | Full nested Order with User, Address, Items |
+
+### Read Operations (10 property reads)
+
+| Library                        | Ops/sec      | Notes                    |
+|--------------------------------|--------------|--------------------------|
+| **spatie/data-transfer-object**| 18,983,329/s | Direct property access   |
+| **php-collective/dto**         | 5,732,459/s  | Getter methods           |
+
+### Realistic Scenario (1 Create + 10 Reads)
+
+| Library                        | Ops/sec   | vs php-collective/dto |
+|--------------------------------|-----------|----------------------|
+| **php-collective/dto**         | 370,562/s | baseline             |
+| **symfony/serializer**         | 103,256/s | 3.6x slower          |
+| **spatie/data-transfer-object**| 52,286/s  | 7.1x slower          |
 
 **Key Insights**:
-- `php-collective/dto` is **4-8x faster** than runtime reflection libraries
+- `php-collective/dto` is **4-8x faster** than runtime reflection libraries for creation
+- Read performance: Spatie's direct property access is faster, but getter overhead is minimal
+- **Realistic scenario**: php-collective/dto is 3.6-7x faster than alternatives when combining create + read
 - Code generation eliminates runtime overhead from reflection and type parsing
-- Symfony Serializer is the fastest runtime library due to caching
-- Valinor's "with setup" shows the cost of creating mappers on each request
+- `spatie/laravel-data` requires Laravel framework and cannot run standalone
 
 ---
 
