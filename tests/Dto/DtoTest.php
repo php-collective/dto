@@ -7,10 +7,12 @@ namespace PhpCollective\Dto\Test\Dto;
 use ArrayObject;
 use InvalidArgumentException;
 use PhpCollective\Dto\Dto\Dto;
+use PhpCollective\Dto\Test\TestDto\ImmutableDto;
 use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class DtoTest extends TestCase
 {
@@ -275,5 +277,93 @@ class DtoTest extends TestCase
         $this->assertInstanceOf(SimpleDto::class, $unserialized);
         $this->assertSame('Test', $unserialized->getName());
         $this->assertSame(5, $unserialized->getCount());
+    }
+
+    // ========== IMMUTABLE DTO TESTS ==========
+
+    public function testImmutableWithMethod(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Original']);
+        $updated = $dto->withTitle('Updated');
+
+        // Original unchanged
+        $this->assertSame('Original', $dto->getTitle());
+        // New instance has updated value
+        $this->assertSame('Updated', $updated->getTitle());
+        // They are different instances
+        $this->assertNotSame($dto, $updated);
+    }
+
+    public function testImmutableGenericWithMethod(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Original']);
+        $updated = $dto->with('title', 'Updated');
+
+        $this->assertSame('Original', $dto->getTitle());
+        $this->assertSame('Updated', $updated->getTitle());
+        $this->assertNotSame($dto, $updated);
+    }
+
+    public function testImmutableWithMultipleFields(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Original', 'version' => 1]);
+        $updated = $dto->withTitle('Updated')->withVersion(2)->withPublished(true);
+
+        $this->assertSame('Original', $dto->getTitle());
+        $this->assertSame(1, $dto->getVersion());
+        $this->assertNull($dto->getPublished());
+
+        $this->assertSame('Updated', $updated->getTitle());
+        $this->assertSame(2, $updated->getVersion());
+        $this->assertTrue($updated->getPublished());
+    }
+
+    public function testImmutableWithInvalidFieldThrowsException(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Test']);
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Field does not exist: invalidField');
+        $dto->with('invalidField', 'value');
+    }
+
+    public function testImmutableCreateFromArray(): void
+    {
+        $dto = ImmutableDto::createFromArray([
+            'title' => 'Test',
+            'version' => 1,
+            'published' => true,
+        ]);
+
+        $this->assertSame('Test', $dto->getTitle());
+        $this->assertSame(1, $dto->getVersion());
+        $this->assertTrue($dto->getPublished());
+    }
+
+    public function testImmutableToArray(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Test', 'version' => 1]);
+        $array = $dto->toArray();
+
+        $this->assertSame('Test', $array['title']);
+        $this->assertSame(1, $array['version']);
+    }
+
+    public function testImmutableTouchedFields(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Original']);
+        $this->assertContains('title', $dto->touchedFields());
+
+        $updated = $dto->withVersion(2);
+        $this->assertContains('title', $updated->touchedFields());
+        $this->assertContains('version', $updated->touchedFields());
+    }
+
+    public function testImmutableWithUnderscoredKeyType(): void
+    {
+        $dto = new ImmutableDto(['title' => 'Original']);
+        $updated = $dto->with('title', 'Updated', ImmutableDto::TYPE_UNDERSCORED);
+
+        $this->assertSame('Updated', $updated->getTitle());
     }
 }
