@@ -326,6 +326,7 @@ This is the standalone core library. For framework-specific integrations:
 
 ## Documentation
 
+- [Examples](docs/Examples.md) - Practical usage patterns and recipes
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
 
 ## License

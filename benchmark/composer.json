@@ -1,0 +1,33 @@
+{
+    "name": "php-collective/dto-benchmark",
+    "description": "Benchmarks for php-collective/dto - external library comparisons",
+    "type": "project",
+    "license": "MIT",
+    "require": {
+        "php": "^8.2",
+        "php-collective/dto": "@dev"
+    },
+    "require-dev": {
+        "cuyz/valinor": "^2.3",
+        "spatie/data-transfer-object": "^3.9",
+        "spatie/laravel-data": "^4.18",
+        "symfony/property-access": "^8.0",
+        "symfony/serializer": "^8.0"
+    },
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Benchmark\\": "src/"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

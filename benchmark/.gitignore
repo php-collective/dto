@@ -1,0 +1,6 @@
+# Generated DTOs (regenerate with: bin/dto generate --config-path=benchmark/config/ ...)
+src/Dto/
+
+# Benchmark dependencies (install with: cd benchmark && composer install)
+vendor/
+composer.lock
