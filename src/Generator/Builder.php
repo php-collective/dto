@@ -512,15 +512,21 @@ class Builder
             if ($field['collection']) {
                 if ($field['collectionType'] === 'array') {
                     $fields[$key]['typeHint'] = 'array';
+                    // Generic PHPDoc type for arrays: array<int, ElementType>
+                    $fields[$key]['docBlockType'] = $this->buildGenericArrayType($field);
                 } else {
                     $fields[$key]['typeHint'] = $field['collectionType'];
 
                     $fields[$key]['type'] .= '|' . $fields[$key]['typeHint'];
+                    // Generic PHPDoc type for collections: \ArrayObject<int, ElementType>
+                    $fields[$key]['docBlockType'] = $this->buildGenericCollectionType($field);
                 }
             }
             if ($field['isArray']) {
                 if ($field['type'] !== 'array') {
                     $fields[$key]['typeHint'] = 'array';
+                    // Generic PHPDoc type for typed arrays: array<int, ElementType>
+                    $fields[$key]['docBlockType'] = $this->buildGenericArrayType($field);
                 }
             }
 
@@ -839,6 +845,50 @@ class Builder
         }
 
         return $type;
+    }
+
+    /**
+     * Build a generic PHPDoc type for array collections.
+     *
+     * Converts `string[]` to `array<int, string>` or `list<string>`.
+     *
+     * @param array<string, mixed> $field
+     *
+     * @return string
+     */
+    protected function buildGenericArrayType(array $field): string
+    {
+        $elementType = $field['singularType'] ?? null;
+
+        // Extract element type from type[] notation if not already set
+        if (!$elementType && isset($field['type'])) {
+            $type = $field['type'];
+            if (str_ends_with($type, '[]')) {
+                $elementType = substr($type, 0, -2);
+            }
+        }
+
+        $keyType = ($field['associative'] ?? false) ? 'string' : 'int';
+
+        return sprintf('array<%s, %s>', $keyType, $elementType ?: 'mixed');
+    }
+
+    /**
+     * Build a generic PHPDoc type for object collections (ArrayObject, etc.).
+     *
+     * Converts `ItemDto[]|\ArrayObject` to `\ArrayObject<int, ItemDto>`.
+     *
+     * @param array<string, mixed> $field
+     *
+     * @return string
+     */
+    protected function buildGenericCollectionType(array $field): string
+    {
+        $collectionType = $field['collectionType'] ?? '\ArrayObject';
+        $elementType = $field['singularType'] ?? 'mixed';
+        $keyType = $field['associative'] ? 'string' : 'int';
+
+        return sprintf('%s<%s, %s>', $collectionType, $keyType, $elementType);
     }
 
     /**

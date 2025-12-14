@@ -219,6 +219,31 @@ $dto->addItem('key2', $itemTwo);
 $item = $dto->getItem('key1');
 ```
 
+### PHPDoc Generics
+
+Collections and typed arrays use PHPDoc generic syntax for better static analysis support:
+
+```php
+/**
+ * @property \ArrayObject<int, ItemDto> $items
+ * @property array<int, string> $tags
+ */
+class OrderDto extends AbstractDto
+{
+    /**
+     * @var \ArrayObject<int, ItemDto>
+     */
+    protected $items;
+
+    /**
+     * @return \ArrayObject<int, ItemDto>
+     */
+    public function getItems(): \ArrayObject { ... }
+}
+```
+
+PHPStan and Psalm can now properly infer element types in foreach loops and method calls.
+
 ### Deprecations
 
 ```xml
