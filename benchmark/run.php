@@ -121,6 +121,23 @@ $results[] = $r = benchmark('Plain nested array (baseline)', function () use ($s
 }, $iterations);
 echo formatResult($r) . "\n";
 
+// spatie/laravel-data (if available)
+if (LARAVEL_DATA_AVAILABLE) {
+    $results[] = $r = benchmark('spatie/laravel-data from()', function () use ($simpleUserData) {
+        return \Benchmark\LaravelData\UserData::from($simpleUserData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+// cuyz/valinor (if available)
+if (class_exists(\CuyZ\Valinor\MapperBuilder::class)) {
+    $valinorMapper = (new \CuyZ\Valinor\MapperBuilder())->mapper();
+    $results[] = $r = benchmark('cuyz/valinor map()', function () use ($valinorMapper, $simpleUserData) {
+        return $valinorMapper->map(\Benchmark\Valinor\UserDto::class, $simpleUserData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
 // ============================================================================
 // Section 2: Complex Nested DTO Creation
 // ============================================================================
@@ -144,6 +161,23 @@ $results[] = $r = benchmark('Plain nested array', function () use ($complexOrder
     return $complexOrderData;
 }, $iterations);
 echo formatResult($r) . "\n";
+
+// spatie/laravel-data nested (if available)
+if (LARAVEL_DATA_AVAILABLE) {
+    $results[] = $r = benchmark('spatie/laravel-data nested', function () use ($complexOrderData) {
+        return \Benchmark\LaravelData\OrderData::from($complexOrderData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+// cuyz/valinor nested (if available)
+if (class_exists(\CuyZ\Valinor\MapperBuilder::class)) {
+    $valinorMapper = (new \CuyZ\Valinor\MapperBuilder())->mapper();
+    $results[] = $r = benchmark('cuyz/valinor nested', function () use ($valinorMapper, $complexOrderData) {
+        return $valinorMapper->map(\Benchmark\Valinor\OrderDto::class, $complexOrderData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
 
 // ============================================================================
 // Section 3: Property Access
@@ -225,6 +259,15 @@ $results[] = $r = benchmark('Plain array (no conversion)', function () use ($com
     return $complexOrderData;
 }, $iterations);
 echo formatResult($r) . "\n";
+
+// spatie/laravel-data toArray (if available)
+if (LARAVEL_DATA_AVAILABLE) {
+    $laravelOrder = \Benchmark\LaravelData\OrderData::from($complexOrderData);
+    $results[] = $r = benchmark('spatie/laravel-data toArray()', function () use ($laravelOrder) {
+        return $laravelOrder->toArray();
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
 
 // ============================================================================
 // Section 5: JSON Serialization

@@ -9,6 +9,10 @@
     },
     "require-dev": {
         "cuyz/valinor": "^2.3",
+        "illuminate/container": "^11.0|^12.0",
+        "illuminate/config": "^11.0|^12.0",
+        "illuminate/events": "^11.0|^12.0",
+        "illuminate/validation": "^11.0|^12.0",
         "spatie/data-transfer-object": "^3.9",
         "spatie/laravel-data": "^4.18",
         "symfony/property-access": "^8.0",

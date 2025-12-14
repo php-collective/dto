@@ -15,6 +15,112 @@ if (file_exists($benchmarkVendor)) {
     require_once $benchmarkVendor;
 }
 
+// Bootstrap minimal Laravel container for spatie/laravel-data
+if (class_exists(\Illuminate\Container\Container::class) && class_exists(\Spatie\LaravelData\Data::class)) {
+    $app = new \Illuminate\Container\Container();
+    \Illuminate\Container\Container::setInstance($app);
+
+    // Register config repository with full laravel-data config
+    $app->singleton('config', function () {
+        return new \Illuminate\Config\Repository([
+            'data' => [
+                'date_format' => DATE_ATOM,
+                'date_timezone' => null,
+                'features' => [
+                    'cast_and_transform_iterables' => false,
+                    'ignore_exception_when_trying_to_set_computed_property_value' => false,
+                ],
+                'transformers' => [
+                    DateTimeInterface::class => \Spatie\LaravelData\Transformers\DateTimeInterfaceTransformer::class,
+                    \Illuminate\Contracts\Support\Arrayable::class => \Spatie\LaravelData\Transformers\ArrayableTransformer::class,
+                    BackedEnum::class => \Spatie\LaravelData\Transformers\EnumTransformer::class,
+                ],
+                'casts' => [
+                    DateTimeInterface::class => \Spatie\LaravelData\Casts\DateTimeInterfaceCast::class,
+                    BackedEnum::class => \Spatie\LaravelData\Casts\EnumCast::class,
+                ],
+                'rule_inferrers' => [
+                    \Spatie\LaravelData\RuleInferrers\SometimesRuleInferrer::class,
+                    \Spatie\LaravelData\RuleInferrers\NullableRuleInferrer::class,
+                    \Spatie\LaravelData\RuleInferrers\RequiredRuleInferrer::class,
+                    \Spatie\LaravelData\RuleInferrers\BuiltInTypesRuleInferrer::class,
+                    \Spatie\LaravelData\RuleInferrers\AttributesRuleInferrer::class,
+                ],
+                'normalizers' => [
+                    \Spatie\LaravelData\Normalizers\ArrayableNormalizer::class,
+                    \Spatie\LaravelData\Normalizers\ObjectNormalizer::class,
+                    \Spatie\LaravelData\Normalizers\ArrayNormalizer::class,
+                    \Spatie\LaravelData\Normalizers\JsonNormalizer::class,
+                ],
+                'wrap' => null,
+                'var_dumper_caster_mode' => 'development',
+                'structure_caching' => [
+                    'enabled' => false,
+                    'directories' => [],
+                    'cache' => [
+                        'store' => 'array',
+                        'prefix' => 'laravel-data',
+                        'duration' => null,
+                    ],
+                    'reflection_discovery' => [
+                        'enabled' => false,
+                        'base_path' => __DIR__,
+                        'root_namespace' => null,
+                    ],
+                ],
+                'validation_strategy' => \Spatie\LaravelData\Support\Creation\ValidationStrategy::OnlyRequests->value,
+                'name_mapping_strategy' => [
+                    'input' => null,
+                    'output' => null,
+                ],
+                'ignore_invalid_partials' => false,
+                'max_transformation_depth' => null,
+                'throw_when_max_transformation_depth_reached' => true,
+                'livewire' => [
+                    'enable_synths' => false,
+                ],
+            ],
+        ]);
+    });
+
+    // Register events dispatcher
+    $app->singleton('events', function ($app) {
+        return new \Illuminate\Events\Dispatcher($app);
+    });
+
+    // Make config() helper available
+    if (!function_exists('config')) {
+        function config($key = null, $default = null) {
+            $config = \Illuminate\Container\Container::getInstance()->make('config');
+            if (is_null($key)) {
+                return $config;
+            }
+            if (is_array($key)) {
+                foreach ($key as $k => $v) {
+                    $config->set($k, $v);
+                }
+                return null;
+            }
+            return $config->get($key, $default);
+        }
+    }
+
+    // Make app() helper available
+    if (!function_exists('app')) {
+        function app($abstract = null, array $parameters = []) {
+            $container = \Illuminate\Container\Container::getInstance();
+            if (is_null($abstract)) {
+                return $container;
+            }
+            return $container->make($abstract, $parameters);
+        }
+    }
+
+    define('LARAVEL_DATA_AVAILABLE', true);
+} else {
+    define('LARAVEL_DATA_AVAILABLE', false);
+}
+
 /**
  * Benchmark helper function.
  *
