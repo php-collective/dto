@@ -43,6 +43,10 @@ class FieldBuilder
 
     protected ?string $serialize = null;
 
+    protected ?string $mapFrom = null;
+
+    protected ?string $mapTo = null;
+
     public function __construct(string $name, string $type)
     {
         $this->name = $name;
@@ -252,6 +256,38 @@ class FieldBuilder
     }
 
     /**
+     * Map from a different input key name.
+     *
+     * When hydrating from array, this source key will be mapped to this field.
+     *
+     * @example Field::string('emailAddress')->mapFrom('email')
+     *          // Input: ['email' => 'john@example.com']
+     *          // Field: emailAddress = 'john@example.com'
+     */
+    public function mapFrom(string $sourceKey): static
+    {
+        $this->mapFrom = $sourceKey;
+
+        return $this;
+    }
+
+    /**
+     * Map to a different output key name.
+     *
+     * When converting to array, the field will be output with this key.
+     *
+     * @example Field::string('emailAddress')->mapTo('email_address')
+     *          // Field: emailAddress = 'john@example.com'
+     *          // Output: ['email_address' => 'john@example.com']
+     */
+    public function mapTo(string $outputKey): static
+    {
+        $this->mapTo = $outputKey;
+
+        return $this;
+    }
+
+    /**
      * Get field name.
      */
     public function getName(): string
@@ -275,7 +311,9 @@ class FieldBuilder
             !$this->associative &&
             $this->deprecated === null &&
             $this->factory === null &&
-            $this->serialize === null
+            $this->serialize === null &&
+            $this->mapFrom === null &&
+            $this->mapTo === null
         ) {
             return $this->type;
         }
@@ -320,6 +358,14 @@ class FieldBuilder
 
         if ($this->serialize !== null) {
             $config['serialize'] = $this->serialize;
+        }
+
+        if ($this->mapFrom !== null) {
+            $config['mapFrom'] = $this->mapFrom;
+        }
+
+        if ($this->mapTo !== null) {
+            $config['mapTo'] = $this->mapTo;
         }
 
         return $config;

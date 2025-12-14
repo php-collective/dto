@@ -80,6 +80,8 @@ class Builder
         'singularNullable',
         'associative',
         'key',
+        'mapFrom',
+        'mapTo',
     ];
 
     /**
@@ -361,6 +363,8 @@ class Builder
                 'deprecated' => null,
                 'serialize' => null,
                 'factory' => null,
+                'mapFrom' => null,
+                'mapTo' => null,
             ];
             if ($data['required']) {
                 $data['nullable'] = false;

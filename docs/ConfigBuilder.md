@@ -196,6 +196,65 @@ Field::class('priceDisplay', Money::class)->serialize('string')
 // toArray() returns: ['priceDisplay' => '1000 USD']
 ```
 
+### Property Mapping
+
+Map field names between different formats when reading from or writing to arrays:
+
+```php
+// Map from different input key
+Field::string('emailAddress')->mapFrom('email')
+
+// Map to different output key
+Field::string('emailAddress')->mapTo('email_address')
+
+// Both directions
+Field::string('emailAddress')->mapFrom('email')->mapTo('email_address')
+```
+
+**Use cases:**
+
+| Scenario | Configuration |
+|----------|--------------|
+| API uses snake_case, DTO uses camelCase | `mapFrom('user_name')` |
+| Database column differs from property | `mapFrom('usr_email')` |
+| Output to legacy system with different naming | `mapTo('EMAIL_ADDRESS')` |
+| Complete bi-directional mapping | `mapFrom('email')->mapTo('email_address')` |
+
+**Example: External API Integration**
+
+```php
+// External API returns: {"user_name": "John", "created_at": "2024-01-01"}
+// Your DTO uses camelCase internally
+
+Dto::create('ApiUser')->fields(
+    Field::string('userName')->mapFrom('user_name'),
+    Field::string('createdAt')->mapFrom('created_at')->mapTo('timestamp'),
+)
+
+// Usage
+$dto = new ApiUserDto(['user_name' => 'John', 'created_at' => '2024-01-01']);
+echo $dto->getUserName(); // 'John'
+
+$dto->toArray();
+// ['userName' => 'John', 'timestamp' => '2024-01-01']
+```
+
+**Array syntax:**
+
+```php
+'ApiUser' => [
+    'fields' => [
+        'userName' => [
+            'type' => 'string',
+            'mapFrom' => 'user_name',
+            'mapTo' => 'username',
+        ],
+    ],
+],
+```
+
+Note: This should be used carefully. The more renaming, the harder it is to follow this later on.
+
 ## DTO Options
 
 ### Basic DTO

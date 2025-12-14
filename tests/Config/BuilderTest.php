@@ -341,6 +341,54 @@ class BuilderTest extends TestCase
         $this->assertArrayNotHasKey('traits', $dto->toArray());
     }
 
+    public function testFieldMapFrom(): void
+    {
+        $field = Field::string('emailAddress')->mapFrom('email');
+
+        $this->assertSame([
+            'type' => 'string',
+            'mapFrom' => 'email',
+        ], $field->toArray());
+    }
+
+    public function testFieldMapTo(): void
+    {
+        $field = Field::string('emailAddress')->mapTo('email_address');
+
+        $this->assertSame([
+            'type' => 'string',
+            'mapTo' => 'email_address',
+        ], $field->toArray());
+    }
+
+    public function testFieldMapFromAndMapTo(): void
+    {
+        $field = Field::string('emailAddress')
+            ->mapFrom('email')
+            ->mapTo('email_address');
+
+        $this->assertSame([
+            'type' => 'string',
+            'mapFrom' => 'email',
+            'mapTo' => 'email_address',
+        ], $field->toArray());
+    }
+
+    public function testFieldMapWithRequired(): void
+    {
+        $field = Field::string('emailAddress')
+            ->required()
+            ->mapFrom('email')
+            ->mapTo('email_address');
+
+        $this->assertSame([
+            'type' => 'string',
+            'required' => true,
+            'mapFrom' => 'email',
+            'mapTo' => 'email_address',
+        ], $field->toArray());
+    }
+
     public function testBenchmarkConfigEquivalence(): void
     {
         // Build using fluent API

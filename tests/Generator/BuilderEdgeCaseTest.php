@@ -820,4 +820,122 @@ PHP;
         // Should not double up backslashes
         $this->assertSame(['\\App\\Traits\\UserMethods'], $definitions['User']['traits']);
     }
+
+    // ========== PROPERTY MAPPING TESTS ==========
+
+    public function testFieldWithMapFrom(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'emailAddress' => [
+                'type' => 'string',
+                'mapFrom' => 'email',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertSame('email', $definitions['User']['fields']['emailAddress']['mapFrom']);
+        $this->assertSame('email', $definitions['User']['metaData']['emailAddress']['mapFrom']);
+    }
+
+    public function testFieldWithMapTo(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'emailAddress' => [
+                'type' => 'string',
+                'mapTo' => 'email_address',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertSame('email_address', $definitions['User']['fields']['emailAddress']['mapTo']);
+        $this->assertSame('email_address', $definitions['User']['metaData']['emailAddress']['mapTo']);
+    }
+
+    public function testFieldWithMapFromAndMapTo(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'ApiResponse' => [
+        'fields' => [
+            'userName' => [
+                'type' => 'string',
+                'mapFrom' => 'user_name',
+                'mapTo' => 'username',
+            ],
+            'createdAt' => [
+                'type' => 'string',
+                'mapFrom' => 'created_at',
+                'mapTo' => 'timestamp',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // userName field
+        $this->assertSame('user_name', $definitions['ApiResponse']['fields']['userName']['mapFrom']);
+        $this->assertSame('username', $definitions['ApiResponse']['fields']['userName']['mapTo']);
+
+        // createdAt field
+        $this->assertSame('created_at', $definitions['ApiResponse']['fields']['createdAt']['mapFrom']);
+        $this->assertSame('timestamp', $definitions['ApiResponse']['fields']['createdAt']['mapTo']);
+    }
+
+    public function testFieldWithoutMappingHasNullValues(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertNull($definitions['User']['fields']['name']['mapFrom']);
+        $this->assertNull($definitions['User']['fields']['name']['mapTo']);
+    }
 }

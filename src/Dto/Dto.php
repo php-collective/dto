@@ -184,6 +184,15 @@ abstract class Dto implements Serializable
     protected array $_keyMap = [];
 
     /**
+     * Custom field mapping for input/output name translation.
+     * - mapFrom: maps input key names to field names (used in fromArray)
+     * - mapTo: maps field names to output key names (used in toArray)
+     *
+     * @var array<string, array<string, string>>
+     */
+    protected array $_fieldMap = [];
+
+    /**
      * Holds touched fields.
      *
      * @var array<string, bool>
@@ -262,8 +271,11 @@ abstract class Dto implements Serializable
             $value = $this->$field;
 
             $key = $field;
-            if ($type !== static::TYPE_DEFAULT) {
-                $key = $this->key($key, $type);
+            // Apply custom mapTo mapping first
+            if (isset($this->_fieldMap['mapTo'][$field])) {
+                $key = $this->_fieldMap['mapTo'][$field];
+            } elseif ($type !== static::TYPE_DEFAULT) {
+                $key = $this->key($field, $type);
             }
 
             if (is_object($value)) {
@@ -378,6 +390,11 @@ abstract class Dto implements Serializable
 
             if ($type !== static::TYPE_DEFAULT) {
                 $field = $this->field($field, $type);
+            }
+
+            // Apply custom mapFrom mapping
+            if (isset($this->_fieldMap['mapFrom'][$field])) {
+                $field = $this->_fieldMap['mapFrom'][$field];
             }
 
             if ($this->_metadata[$field]['dto']) {
@@ -702,6 +719,10 @@ abstract class Dto implements Serializable
             return true;
         }
         if ($type !== static::TYPE_DEFAULT && isset($this->_keyMap[$type][$field])) {
+            return true;
+        }
+        // Check custom mapFrom mapping
+        if (isset($this->_fieldMap['mapFrom'][$field])) {
             return true;
         }
 

@@ -546,4 +546,45 @@ PHP;
         $content = file_get_contents($this->tempDir . '/src/Dto/UserDto.php');
         $this->assertStringContainsString('use App\Traits\UserMethods;', $content);
     }
+
+    public function testGenerateWithPropertyMapping(): void
+    {
+        $php = <<<'PHP'
+<?php
+return [
+    'ApiUser' => [
+        'fields' => [
+            'userName' => [
+                'type' => 'string',
+                'mapFrom' => 'user_name',
+                'mapTo' => 'username',
+            ],
+            'emailAddress' => [
+                'type' => 'string',
+                'mapFrom' => 'email',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $php);
+
+        $result = $this->runCli(sprintf(
+            'generate --config-path=%s/config --src-path=%s/src --namespace=TestApp --format=php',
+            escapeshellarg($this->tempDir),
+            escapeshellarg($this->tempDir),
+        ));
+
+        $this->assertSame(0, $result['exitCode'], 'CLI should exit with 0. Output: ' . $result['output']);
+        $this->assertFileExists($this->tempDir . '/src/Dto/ApiUserDto.php');
+
+        $content = file_get_contents($this->tempDir . '/src/Dto/ApiUserDto.php');
+        // Verify _fieldMap is generated
+        $this->assertStringContainsString('$_fieldMap', $content);
+        $this->assertStringContainsString("'mapFrom'", $content);
+        $this->assertStringContainsString("'mapTo'", $content);
+        $this->assertStringContainsString("'user_name' => 'userName'", $content);
+        $this->assertStringContainsString("'email' => 'emailAddress'", $content);
+        $this->assertStringContainsString("'userName' => 'username'", $content);
+    }
 }

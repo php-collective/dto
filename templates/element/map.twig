@@ -13,3 +13,37 @@
 {% endfor %}
 		],
 	];
+
+{% set hasMapFrom = false %}
+{% set hasMapTo = false %}
+{% for field in fields %}
+{% if field.mapFrom is not null %}{% set hasMapFrom = true %}{% endif %}
+{% if field.mapTo is not null %}{% set hasMapTo = true %}{% endif %}
+{% endfor %}
+{% if hasMapFrom or hasMapTo %}
+	/**
+	 * Custom field mapping for input/output name translation.
+	 *
+	 * @var array<string, array<string, string>>
+	 */
+	protected array $_fieldMap = [
+{% if hasMapFrom %}
+		'mapFrom' => [
+{% for field in fields %}
+{% if field.mapFrom is not null %}
+			'{{ field.mapFrom }}' => '{{ field.name }}',
+{% endif %}
+{% endfor %}
+		],
+{% endif %}
+{% if hasMapTo %}
+		'mapTo' => [
+{% for field in fields %}
+{% if field.mapTo is not null %}
+			'{{ field.name }}' => '{{ field.mapTo }}',
+{% endif %}
+{% endfor %}
+		],
+{% endif %}
+	];
+{% endif %}
