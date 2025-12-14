@@ -262,17 +262,54 @@ Dto::setCollectionFactory(fn($items) => collect($items));
 The library supports multiple configuration formats:
 
 - **XML** (default) - with XSD validation and IDE autocomplete
-- **YAML** - requires `symfony/yaml` (included via Twig)
+- **YAML** - requires PHP YAML extension (`pecl install yaml`)
 - **NEON** - requires `nette/neon`
 - **PHP** - native PHP arrays, best IDE support for complex configs
 
 ### YAML Example
 
 ```yaml
+# config/dto.yml
 Car:
     fields:
         color: string
         isNew: bool
+        distanceTravelled:
+            type: int
+            defaultValue: 0
+        owner:
+            type: Owner
+            required: true
+        parts:
+            type: Part[]
+            collection: true
+            singular: part
+
+Owner:
+    fields:
+        name: string
+        birthYear: int
+
+ImmutableConfig:
+    immutable: true
+    fields:
+        apiKey: string
+        timeout:
+            type: int
+            defaultValue: 30
+```
+
+### NEON Example
+
+```neon
+# config/dto.neon
+Car:
+    fields:
+        color: string
+        isNew: bool
+        distanceTravelled:
+            type: int
+            defaultValue: 0
         owner:
             type: Owner
             required: true
@@ -280,18 +317,7 @@ Car:
 Owner:
     fields:
         name: string
-```
-
-### NEON Example
-
-```neon
-Car:
-    fields:
-        color: string
-        isNew: bool
-        owner:
-            type: Owner
-            required: true
+        birthYear: int
 ```
 
 ### PHP Example
