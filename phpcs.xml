@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<ruleset name="php-collective-dto">
+    <arg value="nps"/>
+
+    <file>src/</file>
+    <file>tests/</file>
+
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+
+    <rule ref="PhpCollective"/>
+
+    <rule ref="SlevomatCodingStandard.Functions.RequireTrailingCommaInDeclaration"/>
+    <rule ref="SlevomatCodingStandard.Functions.RequireTrailingCommaInClosureUse"/>
+
+</ruleset>

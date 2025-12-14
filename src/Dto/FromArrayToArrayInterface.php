@@ -7,17 +7,17 @@ namespace PhpCollective\Dto\Dto;
 /**
  * Implement this interface for your VOs that should be fromArray()/toArray() safe.
  */
-interface FromArrayToArrayInterface {
+interface FromArrayToArrayInterface
+{
+ /**
+  * @param array<string, mixed> $array
+  *
+  * @return static
+  */
+    public static function createFromArray(array $array);
 
-	/**
-	 * @param array<string, mixed> $array
-	 * @return static
-	 */
-	public static function createFromArray(array $array);
-
-	/**
-	 * @return array
-	 */
-	public function toArray(): array;
-
+    /**
+     * @return array
+     */
+    public function toArray(): array;
 }
