@@ -16,7 +16,7 @@ interface RendererInterface
   *
   * @return $this
   */
-    public function set(array $vars);
+    public function set(array $vars): static;
 
     /**
      * Render a template with the current variables.
