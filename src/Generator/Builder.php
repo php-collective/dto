@@ -532,10 +532,25 @@ class Builder
 
             if ($fields[$key]['typeHint'] && $this->config['scalarAndReturnTypes']) {
                 $fields[$key]['returnTypeHint'] = $fields[$key]['typeHint'];
+
+                // Pre-compute nullable return type hint (for getters)
+                if ($fields[$key]['nullable']) {
+                    // For union types (PHP 8.0+), use |null suffix instead of ? prefix
+                    if ($this->isUnionType($fields[$key]['typeHint'])) {
+                        $fields[$key]['nullableReturnTypeHint'] = $fields[$key]['typeHint'] . '|null';
+                    } else {
+                        $fields[$key]['nullableReturnTypeHint'] = '?' . $fields[$key]['typeHint'];
+                    }
+                }
             }
 
             if ($fields[$key]['typeHint'] && $this->config['scalarAndReturnTypes'] && $fields[$key]['nullable']) {
-                $fields[$key]['nullableTypeHint'] = '?' . $fields[$key]['typeHint'];
+                // For union types (PHP 8.0+), use |null suffix instead of ? prefix
+                if ($this->isUnionType($fields[$key]['typeHint'])) {
+                    $fields[$key]['nullableTypeHint'] = $fields[$key]['typeHint'] . '|null';
+                } else {
+                    $fields[$key]['nullableTypeHint'] = '?' . $fields[$key]['typeHint'];
+                }
             }
 
             if ($fields[$key]['collection']) {
@@ -543,6 +558,7 @@ class Builder
                     'singularTypeHint' => null,
                     'singularNullable' => false,
                     'singularReturnTypeHint' => null,
+                    'singularNullableReturnTypeHint' => null,
                 ];
                 if ($fields[$key]['singularType']) {
                     $fields[$key]['singularTypeHint'] = $this->typehint($fields[$key]['singularType']);
@@ -550,6 +566,15 @@ class Builder
 
                 if ($fields[$key]['singularTypeHint'] && $this->config['scalarAndReturnTypes']) {
                     $fields[$key]['singularReturnTypeHint'] = $fields[$key]['singularTypeHint'];
+
+                    // Pre-compute nullable singular return type hint for associative collections
+                    if ($fields[$key]['singularNullable']) {
+                        if ($this->isUnionType($fields[$key]['singularTypeHint'])) {
+                            $fields[$key]['singularNullableReturnTypeHint'] = $fields[$key]['singularTypeHint'] . '|null';
+                        } else {
+                            $fields[$key]['singularNullableReturnTypeHint'] = '?' . $fields[$key]['singularTypeHint'];
+                        }
+                    }
                 }
             }
         }
@@ -807,11 +832,12 @@ class Builder
      */
     protected function typehint(string $type): ?string
     {
-        // Unset the typehint for simple type unions
+        // Handle simple type unions (PHP 8.0+)
         if ($this->isValidSimpleType($type)) {
             $types = explode('|', $type);
             if (count($types) > 1) {
-                return null;
+                // Return union type for PHP 8.0+
+                return $type;
             }
         }
         if (in_array($type, $this->simpleTypeAdditionsForDocBlock, true)) {
@@ -822,6 +848,18 @@ class Builder
         }
 
         return $type;
+    }
+
+    /**
+     * Check if a type is a union type.
+     *
+     * @param string $type
+     *
+     * @return bool
+     */
+    protected function isUnionType(string $type): bool
+    {
+        return str_contains($type, '|');
     }
 
     /**
