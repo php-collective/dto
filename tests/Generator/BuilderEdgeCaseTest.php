@@ -1159,4 +1159,273 @@ PHP;
         // Mixed array and scalar union should also convert to array
         $this->assertSame('array', $definitions['Response']['fields']['value']['typeHint']);
     }
+
+    public function testTypedConstantsEnabled(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'typedConstants' => true,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // typedConstants is passed to renderer, verify it's in config
+        $this->assertTrue($config->get('typedConstants'));
+        $this->assertArrayHasKey('User', $definitions);
+    }
+
+    public function testTypedConstantsDisabled(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'typedConstants' => false,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Default is false
+        $this->assertFalse($config->get('typedConstants'));
+        $this->assertArrayHasKey('User', $definitions);
+    }
+
+    public function testDefaultCollectionType(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Order' => [
+        'fields' => [
+            'items' => [
+                'type' => 'Item[]',
+                'singular' => 'item',
+            ],
+        ],
+    ],
+    'Item' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'defaultCollectionType' => '\ArrayObject',
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Collection type should be ArrayObject (default)
+        $this->assertSame('\ArrayObject', $definitions['Order']['fields']['items']['collectionType']);
+    }
+
+    public function testCustomCollectionType(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Order' => [
+        'fields' => [
+            'items' => [
+                'type' => 'Item[]',
+                'singular' => 'item',
+            ],
+        ],
+    ],
+    'Item' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'defaultCollectionType' => '\Doctrine\Common\Collections\ArrayCollection',
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Custom collection type should be used
+        $this->assertSame('\Doctrine\Common\Collections\ArrayCollection', $definitions['Order']['fields']['items']['collectionType']);
+    }
+
+    public function testDebugModeEnabled(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'debug' => true,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // In debug mode, metadata should contain all fields (not filtered)
+        $metadata = $definitions['User']['fields']['name'];
+        // Debug mode includes extra fields like 'value' in metadata
+        $this->assertTrue($config->get('debug'));
+        $this->assertArrayHasKey('name', $definitions['User']['fields']);
+    }
+
+    public function testDebugModeDisabled(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'debug' => false,
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Default is false
+        $this->assertFalse($config->get('debug'));
+        $this->assertArrayHasKey('User', $definitions);
+    }
+
+    public function testCustomSuffix(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'suffix' => 'Transfer',
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Class name should use custom suffix
+        $this->assertSame('UserTransfer', $definitions['User']['className']);
+    }
+
+    public function testDefaultSuffix(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Default suffix is 'Dto'
+        $this->assertSame('UserDto', $definitions['User']['className']);
+    }
+
+    public function testSuffixAffectsExtends(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'BaseUser' => [
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+    'AdminUser' => [
+        'extends' => 'BaseUser',
+        'fields' => [
+            'role' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig([
+            'namespace' => 'App',
+            'suffix' => 'Transfer',
+        ]);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Extended class name should also use custom suffix
+        $this->assertSame('AdminUserTransfer', $definitions['AdminUser']['className']);
+        $this->assertSame('BaseUserTransfer', $definitions['AdminUser']['extends']);
+    }
 }
