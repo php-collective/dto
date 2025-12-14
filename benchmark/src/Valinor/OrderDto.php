@@ -6,6 +6,9 @@ namespace Benchmark\Valinor;
 
 final readonly class OrderDto
 {
+    /**
+     * @param list<OrderItemDto> $items
+     */
     public function __construct(
         public int $id,
         public UserDto $customer,
