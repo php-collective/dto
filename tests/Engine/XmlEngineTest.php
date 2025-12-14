@@ -145,4 +145,23 @@ XML;
 
         $this->assertTrue($result['Container']['fields']['items']['collection']);
     }
+
+    public function testParseUnionTypes(): void
+    {
+        $engine = new XmlEngine();
+        $xml = <<<'XML'
+<?xml version="1.0"?>
+<dtos>
+    <dto name="Flexible">
+        <field name="id" type="int|string" required="true"/>
+        <field name="value" type="int|float|string"/>
+    </dto>
+</dtos>
+XML;
+
+        $result = $engine->parse($xml);
+
+        $this->assertSame('int|string', $result['Flexible']['fields']['id']['type']);
+        $this->assertSame('int|float|string', $result['Flexible']['fields']['value']['type']);
+    }
 }

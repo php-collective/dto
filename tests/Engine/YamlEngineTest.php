@@ -111,4 +111,22 @@ YAML;
         $engine->validate(['file1.yml', 'file2.yml']);
         $this->assertTrue(true);
     }
+
+    public function testParseUnionTypes(): void
+    {
+        $engine = new YamlEngine();
+        $yaml = <<<'YAML'
+Flexible:
+    fields:
+        id:
+            type: int|string
+            required: true
+        value: int|float|string
+YAML;
+
+        $result = $engine->parse($yaml);
+
+        $this->assertSame('int|string', $result['Flexible']['fields']['id']['type']);
+        $this->assertSame('int|float|string', $result['Flexible']['fields']['value']['type']);
+    }
 }

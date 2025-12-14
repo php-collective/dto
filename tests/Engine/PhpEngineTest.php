@@ -238,4 +238,28 @@ PHP);
         $this->expectExceptionMessage('not readable');
         $engine->validate(['/nonexistent/file.php']);
     }
+
+    public function testParseFileUnionTypes(): void
+    {
+        $path = $this->createFixture('dto.php', <<<'PHP'
+<?php
+return [
+    'Flexible' => [
+        'fields' => [
+            'id' => [
+                'type' => 'int|string',
+                'required' => true,
+            ],
+            'value' => 'int|float|string',
+        ],
+    ],
+];
+PHP);
+
+        $engine = new PhpEngine();
+        $result = $engine->parseFile($path);
+
+        $this->assertSame('int|string', $result['Flexible']['fields']['id']['type']);
+        $this->assertSame('int|float|string', $result['Flexible']['fields']['value']['type']);
+    }
 }
