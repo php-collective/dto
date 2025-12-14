@@ -278,11 +278,11 @@ Car:
             required: true
 ```
 
-## Framework Integration
+## Integrations
 
-This is the standalone core library. For framework-specific integration:
+This is the standalone core library. For framework-specific integrations:
 
-- **CakePHP**: [dereuromark/cakephp-dto](https://github.com/dereuromark/cakephp-dto) - provides CLI commands, View integration, and CakePHP Collection support
+- **CakePHP**: [dereuromark/cakephp-dto](https://github.com/dereuromark/cakephp-dto) - CLI commands, View integration, and CakePHP Collection support
 
 ## Documentation
 
