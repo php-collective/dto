@@ -387,6 +387,85 @@ new UserDto(['id' => 1, 'name' => 'John', 'email' => 'john@example.com'])
 
 Using `getArrayResult()` + DTO hydration gives the same performance benefits while working with generated DTOs.
 
+However, if you prefer Doctrine's native `SELECT NEW` syntax, you can use **mapper classes**.
+
+### Doctrine SELECT NEW with Mappers
+
+Generate mapper classes alongside your DTOs:
+
+```bash
+vendor/bin/dto generate --mapper
+```
+
+This creates mapper classes that extend DTOs with positional constructors:
+
+```
+src/Dto/
+├── UserSummaryDto.php           # Standard DTO (array constructor)
+└── Mapper/
+    └── UserSummaryDtoMapper.php # Mapper (positional constructor)
+```
+
+**Generated Mapper Structure:**
+
+```php
+namespace App\Dto\Mapper;
+
+use App\Dto\UserSummaryDto;
+
+class UserSummaryDtoMapper extends UserSummaryDto
+{
+    public function __construct(
+        int $id,
+        string $name,
+        ?string $email
+    ) {
+        parent::__construct([
+            'id' => $id,
+            'name' => $name,
+            'email' => $email,
+        ]);
+    }
+}
+```
+
+**Usage with Doctrine:**
+
+```php
+use App\Dto\Mapper\UserSummaryDtoMapper;
+
+// Use the mapper in SELECT NEW
+$users = $entityManager->createQuery(
+    'SELECT NEW App\Dto\Mapper\UserSummaryDtoMapper(u.id, u.name, u.email)
+     FROM App\Entity\User u
+     WHERE u.active = true'
+)->getResult();
+
+// Results are fully-functional DTOs
+foreach ($users as $user) {
+    echo $user->getName();    // All getter methods work
+    echo $user->toArray();    // Serialization works
+}
+
+// Type hints work - mapper IS-A DTO
+function processUser(UserSummaryDto $dto): void { /* ... */ }
+processUser($users[0]);  // Works because UserSummaryDtoMapper extends UserSummaryDto
+```
+
+**Benefits of Mappers:**
+
+| Feature | getArrayResult + DTO | SELECT NEW + Mapper |
+|---------|---------------------|---------------------|
+| Performance | ✅ Fast | ✅ Fast |
+| Type safety | ✅ Full | ✅ Full |
+| Code style | Manual mapping | Native DQL |
+| Single query | ✅ Yes | ✅ Yes |
+| IDE support | ✅ Full | ✅ Full |
+
+Both approaches produce identical results. Choose based on preference:
+- **getArrayResult**: More explicit, works with any DTO
+- **SELECT NEW + Mapper**: Native DQL syntax, requires `--mapper` flag
+
 ### DTO Definition for Query Results
 
 Define lightweight DTOs for specific queries:
@@ -470,7 +549,8 @@ class UserDto extends AbstractDto
 | Approach | Use Case |
 |----------|----------|
 | **Entity directly** | Internal domain logic, persistence |
-| **DTO via SELECT NEW** | API responses, read-only views, performance |
+| **DTO via getArrayResult** | Simple queries, manual mapping |
+| **DTO via SELECT NEW + Mapper** | Native DQL syntax, type-safe results |
 | **DTO from Entity** | When you need the full entity first, then transform |
 
 Benefits of DTOs for query results:
