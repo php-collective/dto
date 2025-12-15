@@ -3,13 +3,13 @@
 	/**
 	 * @deprecated {{ field.deprecated }}
 	 */
-	{% if scalarAndReturnTypes %}public {% endif %}const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
 {% elseif typedConstants %}
-	{% if scalarAndReturnTypes %}public {% endif %}const string FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const string FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
 {% else %}
 	/**
 	 * @var string
 	 */
-	{% if scalarAndReturnTypes %}public {% endif %}const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
 {% endif %}
 {% endfor -%}
