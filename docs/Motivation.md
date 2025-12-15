@@ -104,12 +104,10 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 | Feature              | php-collective/dto | laravel-data | valinor  | jms/serializer |
 |----------------------|:------------------:|:------------:|:--------:|:--------------:|
 | Validation Rules     |   Required only    |     Full     |   Good   |    Partial     |
-| PHPDoc Generics      |        Yes         |   Partial    | Excellent |    Partial     |
 | Lazy Properties      |         No         |     Yes      |    No    |       No       |
-| Shaped Arrays        |        Yes         |      No      |   Yes    |       No       |
 | Integer Ranges       |         No         |      No      |   Yes    |       No       |
 | API Versioning       |         No         |      No      |    No    |      Yes       |
-| Eloquent Integration |         No         |     Yes      |    No    |       No       |
+| Eloquent Integration |      Not Yet       |     Yes      |    No    |       No       |
 | Streaming/Large Data |         No         |      No      |    No    |       No       |
 
 **Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance (25-60x faster) and IDE support. Choose runtime libraries if you need advanced validation, lazy loading, or framework-specific integration.
