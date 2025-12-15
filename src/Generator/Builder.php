@@ -589,6 +589,9 @@ class Builder
                         }
                     }
                 }
+
+                // Add key type for associative collections (string) vs indexed (int)
+                $fields[$key]['keyType'] = !empty($fields[$key]['associative']) ? 'string' : 'int';
             }
         }
 

@@ -5,7 +5,7 @@
 	 *
 {% endif %}
 {% if associative %}
-	 * @param string|int $key
+	 * @param {{ keyType }} $key
 {% endif %}
 	 * @param {{ singularType }}{% if singularNullable %}|null{% endif %} ${{ singular }}
 	 * @return static
