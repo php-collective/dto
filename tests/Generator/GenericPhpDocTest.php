@@ -159,6 +159,53 @@ PHP;
         // Should have string key type for associative collection
         $this->assertArrayHasKey('docBlockType', $productsField);
         $this->assertSame('\ArrayObject<string, \App\Dto\ProductDto>', $productsField['docBlockType']);
+
+        // Should have keyType set for collections
+        $this->assertArrayHasKey('keyType', $productsField);
+        $this->assertSame('string', $productsField['keyType']);
+    }
+
+    public function testGeneratedAssociativeCollectionUsesCorrectKeyType(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Catalog' => [
+        'fields' => [
+            'products' => [
+                'type' => 'Product[]',
+                'collection' => true,
+                'collectionType' => 'array',
+                'singular' => 'product',
+                'associative' => true,
+            ],
+        ],
+    ],
+    'Product' => [
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'TestApp']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+        $renderer = new TwigRenderer(null, $config);
+
+        $generator = new Generator($builder, $renderer, $this->createIo(), $config);
+        $generator->generate($this->tempDir . '/config/', $this->tempDir . '/src/');
+
+        $generatedFile = $this->tempDir . '/src/Dto/CatalogDto.php';
+        $this->assertFileExists($generatedFile);
+
+        $content = file_get_contents($generatedFile);
+
+        // Associative collection should have @param string $key (not string|int)
+        $this->assertStringContainsString('@param string $key', $content);
+        $this->assertStringNotContainsString('@param string|int $key', $content);
     }
 
     public function testGeneratedDtoUsesGenericPhpDocTypes(): void

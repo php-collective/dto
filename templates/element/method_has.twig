@@ -30,7 +30,7 @@
 	 * @deprecated {{ deprecated }}
 	 *
 {% endif %}
-	 * @param string|int $key
+	 * @param {{ keyType }} $key
 	 * @return bool
 	 */
 	public function has{{ singular[:1]|upper ~ singular[1:] }}($key){% if scalarAndReturnTypes %}: bool{% endif %}
