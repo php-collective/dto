@@ -17,6 +17,28 @@ use UnitEnum;
 
 abstract class Dto implements Serializable
 {
+    /**
+     * Convert DTO to array. Implemented by generated DTOs with shaped array return types.
+     *
+     * @param string|null $type
+     * @param array<string>|null $fields
+     * @param bool $touched
+     *
+     * @return array<string, mixed>
+     */
+    abstract public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array;
+
+    /**
+     * Create DTO from array. Implemented by generated DTOs with shaped array param types.
+     *
+     * @param array<string, mixed> $data
+     * @param bool $ignoreMissing
+     * @param string|null $type
+     *
+     * @return static
+     */
+    abstract public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static;
+
  /**
   * Default key type for conversions. Can be set globally.
   *
@@ -71,13 +93,16 @@ abstract class Dto implements Serializable
     }
 
     /**
+     * Internal implementation for createFromArray.
+     * Generated DTOs provide typed public createFromArray() that calls this.
+     *
      * @param array<string, mixed> $data
      * @param bool $ignoreMissing
      * @param string|null $type
      *
      * @return static
      */
-    public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null)
+    protected static function _createFromArrayInternal(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
         return new static($data, $ignoreMissing, $type);
     }
@@ -251,15 +276,18 @@ abstract class Dto implements Serializable
     }
 
     /**
+     * Internal implementation for toArray.
+     * Generated DTOs provide typed public toArray() that calls this.
+     *
      * @param string|null $type
      * @param array<string>|null $fields
      * @param bool $touched
      *
      * @throws \InvalidArgumentException
      *
-     * @return array
+     * @return array<string, mixed>
      */
-    public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
+    protected function _toArrayInternal(?string $type = null, ?array $fields = null, bool $touched = false): array
     {
         if ($fields === null) {
             $fields = $this->fields();
@@ -363,11 +391,11 @@ abstract class Dto implements Serializable
     /**
      * @param string|null $type
      *
-     * @return array
+     * @return array<string, mixed>
      */
     public function touchedToArray(?string $type = null): array
     {
-        return $this->toArray($type, $this->touchedFields(), true);
+        return $this->_toArrayInternal($type, $this->touchedFields(), true);
     }
 
     /**

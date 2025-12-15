@@ -185,12 +185,12 @@ PHP;
         $content = file_get_contents($generatedFile);
         $this->assertIsString($content);
 
-        // Should have overridden toArray with shaped array return type
+        // Should have toArray with shaped array return type
         $this->assertStringContainsString('@return array{id: int, name: string|null, email: string|null}', $content);
-        $this->assertStringContainsString('#[\Override]', $content);
         $this->assertStringContainsString('public function toArray(', $content);
+        $this->assertStringContainsString('_toArrayInternal', $content);
 
-        // Should have overridden createFromArray with shaped array param type
+        // Should have createFromArray with shaped array param type
         $this->assertStringContainsString('@param array{id: int, name: string|null, email: string|null} $data', $content);
         $this->assertStringContainsString('public static function createFromArray(', $content);
     }
@@ -244,5 +244,55 @@ PHP;
         // Should have nested shapes
         $this->assertStringContainsString('customer: array{name: string|null}', $content);
         $this->assertStringContainsString('items: array<int, array{name: string|null, price: float|null}>', $content);
+    }
+
+    public function testGeneratedDtoWithInheritance(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Vehicle' => [
+        'fields' => [
+            'brand' => 'string',
+            'year' => 'int',
+        ],
+    ],
+    'Car' => [
+        'extends' => 'Vehicle',
+        'fields' => [
+            'doors' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'TestApp']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+        $renderer = new TwigRenderer(null, $config);
+
+        $generator = new Generator($builder, $renderer, $this->createIo(), $config);
+        $generator->generate($this->tempDir . '/config/', $this->tempDir . '/src/');
+
+        // Check parent DTO
+        $vehicleFile = $this->tempDir . '/src/Dto/VehicleDto.php';
+        $this->assertFileExists($vehicleFile);
+        $vehicleContent = file_get_contents($vehicleFile);
+        $this->assertIsString($vehicleContent);
+        $this->assertStringContainsString('@return array{brand: string|null, year: int|null}', $vehicleContent);
+
+        // Check child DTO - should have all fields (inherited + own)
+        $carFile = $this->tempDir . '/src/Dto/CarDto.php';
+        $this->assertFileExists($carFile);
+        $carContent = file_get_contents($carFile);
+        $this->assertIsString($carContent);
+
+        // Child should extend parent
+        $this->assertStringContainsString('extends VehicleDto', $carContent);
+
+        // Child should have its own toArray with its fields
+        $this->assertStringContainsString('public function toArray(', $carContent);
+        $this->assertStringContainsString('doors: int|null', $carContent);
     }
 }

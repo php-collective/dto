@@ -17,7 +17,7 @@ interface FromArrayToArrayInterface
     public static function createFromArray(array $array);
 
     /**
-     * @return array
+     * @return array<string, mixed>
      */
     public function toArray(): array;
 }

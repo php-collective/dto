@@ -98,4 +98,28 @@ class NestedDto extends AbstractDto
     {
         return $this->simple !== null;
     }
+
+    /**
+     * @param string|null $type
+     * @param array<string>|null $fields
+     * @param bool $touched
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
+    {
+        return $this->_toArrayInternal($type, $fields, $touched);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @param bool $ignoreMissing
+     * @param string|null $type
+     *
+     * @return static
+     */
+    public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
+    {
+        return static::_createFromArrayInternal($data, $ignoreMissing, $type);
+    }
 }

@@ -4,27 +4,34 @@
 
 Generated DTOs include PHPStan/Psalm shaped array annotations for `toArray()` and `createFromArray()` methods, enabling full static analysis of array structures.
 
+## Architecture
+
+The parent `Dto` class provides protected internal methods (`_toArrayInternal()`, `_createFromArrayInternal()`) that contain the serialization logic. Generated DTOs define public `toArray()` and `createFromArray()` methods with shaped array types that call these internal methods.
+
+This design:
+- Avoids LSP (Liskov Substitution Principle) violations
+- Provides clean PHPStan-compatible types
+- Works correctly with DTO inheritance
+
 ## Generated Output
 
-Each DTO gets overridden methods with shaped array PHPDoc annotations based on field definitions:
+Each DTO gets typed methods calling the internal implementation:
 
 ```php
 /**
  * @return array{name: string|null, count: int|null, active: bool|null}
  */
-#[\Override]
 public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
 {
-    return parent::toArray($type, $fields, $touched);
+    return $this->_toArrayInternal($type, $fields, $touched);
 }
 
 /**
  * @param array{name: string|null, count: int|null, active: bool|null} $data
  */
-#[\Override]
 public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
 {
-    return parent::createFromArray($data, $ignoreMissing, $type);
+    return static::_createFromArrayInternal($data, $ignoreMissing, $type);
 }
 ```
 
@@ -61,6 +68,20 @@ Collections include the element's shaped array type:
 ```php
 // Order DTO with Item[] collection
 /** @return array{id: int|null, items: array<int, array{name: string|null, price: float|null}>} */
+```
+
+## DTO Inheritance
+
+When a DTO extends another DTO, each defines its own `toArray()` with its specific fields. Since there's no method override (just calling the internal method), PHPStan won't complain about type mismatches.
+
+```php
+// VehicleDto
+/** @return array{brand: string|null, year: int|null} */
+public function toArray(...): array
+
+// CarDto extends VehicleDto
+/** @return array{doors: int|null} */
+public function toArray(...): array
 ```
 
 ## Related
