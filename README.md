@@ -87,16 +87,9 @@ return Schema::create()
     ->toArray();
 ```
 
-Immutable DTOs use `with*()` methods that return new instances:
-
 ```php
 // Creating from API/database response
 $article = ArticleDto::createFromArray($apiResponse);
-
-// Modifications return new instances (original unchanged)
-$published = $article
-    ->withPublished(true)
-    ->withPublishedAt(date('Y-m-d H:i:s'));
 ```
 
 Reading in a template (e.g., Twig, Blade, or plain PHP):
