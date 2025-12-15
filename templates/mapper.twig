@@ -1,0 +1,41 @@
+<?php{% if strictTypes %} declare(strict_types=1);{% endif %}
+
+/**
+ * !!! Auto generated file. Do not directly modify this file. !!!
+ *
+ * Doctrine-compatible mapper with positional constructor.
+ * Use with SELECT NEW queries:
+ *
+ *   SELECT NEW {{ namespace }}\Mapper\{{ className }}Mapper(e.field1, e.field2, ...)
+ */
+
+namespace {{ namespace }}\Mapper;
+
+use {{ namespace }}\{{ className }};
+
+/**
+ * {{ name }} DTO Mapper
+ *
+ * Extends {{ className }} with a positional constructor for Doctrine SELECT NEW.
+ */
+class {{ className }}Mapper extends {{ className }}
+{
+	/**
+	 * Positional constructor for Doctrine SELECT NEW compatibility.
+	 *
+{% for fieldName, field in fields %}
+	 * @param {{ field.nullableTypeHint ?? field.typeHint }} ${{ field.name }}
+{% endfor %}
+	 */
+	public function __construct(
+{% for fieldName, field in fields %}
+		{{ field.nullableTypeHint ?? field.typeHint }} ${{ field.name }}{{ not loop.last ? ',' : '' }}
+{% endfor %}
+	) {
+		parent::__construct([
+{% for fieldName, field in fields %}
+			'{{ field.name }}' => ${{ field.name }},
+{% endfor %}
+		]);
+	}
+}

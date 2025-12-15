@@ -53,6 +53,7 @@ Options specific to PHP DTO generation:
 | `--dry-run` | Show what would be generated without writing files |
 | `--force` | Regenerate all DTOs, even if unchanged |
 | `--confirm` | Validate PHP syntax of generated files |
+| `--mapper` | Generate Doctrine-compatible mapper classes |
 
 ## TypeScript Options
 
@@ -114,6 +115,19 @@ vendor/bin/dto generate --confirm
 # Regenerate all DTOs, ignoring timestamps
 vendor/bin/dto generate --force
 ```
+
+### Doctrine Mapper Generation
+
+```bash
+# Generate DTOs with Doctrine-compatible mapper classes
+vendor/bin/dto generate --mapper
+
+# Creates:
+#   src/Dto/UserDto.php           - Standard DTO
+#   src/Dto/Mapper/UserDtoMapper.php - Mapper with positional constructor
+```
+
+The mapper classes extend the DTOs with positional constructors for use with Doctrine's `SELECT NEW` syntax. See [Framework Integration](FrameworkIntegration.md#doctrine-select-new-with-mappers) for usage details.
 
 ### TypeScript Generation
 
@@ -201,6 +215,7 @@ Add to `composer.json`:
 {
   "scripts": {
     "dto:generate": "dto generate",
+    "dto:generate-mapper": "dto generate --mapper",
     "dto:check": "dto generate --dry-run",
     "dto:typescript": "dto typescript --output=frontend/types/"
   }

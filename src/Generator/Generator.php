@@ -70,6 +70,7 @@ class Generator
             'dryRun' => false,
             'confirm' => false,
             'verbose' => false,
+            'mapper' => false,
         ];
 
         $definitions = [];
@@ -129,6 +130,11 @@ class Generator
             $this->io->success('Deleting: ' . $name . ' DTO');
         }
 
+        // Generate mappers if enabled
+        if ($options['mapper']) {
+            $changes += $this->generateAndWriteMappers($definitions, $srcPath, $options);
+        }
+
         $this->io->verbose('Done, ' . $changes . ' file(s) changed.');
 
         if ($options['dryRun'] || $options['verbose']) {
@@ -136,6 +142,70 @@ class Generator
         }
 
         return static::CODE_SUCCESS;
+    }
+
+    /**
+     * Generate and write mapper files for Doctrine SELECT NEW compatibility.
+     *
+     * @param array<string, mixed> $definitions
+     * @param string $srcPath
+     * @param array<string, mixed> $options
+     *
+     * @return int Number of changes
+     */
+    protected function generateAndWriteMappers(array $definitions, string $srcPath, array $options): int
+    {
+        $mappers = $this->generateMappers($definitions);
+        $foundMappers = [];
+        if (!$options['force']) {
+            $foundMappers = $this->findExistingMappers($srcPath . 'Dto' . DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR);
+        }
+
+        $changes = 0;
+        foreach ($mappers as $name => $content) {
+            $isNew = !isset($foundMappers[$name]);
+            $isModified = !$isNew && $this->isModified($foundMappers[$name], $content);
+
+            if (!$isNew && !$isModified) {
+                unset($foundMappers[$name]);
+                $this->io->out('Skipping: ' . $name . ' Mapper', 1, IoInterface::VERBOSE);
+
+                continue;
+            }
+
+            $suffix = $this->config->get('suffix', 'Dto');
+            $target = $srcPath . 'Dto' . DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR . $name . $suffix . 'Mapper.php';
+            $targetPath = dirname($target);
+            if (!is_dir($targetPath)) {
+                mkdir($targetPath, 0755, true);
+            }
+
+            if ($isModified) {
+                $this->io->out('Changes in ' . $name . ' Mapper:', 1, IoInterface::VERBOSE);
+                $oldContent = file_get_contents($foundMappers[$name]) ?: '';
+                $this->_displayDiff($oldContent, $content);
+            }
+            if (!$options['dryRun']) {
+                file_put_contents($target, $content);
+                if ($options['confirm'] && !$this->checkPhpFileSyntax($target)) {
+                    // Don't fail the whole process for mapper syntax errors
+                    $this->io->error('Mapper syntax error in: ' . $name);
+                }
+            }
+            $changes++;
+
+            unset($foundMappers[$name]);
+            $this->io->success(($isModified ? 'Modifying' : 'Creating') . ': ' . $name . ' Mapper');
+        }
+
+        foreach ($foundMappers as $name => $file) {
+            if (!$options['dryRun']) {
+                unlink($file);
+            }
+            $this->io->success('Deleting: ' . $name . ' Mapper');
+        }
+
+        return $changes;
     }
 
     /**
@@ -157,6 +227,38 @@ class Generator
             $file = $fileInfo->getPathname();
             $suffix = $this->config->get('suffix', 'Dto');
             if (!preg_match('#src/Dto/(.+)' . preg_quote($suffix, '#') . '\.php$#', $file, $matches)) {
+                continue;
+            }
+            // Skip mapper files
+            if (str_contains($file, DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR)) {
+                continue;
+            }
+            $name = $matches[1];
+            $files[$name] = $file;
+        }
+
+        return $files;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @return array<string>
+     */
+    protected function findExistingMappers(string $path): array
+    {
+        if (!is_dir($path)) {
+            return [];
+        }
+
+        $files = [];
+
+        $directory = new RecursiveDirectoryIterator($path);
+        $iterator = new RecursiveIteratorIterator($directory);
+        foreach ($iterator as $fileInfo) {
+            $file = $fileInfo->getPathname();
+            $suffix = $this->config->get('suffix', 'Dto');
+            if (!preg_match('#Mapper/(.+)' . preg_quote($suffix, '#') . 'Mapper\.php$#', $file, $matches)) {
                 continue;
             }
             $name = $matches[1];
@@ -193,6 +295,26 @@ class Generator
         }
 
         return $dtos;
+    }
+
+    /**
+     * Generate mapper classes for Doctrine SELECT NEW compatibility.
+     *
+     * @param array<string, mixed> $definitions
+     *
+     * @return array<string>
+     */
+    protected function generateMappers(array $definitions): array
+    {
+        $mappers = [];
+        foreach ($definitions as $name => $dto) {
+            $this->renderer->set($dto);
+
+            $content = $this->renderer->generate('mapper');
+            $mappers[$name] = $content;
+        }
+
+        return $mappers;
     }
 
     /**
