@@ -355,5 +355,4 @@ PHP;
         $this->assertSame('array<string, string|null>', $tagsField['docBlockType']);
         $this->assertTrue($tagsField['singularNullable']);
     }
-
 }
