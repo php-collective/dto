@@ -322,4 +322,37 @@ PHP;
         $this->assertArrayNotHasKey('docBlockType', $definitions['User']['fields']['name']);
         $this->assertArrayNotHasKey('docBlockType', $definitions['User']['fields']['active']);
     }
+
+    public function testNullableSingularIncludesNullInDocBlockType(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Meta' => [
+        'fields' => [
+            'tags' => [
+                'type' => '?string[]',
+                'collectionType' => 'array',
+                'associative' => true,
+                'singular' => 'tag',
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $tagsField = $definitions['Meta']['fields']['tags'];
+
+        // Nullable singular should include |null in docBlockType
+        $this->assertArrayHasKey('docBlockType', $tagsField);
+        $this->assertSame('array<string, string|null>', $tagsField['docBlockType']);
+        $this->assertTrue($tagsField['singularNullable']);
+    }
 }
