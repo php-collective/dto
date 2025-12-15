@@ -232,6 +232,11 @@ class Builder
             $config[$name] = $dto;
         }
 
+        // Add shaped array types for toArray()/createFromArray() PHPDoc
+        foreach ($config as $name => $dto) {
+            $config[$name]['arrayShape'] = $this->buildArrayShape($dto['fields'], $config);
+        }
+
         return $config;
     }
 
@@ -943,6 +948,95 @@ class Builder
         $keyType = $field['associative'] ? 'string' : 'int';
 
         return sprintf('%s<%s, %s>', $collectionType, $keyType, $elementType);
+    }
+
+    /**
+     * Build a shaped array type for PHPDoc annotations on toArray()/createFromArray().
+     *
+     * Generates types like: array{name: string, count: int, items: array<int, ItemDto>}
+     *
+     * @param array<string, array<string, mixed>> $fields
+     * @param array<string, array<string, mixed>> $allDtos All DTOs for resolving nested shapes
+     *
+     * @return string
+     */
+    protected function buildArrayShape(array $fields, array $allDtos = []): string
+    {
+        $parts = [];
+
+        foreach ($fields as $name => $field) {
+            $type = $this->buildFieldShapeType($field, $allDtos);
+            $parts[] = $name . ': ' . $type;
+        }
+
+        return 'array{' . implode(', ', $parts) . '}';
+    }
+
+    /**
+     * Build the shaped array type for a single field.
+     *
+     * @param array<string, mixed> $field
+     * @param array<string, array<string, mixed>> $allDtos
+     *
+     * @return string
+     */
+    protected function buildFieldShapeType(array $field, array $allDtos = []): string
+    {
+        // For collections, use array<keyType, elementType>
+        if (!empty($field['collection']) || !empty($field['isArray'])) {
+            $elementType = $field['singularType'] ?? 'mixed';
+            $keyType = !empty($field['associative']) ? 'string' : 'int';
+
+            // If element is a DTO, try to resolve its shape
+            $dtoName = $this->extractDtoName($elementType);
+            if ($dtoName && isset($allDtos[$dtoName])) {
+                $nestedShape = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
+                $elementType = $nestedShape;
+            }
+
+            $type = sprintf('array<%s, %s>', $keyType, $elementType);
+        } elseif (!empty($field['dto'])) {
+            // For nested DTOs, build nested shape if available
+            $dtoName = $this->extractDtoName($field['type']);
+            if ($dtoName && isset($allDtos[$dtoName])) {
+                $type = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
+            } else {
+                $type = 'array<string, mixed>';
+            }
+        } else {
+            // Simple type
+            $type = $field['typeHint'] ?? $field['type'] ?? 'mixed';
+        }
+
+        // Add null if nullable
+        if (!empty($field['nullable'])) {
+            $type .= '|null';
+        }
+
+        return $type;
+    }
+
+    /**
+     * Extract the DTO name from a fully qualified class name.
+     *
+     * @param string $type
+     *
+     * @return string|null
+     */
+    protected function extractDtoName(string $type): ?string
+    {
+        // Remove leading backslash and namespace, extract class name without Dto suffix
+        $className = ltrim($type, '\\');
+        $parts = explode('\\', $className);
+        $shortName = end($parts);
+
+        // Remove Dto suffix if present
+        $suffix = $this->getConfigOrFail('suffix');
+        if (str_ends_with($shortName, $suffix)) {
+            return substr($shortName, 0, -strlen($suffix));
+        }
+
+        return $shortName;
     }
 
     /**

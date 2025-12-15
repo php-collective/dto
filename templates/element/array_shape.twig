@@ -1,0 +1,26 @@
+
+	/**
+	 * @param string|null $type
+	 * @param array<string>|null $fields
+	 * @param bool $touched
+	 *
+	 * @return {{ arrayShape }}
+	 */
+	#[\Override]
+	public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
+	{
+		return parent::toArray($type, $fields, $touched);
+	}
+
+	/**
+	 * @param {{ arrayShape }} $data
+	 * @param bool $ignoreMissing
+	 * @param string|null $type
+	 *
+	 * @return static
+	 */
+	#[\Override]
+	public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
+	{
+		return parent::createFromArray($data, $ignoreMissing, $type);
+	}
