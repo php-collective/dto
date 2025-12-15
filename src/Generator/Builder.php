@@ -234,7 +234,7 @@ class Builder
 
         // Add shaped array types for toArray()/createFromArray() PHPDoc
         foreach ($config as $name => $dto) {
-            $config[$name]['arrayShape'] = $this->buildArrayShape($dto['fields'], $config);
+            $config[$name]['arrayShape'] = $this->buildArrayShape($dto['fields'], $config, $dto);
         }
 
         return $config;
@@ -969,21 +969,70 @@ class Builder
      *
      * Generates types like: array{name: string, count: int, items: array<int, ItemDto>}
      *
+     * When a DTO extends another DTO, the parent's fields are included first to ensure
+     * the child's return type is covariant (compatible with LSP).
+     *
      * @param array<string, array<string, mixed>> $fields
      * @param array<string, array<string, mixed>> $allDtos All DTOs for resolving nested shapes
+     * @param array<string, mixed>|null $dto The current DTO definition (for inheritance)
      *
      * @return string
      */
-    protected function buildArrayShape(array $fields, array $allDtos = []): string
+    protected function buildArrayShape(array $fields, array $allDtos = [], ?array $dto = null): string
     {
-        $parts = [];
+        $allFields = [];
 
+        // If DTO extends another DTO, include parent fields first (for LSP covariance)
+        if ($dto !== null && !empty($dto['extends'])) {
+            $parentDtoName = $this->extractDtoName($dto['extends']);
+            if ($parentDtoName && isset($allDtos[$parentDtoName])) {
+                $parentDto = $allDtos[$parentDtoName];
+                // Recursively get parent fields (handles multi-level inheritance)
+                $parentFields = $this->collectInheritedFields($parentDto, $allDtos);
+                $allFields = $parentFields;
+            }
+        }
+
+        // Add/override with current DTO's fields
         foreach ($fields as $name => $field) {
+            $allFields[$name] = $field;
+        }
+
+        $parts = [];
+        foreach ($allFields as $name => $field) {
             $type = $this->buildFieldShapeType($field, $allDtos);
             $parts[] = $name . ': ' . $type;
         }
 
         return 'array{' . implode(', ', $parts) . '}';
+    }
+
+    /**
+     * Collect all inherited fields from parent DTOs recursively.
+     *
+     * @param array<string, mixed> $dto
+     * @param array<string, array<string, mixed>> $allDtos
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function collectInheritedFields(array $dto, array $allDtos): array
+    {
+        $fields = [];
+
+        // First, get grandparent fields if this DTO also extends something
+        if (!empty($dto['extends'])) {
+            $parentDtoName = $this->extractDtoName($dto['extends']);
+            if ($parentDtoName && isset($allDtos[$parentDtoName])) {
+                $fields = $this->collectInheritedFields($allDtos[$parentDtoName], $allDtos);
+            }
+        }
+
+        // Then add this DTO's fields
+        foreach ($dto['fields'] as $name => $field) {
+            $fields[$name] = $field;
+        }
+
+        return $fields;
     }
 
     /**

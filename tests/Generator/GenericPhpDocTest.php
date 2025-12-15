@@ -355,4 +355,68 @@ PHP;
         $this->assertSame('array<string, string|null>', $tagsField['docBlockType']);
         $this->assertTrue($tagsField['singularNullable']);
     }
+
+    public function testChildDtoArrayShapeIncludesParentFields(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Vehicle' => [
+        'fields' => [
+            'name' => [
+                'type' => 'string',
+                'required' => true,
+            ],
+            'weight' => [
+                'type' => 'int',
+                'required' => true,
+            ],
+        ],
+    ],
+    'Car' => [
+        'extends' => 'Vehicle',
+        'fields' => [
+            'wheels' => [
+                'type' => 'int',
+                'required' => true,
+            ],
+        ],
+    ],
+    'FlyingCar' => [
+        'extends' => 'Car',
+        'fields' => [
+            'maxAltitude' => [
+                'type' => 'int',
+                'required' => true,
+            ],
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        // Parent DTO should only have its own fields
+        $this->assertSame(
+            'array{name: string, weight: int}',
+            $definitions['Vehicle']['arrayShape'],
+        );
+
+        // Child DTO should include parent fields for LSP covariance
+        $this->assertSame(
+            'array{name: string, weight: int, wheels: int}',
+            $definitions['Car']['arrayShape'],
+        );
+
+        // Grandchild should include all ancestor fields
+        $this->assertSame(
+            'array{name: string, weight: int, wheels: int, maxAltitude: int}',
+            $definitions['FlyingCar']['arrayShape'],
+        );
+    }
 }
