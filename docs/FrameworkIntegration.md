@@ -2,6 +2,17 @@
 
 This library is **framework-agnostic** by design. It works with any PHP framework without requiring wrapper packages, while still offering deep integration possibilities.
 
+Do We Need Wrapper Libraries?
+
+| Feature            | Without Wrapper    | With Wrapper                |
+  |--------------------|--------------------|-----------------------------|
+| Basic usage        | ✅ Works           | ✅ Works                    |
+| Collection factory | 1 line setup       | Auto-configured             |
+| Code generation    | bin/dto generate   | artisan dto:generate        |
+| Request → DTO      | Manual             | Auto via injection          |
+| Validation         | Manual integration | Native framework validators |
+| IDE support        | ✅ Full            | ✅ Full                     |
+
 ## Quick Setup
 
 ### Laravel
