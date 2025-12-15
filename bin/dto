@@ -89,6 +89,7 @@ function parseArgs(array $argv): array
         'quiet' => false,
         'help' => false,
         'confirm' => false,
+        'mapper' => false,
         // TypeScript options
         'single-file' => true,
         'readonly' => false,
@@ -111,6 +112,8 @@ function parseArgs(array $argv): array
             $options['force'] = true;
         } elseif ($arg === '--confirm') {
             $options['confirm'] = true;
+        } elseif ($arg === '--mapper') {
+            $options['mapper'] = true;
         } elseif ($arg === '--single-file') {
             $options['single-file'] = true;
         } elseif ($arg === '--multi-file') {
@@ -171,6 +174,7 @@ Generate Options:
   --dry-run            Show what would be generated without writing files
   --force              Regenerate all DTOs, ignoring existing
   --confirm            Validate PHP syntax of generated files
+  --mapper             Generate Doctrine-compatible mapper classes
 
 TypeScript Options:
   --output=PATH        Path for TypeScript output (default: types/)
@@ -189,6 +193,9 @@ Examples:
 
   # Preview changes without writing
   vendor/bin/dto generate --dry-run --verbose
+
+  # Generate with Doctrine-compatible mappers
+  vendor/bin/dto generate --mapper
 
   # Generate TypeScript interfaces
   vendor/bin/dto typescript --output=frontend/src/types/
@@ -364,6 +371,7 @@ $exitCode = $generator->generate($configPath, $srcPath, [
     'confirm' => $args['confirm'],
     'verbose' => $args['verbose'],
     'namespace' => $namespace,
+    'mapper' => $args['mapper'],
 ]);
 
 exit($exitCode);
