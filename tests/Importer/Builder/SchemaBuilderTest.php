@@ -261,6 +261,22 @@ class SchemaBuilderTest extends TestCase
     /**
      * @return void
      */
+    public function testBuildPhpNamespacedDtoTypes(): void
+    {
+        $fields = [
+            'user' => ['type' => 'Github/User'],
+            'labels' => ['type' => 'Github/Label[]'],
+        ];
+
+        $output = $this->builder->build('Issue', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Field::dto('user', 'Github/User')", $output);
+        $this->assertStringContainsString("Field::collection('labels', 'Github/Label')", $output);
+    }
+
+    /**
+     * @return void
+     */
     public function testBuildAllExcludesMarkedDefinitions(): void
     {
         $definitions = [
