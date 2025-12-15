@@ -930,6 +930,11 @@ class Builder
             }
         }
 
+        // Include nullable in element type if singularNullable is set
+        if (!empty($field['singularNullable']) && $elementType) {
+            $elementType .= '|null';
+        }
+
         $keyType = ($field['associative'] ?? false) ? 'string' : 'int';
 
         return sprintf('array<%s, %s>', $keyType, $elementType ?: 'mixed');
@@ -948,6 +953,12 @@ class Builder
     {
         $collectionType = $field['collectionType'] ?? '\ArrayObject';
         $elementType = $field['singularType'] ?? 'mixed';
+
+        // Include nullable in element type if singularNullable is set
+        if (!empty($field['singularNullable']) && $elementType !== 'mixed') {
+            $elementType .= '|null';
+        }
+
         $keyType = $field['associative'] ? 'string' : 'int';
 
         return sprintf('%s<%s, %s>', $collectionType, $keyType, $elementType);
