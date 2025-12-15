@@ -16,13 +16,14 @@ Some people argue that arrays are faster and use less memory than objects. This 
 
 ## Other Existing Solutions
 
-The PHP DTO ecosystem has evolved significantly with PHP 8.x features. Here's the current landscape (2024/2025):
+The PHP DTO ecosystem has evolved significantly with PHP 8.x features. Here's the current landscape (2025):
 
 **Active Libraries:**
-- [spatie/laravel-data](https://github.com/spatie/laravel-data): Laravel-specific, runtime reflection with PHP 8 attributes. Features validation, TypeScript generation, and API resource integration.
-- [cuyz/valinor](https://github.com/CuyZ/Valinor): Framework-agnostic runtime mapper with PHPStan/Psalm type support (generics, shaped arrays). Excellent error messages.
-- [symfony/serializer](https://symfony.com/doc/current/serializer.html): Component-based serialization for Symfony. Supports JSON, XML, YAML, CSV.
-- [jms/serializer](https://github.com/schmittjoh/serializer): Mature annotation-driven serializer with versioning and Doctrine integration.
+- [spatie/laravel-data](https://github.com/spatie/laravel-data) (v4.18+): Laravel-specific, runtime reflection with PHP 8 attributes. Features validation, TypeScript generation, lazy properties, and Eloquent integration. Requires PHP 8.1+.
+- [cuyz/valinor](https://github.com/CuyZ/Valinor) (v2.3+): Framework-agnostic runtime mapper with PHPStan/Psalm type support (generics, shaped arrays, integer ranges). Excellent error messages and normalization support. Requires PHP 8.1+.
+- [symfony/serializer](https://symfony.com/doc/current/serializer.html) (v7/8): Component-based serialization with new JsonStreamer for streaming large datasets. Supports JSON, XML, YAML, CSV.
+- [symfony/object-mapper](https://symfony.com/doc/current/serializer.html) (Symfony 7.3+): New lightweight ObjectMapper component for simple DTO hydration without full Serializer overhead.
+- [jms/serializer](https://github.com/schmittjoh/serializer) (v3.32+): Mature annotation/attribute-driven serializer with versioning, Doctrine integration, and circular reference handling. Requires PHP 7.4+.
 
 **Deprecated:**
 - [spatie/data-transfer-object](https://github.com/spatie/data-transfer-object): **Deprecated as of 2023**. Maintainers recommend `spatie/laravel-data` or `cuyz/valinor`.
@@ -61,46 +62,57 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 
 ## Comparison with Alternatives
 
-| Aspect                  |  php-collective/dto  |    laravel-data    |     valinor     | symfony  | native PHP |
-|-------------------------|:--------------------:|:------------------:|:---------------:|:--------:|:----------:|
-| **Approach**            |   Code generation    | Runtime reflection | Runtime mapping | Runtime  |   Manual   |
-| **IDE Autocomplete**    |      Excellent       |        Good        |      Good       |   Good   | Excellent  |
-| **Static Analysis**     |      Excellent       |        Good        |    Excellent    |   Good   | Excellent  |
-| **Runtime Performance** |         Best         |      Moderate      |    Moderate     | Moderate |    Best    |
-| **Validation**          |   Required fields    |        Full        |      Good       | Partial  |    None    |
-| **TypeScript Gen**      |         Yes          |        Yes         |       No        |    No    |     No     |
-| **Collections**         |       Built-in       |      Built-in      |    Built-in     |  Manual  |   Manual   |
-| **Inflection**          |       Built-in       |       Manual       |     Manual      |  Manual  |   Manual   |
-| **Framework**           |         Any          |      Laravel       |       Any       | Symfony  |    Any     |
+| Aspect                  | php-collective/dto | laravel-data | valinor  | symfony/serializer | jms/serializer | native PHP |
+|-------------------------|:------------------:|:------------:|:--------:|:------------------:|:--------------:|:----------:|
+| **Approach**            |  Code generation   |  Reflection  | Mapping  |     Reflection     |   Reflection   |   Manual   |
+| **IDE Autocomplete**    |     Excellent      |     Good     |   Good   |        Good        |      Good      | Excellent  |
+| **Static Analysis**     |     Excellent      |     Good     | Excellent |        Good        |      Good      | Excellent  |
+| **Runtime Performance** |        Best        |   Moderate   | Moderate |      Moderate      |    Moderate    |    Best    |
+| **Validation**          |   Required only    |     Full     |   Good   |      Partial       |    Partial     |    None    |
+| **TypeScript Gen**      |        Yes         |     Yes      |    No    |         No         |       No       |     No     |
+| **Collections**         |      Built-in      |   Built-in   | Built-in |       Manual       |    Built-in    |   Manual   |
+| **Inflection**          |      Built-in      |    Manual    |  Manual  |       Manual       |     Manual     |   Manual   |
+| **Immutable DTOs**      |      Built-in      |   Built-in   | Built-in |       Manual       |     Manual     |   Manual   |
+| **Lazy Properties**     |         No         |     Yes      |    No    |         No         |       No       |     No     |
+| **Generics Support**    |    PHPDoc only     |   Partial    | Excellent|      Partial       |    Partial     |     No     |
+| **Error Messages**      |       Good         |     Good     | Excellent|        Good        |      Good      |    N/A     |
+| **Framework**           |        Any         |   Laravel    |   Any    |      Symfony       |      Any       |    Any     |
+| **PHP Requirement**     |       8.2+         |    8.1+      |   8.1+   |        8.4+        |      7.4+      |    8.2+    |
 
 **When to choose php-collective/dto:**
-- Performance is important (API responses, batch processing)
+- Performance is critical (25-60x faster than runtime libraries)
 - You want the best possible IDE and static analysis support
 - You prefer configuration files over code attributes
-- You need either mutable or immutable DTOs
+- You need either mutable or immutable DTOs with explicit choice
 - You work with different key formats (camelCase, snake_case, dashed)
+- Code review of generated DTOs is valuable to your team
 
 ## Summary
 
 **Strengths vs competition:**
 
-| Aspect              | php-collective/dto         | Others            |
-|---------------------|----------------------------|-------------------|
-| IDE/Static Analysis | Excellent (generated code) | Good (reflection) |
-| Runtime Performance | Best (no reflection)       | Moderate          |
-| Code Review         | Generated code visible     | Magic/runtime     |
-| Inflection Support  | Built-in                   | Usually manual    |
+| Aspect              | php-collective/dto           | Runtime Libraries          |
+|---------------------|------------------------------|----------------------------|
+| IDE/Static Analysis | Excellent (real methods)     | Good (reflection/magic)    |
+| Runtime Performance | Best (25-60x faster)         | Moderate                   |
+| Code Review         | Generated code visible in PR | Magic/runtime behavior     |
+| Inflection Support  | Built-in (snake/camel/dash)  | Usually manual             |
+| Build-time Errors   | Catch issues at generation   | Discover at runtime        |
 
 **Gaps compared to runtime libraries:**
 
-| Feature           | php-collective/dto | laravel-data | valinor |
-|-------------------|:------------------:|:------------:|:-------:|
-| TypeScript Gen    |        Yes         |     Yes      |   No    |
-| Validation Rules  | Required only      |     Full     |  Good   |
-| PHPDoc Generics   |        Yes         |   Partial    |   Yes   |
-| Union Types       |        Yes         |     Yes      |   Yes   |
+| Feature              | php-collective/dto | laravel-data | valinor  | jms/serializer |
+|----------------------|:------------------:|:------------:|:--------:|:--------------:|
+| Validation Rules     |   Required only    |     Full     |   Good   |    Partial     |
+| PHPDoc Generics      |        Yes         |   Partial    | Excellent |    Partial     |
+| Lazy Properties      |         No         |     Yes      |    No    |       No       |
+| Shaped Arrays        |         No         |      No      |   Yes    |       No       |
+| Integer Ranges       |         No         |      No      |   Yes    |       No       |
+| API Versioning       |         No         |      No      |    No    |      Yes       |
+| Eloquent Integration |         No         |     Yes      |    No    |       No       |
+| Streaming/Large Data |         No         |      No      |    No    |       No       |
 
-**Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance and IDE support.
+**Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance (25-60x faster) and IDE support. Choose runtime libraries if you need advanced validation, lazy loading, or framework-specific integration.
 
 ## Why Not Immutable by Default?
 
@@ -129,7 +141,7 @@ Contracting with interfaces is important when building SOLID code. For generated
 
 ## Value Objects
 
-[Value objects](https://codete.com/blog/value-objects/) should work nicely with DTOs. Value objects like `DateTime`, `Money`, or custom ones are usually immutable by design.
+[Value objects](https://martinfowler.com/bliki/ValueObject.html) should work nicely with DTOs. Value objects like `DateTime`, `Money`, or custom ones are usually immutable by design.
 
 The key difference: value objects can contain logic and "operations" between each other (`$moneyOne->subtract($moneyTwo)`), whereas a DTO must not contain anything beyond holding pure data and setting/getting.
 

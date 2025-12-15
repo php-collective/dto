@@ -1,5 +1,13 @@
 # Design Decisions
 
+## Non-Goals
+These features are intentionally out of scope:
+
+- ORM/Database integration - Keep library focused on data transfer
+- Request handling - Framework-specific, use adapters
+- Dependency injection - Use framework DI containers
+- Runtime reflection - Defeats purpose of code generation
+
 ## Validation
 
 The library provides minimal built-in validation:
