@@ -344,6 +344,120 @@ services:
 
 DTOs are typically instantiated directly rather than through the container, as they're data holders, not services.
 
+## Doctrine ORM Integration
+
+Generated DTOs work seamlessly with Doctrine's DTO hydration feature (`SELECT NEW`).
+
+### Direct Query Hydration
+
+```php
+use App\Dto\UserSummaryDto;
+
+// Hydrate DTOs directly from database queries
+$query = $entityManager->createQuery(
+    'SELECT NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)
+     FROM App\Entity\User u
+     WHERE u.active = true'
+);
+
+/** @var UserSummaryDto[] $users */
+$users = $query->getResult();
+
+// All generated methods are available
+foreach ($users as $user) {
+    echo $user->getName();
+    echo $user->getEmail();
+}
+```
+
+### DTO Definition for Query Results
+
+Define DTOs specifically for query results:
+
+```php
+// config/dto.php
+return Schema::create()
+    ->dto(Dto::create('UserSummary')->fields(
+        Field::int('id'),
+        Field::string('name'),
+        Field::string('email'),
+    ))
+    ->toArray();
+```
+
+The generated constructor accepts positional arguments, which is what Doctrine's `NEW` expression requires.
+
+### With Query Builder
+
+```php
+$qb = $entityManager->createQueryBuilder();
+$qb->select('NEW App\Dto\OrderSummaryDto(o.id, o.total, c.name)')
+   ->from(Order::class, 'o')
+   ->join('o.customer', 'c')
+   ->where('o.status = :status')
+   ->setParameter('status', 'completed');
+
+/** @var OrderSummaryDto[] $orders */
+$orders = $qb->getQuery()->getResult();
+```
+
+### Repository Pattern
+
+```php
+class UserRepository extends ServiceEntityRepository
+{
+    public function findActiveSummaries(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->select('NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)')
+            ->where('u.active = true')
+            ->getQuery()
+            ->getResult();
+    }
+}
+```
+
+### Entity to DTO Conversion
+
+For converting full entities to DTOs:
+
+```php
+// Simple conversion
+$user = $entityManager->find(User::class, 1);
+$dto = new UserDto($user->toArray());
+
+// Or with a static factory
+class UserDto extends AbstractDto
+{
+    public static function fromEntity(User $user): static
+    {
+        return new static([
+            'id' => $user->getId(),
+            'name' => $user->getName(),
+            'email' => $user->getEmail(),
+            'roles' => $user->getRoles()->map(fn ($r) => [
+                'id' => $r->getId(),
+                'name' => $r->getName(),
+            ])->toArray(),
+        ]);
+    }
+}
+```
+
+### Why Use DTOs with Doctrine?
+
+| Approach | Use Case |
+|----------|----------|
+| **Entity directly** | Internal domain logic, persistence |
+| **DTO via SELECT NEW** | API responses, read-only views, performance |
+| **DTO from Entity** | When you need the full entity first, then transform |
+
+Benefits of DTOs for query results:
+- **Performance**: Only hydrate needed fields, no proxy objects
+- **API safety**: No lazy-loading surprises in JSON responses
+- **Clear contracts**: DTOs define exactly what the API returns
+- **Immutability**: Use immutable DTOs for read-only data
+
 ## Further Reading
 
 - [Custom Collection Types](Examples.md#custom-collection-types)
