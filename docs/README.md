@@ -11,6 +11,7 @@
 [Performance](Performance.md) |
 [Migration](Migration.md) |
 [TypeScript Generation](TypeScriptGeneration.md) |
+[Shaped Array Types](ShapedArrayTypes.md) |
 [Motivation](Motivation.md)
 
 ---

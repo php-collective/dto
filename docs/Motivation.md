@@ -106,7 +106,7 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 | Validation Rules     |   Required only    |     Full     |   Good   |    Partial     |
 | PHPDoc Generics      |        Yes         |   Partial    | Excellent |    Partial     |
 | Lazy Properties      |         No         |     Yes      |    No    |       No       |
-| Shaped Arrays        |         No         |      No      |   Yes    |       No       |
+| Shaped Arrays        |        Yes         |      No      |   Yes    |       No       |
 | Integer Ranges       |         No         |      No      |   Yes    |       No       |
 | API Versioning       |         No         |      No      |    No    |      Yes       |
 | Eloquent Integration |         No         |     Yes      |    No    |       No       |
