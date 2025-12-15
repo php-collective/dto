@@ -131,6 +131,8 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 - **Deep cloning**: `$dto->clone()`
 - **Nested reading**: `$dto->read(['path', 'to', 'field'])`
 - **PHPDoc generics**: `@var \ArrayObject<int, ItemDto>` for static analysis
+- **[TypeScript generation](#typescript-generation)**: Generate TypeScript interfaces from your DTO configs
+- **[Schema Importer](#schema-importer)**: Auto-create DTOs from JSON data or JSON Schema
 
 ## Configuration Formats
 
@@ -139,15 +141,68 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 - **YAML** - requires `pecl install yaml`
 - **NEON** - requires `nette/neon`
 
+## TypeScript Generation
+
+Generate TypeScript interfaces directly from your DTO configuration - keeping frontend and backend types in sync:
+
+```bash
+# Single file output
+vendor/bin/dto typescript --config-path=config/ --output=frontend/src/types/
+
+# Multi-file with separate imports
+vendor/bin/dto typescript --multi-file --file-case=dashed --output=types/
+```
+
+```typescript
+// Generated: types/dto.ts
+export interface UserDto {
+    id: number;
+    name: string;
+    email: string;
+    address?: AddressDto;
+    roles?: RoleDto[];
+}
+```
+
+Options: `--readonly`, `--strict-nulls`, `--file-case=pascal|dashed|snake`
+
+See [TypeScript Generation](docs/TypeScriptGeneration.md) for full documentation.
+
+## Schema Importer
+
+Bootstrap DTO configurations from existing JSON data or JSON Schema definitions:
+
+```php
+use PhpCollective\Dto\Importer\Importer;
+
+$importer = new Importer();
+
+// From API response example
+$json = '{"name": "John", "age": 30, "email": "john@example.com"}';
+$config = $importer->import($json);
+
+// From JSON Schema
+$schema = file_get_contents('openapi-schema.json');
+$config = $importer->import($schema, ['format' => 'xml']);
+```
+
+Outputs to PHP, XML, YAML, or NEON format. Perfect for integrating with external APIs.
+
+See [Schema Importer](docs/Importer.md) for full documentation.
+
 ## Documentation
 
 - [Quick Start Guide](docs/README.md) - Getting started with examples
 - [Configuration Builder](docs/ConfigBuilder.md) - Fluent API for defining DTOs
 - [Examples](docs/Examples.md) - Practical usage patterns
+- [TypeScript Generation](docs/TypeScriptGeneration.md) - Generate TypeScript interfaces
+- [Schema Importer](docs/Importer.md) - Bootstrap DTOs from JSON data/schema
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
 
 ## Integrations
 
 This is the standalone core library. For framework-specific integrations:
 
-- **CakePHP**: [dereuromark/cakephp-dto](https://github.com/dereuromark/cakephp-dto)
+- **CakePHP**: [dereuromark/cakephp-dto](https://github.com/dereuromark/cakephp-dto) - Bake commands, plugin
+- **Laravel**: [php-collective/laravel-dto](https://github.com/php-collective/laravel-dto) - Artisan commands, service provider
+- **Symfony**: [php-collective/symfony-dto](https://github.com/php-collective/symfony-dto) - Console commands, bundle integration
