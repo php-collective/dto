@@ -84,7 +84,7 @@
 {% if fieldsWithDefaults | length > 0 %}
 {% for field in fieldsWithDefaults %}
 		if ($this->{{ field.name }} === null) {
-			$this->{{ field.name }} = {{ field.defaultValue | json_encode }};
+			$this->{{ field.name }} = {{ field.defaultValue | phpExport | raw }};
 		}
 {% endfor %}
 {% endif %}

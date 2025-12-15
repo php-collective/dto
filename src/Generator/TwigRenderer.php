@@ -58,6 +58,7 @@ class TwigRenderer implements RendererInterface
     protected function registerFilters(): void
     {
         $this->twig->addFilter(new TwigFilter('stringify', [$this, 'stringifyList']));
+        $this->twig->addFilter(new TwigFilter('phpExport', [$this, 'phpExport']));
         $this->twig->addFilter(new TwigFilter('underscore', [Inflector::class, 'underscore']));
         $this->twig->addFilter(new TwigFilter('camelize', [Inflector::class, 'camelize']));
         $this->twig->addFilter(new TwigFilter('variable', [Inflector::class, 'variable']));
@@ -164,5 +165,32 @@ class TwigRenderer implements RendererInterface
         }
 
         return $start . implode($join, $list) . $end;
+    }
+
+    /**
+     * Export a PHP value to its code representation.
+     *
+     * Handles booleans, strings, numbers, arrays, and null properly.
+     *
+     * @param mixed $value The value to export
+     *
+     * @return string
+     */
+    public function phpExport(mixed $value): string
+    {
+        if ($value === null) {
+            return 'null';
+        }
+        if (is_bool($value)) {
+            return $value ? 'true' : 'false';
+        }
+        if (is_string($value)) {
+            return "'" . addcslashes($value, "'\\") . "'";
+        }
+        if (is_array($value)) {
+            return var_export($value, true);
+        }
+
+        return (string)$value;
     }
 }
