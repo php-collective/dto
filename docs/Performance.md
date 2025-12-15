@@ -289,7 +289,7 @@ readonly class UserDto {
 
 ## Doctrine ORM: Entity vs DTO Benchmark
 
-Using DTOs with Doctrine's `SELECT NEW` can significantly improve read performance compared to full entity hydration.
+Using partial array hydration + DTOs significantly improves read performance compared to full entity hydration.
 
 ### Benchmark Setup
 
@@ -326,8 +326,8 @@ Full Entity Hydration:           ~45ms
   - Creates proxy objects for relations
   - Tracks in UnitOfWork
 
-DTO via SELECT NEW:              ~12ms  (3.7x faster)
-  - Hydrates only 3 needed fields
+Array + DTO Hydration:           ~12ms  (3.7x faster)
+  - Fetches only 3 needed fields
   - No proxy objects
   - No UnitOfWork tracking
 
@@ -339,19 +339,19 @@ DTO from Entity->toArray():      ~52ms  (slower than entity alone)
 
 ```
 Full Entity Hydration:     ~2.8 MB
-DTO via SELECT NEW:        ~0.4 MB  (7x less memory)
+Array + DTO Hydration:     ~0.4 MB  (7x less memory)
 ```
 
 ### When to Use Each Approach
 
 | Scenario | Recommendation | Why |
 |----------|---------------|-----|
-| **API list endpoints** | DTO via SELECT NEW | Only fetch displayed fields |
-| **Admin dashboards** | DTO via SELECT NEW | Read-only, specific columns |
+| **API list endpoints** | Array + DTO | Only fetch displayed fields |
+| **Admin dashboards** | Array + DTO | Read-only, specific columns |
 | **Entity updates** | Full Entity | Need UnitOfWork for persistence |
 | **Complex business logic** | Full Entity | Need relation traversal |
-| **Export/reports** | DTO via SELECT NEW | Memory efficient for large sets |
-| **Real-time feeds** | DTO via SELECT NEW | Minimal latency |
+| **Export/reports** | Array + DTO | Memory efficient for large sets |
+| **Real-time feeds** | Array + DTO | Minimal latency |
 
 ### Benchmark Code
 
@@ -368,12 +368,12 @@ foreach ($users as $user) {
 }
 $entityTime = microtime(true) - $start;
 
-// DTO hydration
+// Array + DTO hydration
 $start = microtime(true);
-$users = $em->createQuery(
-    'SELECT NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)
-     FROM App\Entity\User u'
-)->getResult();
+$rows = $em->createQuery(
+    'SELECT u.id, u.name, u.email FROM App\Entity\User u'
+)->getArrayResult();
+$users = array_map(fn($row) => new UserSummaryDto($row), $rows);
 $dtoTime = microtime(true) - $start;
 
 echo "Entity: {$entityTime}s, DTO: {$dtoTime}s\n";
@@ -394,7 +394,7 @@ public function list(): JsonResponse
     ], $users));
 }
 
-// After: DTO hydration (3-4x faster)
+// After: Array + DTO hydration (3-4x faster)
 #[Route('/api/users')]
 public function list(): JsonResponse
 {
@@ -406,18 +406,23 @@ public function list(): JsonResponse
 ### Combined with Pagination
 
 ```php
+/**
+ * @return UserSummaryDto[]
+ */
 public function findPaginatedSummaries(int $page, int $limit): array
 {
-    return $this->createQueryBuilder('u')
-        ->select('NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)')
+    $rows = $this->createQueryBuilder('u')
+        ->select('u.id', 'u.name', 'u.email')
         ->setFirstResult(($page - 1) * $limit)
         ->setMaxResults($limit)
         ->getQuery()
-        ->getResult();
+        ->getArrayResult();
+
+    return array_map(fn($row) => new UserSummaryDto($row), $rows);
 }
 ```
 
 The performance gains compound with:
-- More fields on the entity (DTO fetches fewer)
-- More relations (DTO avoids proxy creation)
+- More fields on the entity (partial select fetches fewer)
+- More relations (array hydration avoids proxy creation)
 - Larger result sets (memory savings)

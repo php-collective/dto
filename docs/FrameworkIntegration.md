@@ -346,33 +346,50 @@ DTOs are typically instantiated directly rather than through the container, as t
 
 ## Doctrine ORM Integration
 
-Generated DTOs work seamlessly with Doctrine's DTO hydration feature (`SELECT NEW`).
+Generated DTOs work well with Doctrine for read-optimized queries.
 
-### Direct Query Hydration
+### Partial Select + DTO Hydration
+
+The recommended approach: fetch only needed fields as arrays, then hydrate DTOs:
 
 ```php
 use App\Dto\UserSummaryDto;
 
-// Hydrate DTOs directly from database queries
-$query = $entityManager->createQuery(
-    'SELECT NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)
+// Fetch partial data as array (fast - no entity hydration)
+$rows = $entityManager->createQuery(
+    'SELECT u.id, u.name, u.email
      FROM App\Entity\User u
      WHERE u.active = true'
-);
+)->getArrayResult();
 
-/** @var UserSummaryDto[] $users */
-$users = $query->getResult();
+// Hydrate generated DTOs
+$users = array_map(fn($row) => new UserSummaryDto($row), $rows);
 
-// All generated methods are available
+// All generated methods available
 foreach ($users as $user) {
     echo $user->getName();
     echo $user->getEmail();
 }
 ```
 
+### Why Not SELECT NEW?
+
+Doctrine's `SELECT NEW` passes **positional arguments**:
+```php
+SELECT NEW App\Dto\UserDto(u.id, u.name, u.email)
+// Calls: new UserDto($id, $name, $email)
+```
+
+Generated DTOs expect an **array**:
+```php
+new UserDto(['id' => 1, 'name' => 'John', 'email' => 'john@example.com'])
+```
+
+Using `getArrayResult()` + DTO hydration gives the same performance benefits while working with generated DTOs.
+
 ### DTO Definition for Query Results
 
-Define DTOs specifically for query results:
+Define lightweight DTOs for specific queries:
 
 ```php
 // config/dto.php
@@ -385,20 +402,19 @@ return Schema::create()
     ->toArray();
 ```
 
-The generated constructor accepts positional arguments, which is what Doctrine's `NEW` expression requires.
-
 ### With Query Builder
 
 ```php
 $qb = $entityManager->createQueryBuilder();
-$qb->select('NEW App\Dto\OrderSummaryDto(o.id, o.total, c.name)')
+$rows = $qb->select('o.id', 'o.total', 'c.name AS customerName')
    ->from(Order::class, 'o')
    ->join('o.customer', 'c')
    ->where('o.status = :status')
-   ->setParameter('status', 'completed');
+   ->setParameter('status', 'completed')
+   ->getQuery()
+   ->getArrayResult();
 
-/** @var OrderSummaryDto[] $orders */
-$orders = $qb->getQuery()->getResult();
+$orders = array_map(fn($row) => new OrderSummaryDto($row), $rows);
 ```
 
 ### Repository Pattern
@@ -406,13 +422,18 @@ $orders = $qb->getQuery()->getResult();
 ```php
 class UserRepository extends ServiceEntityRepository
 {
+    /**
+     * @return UserSummaryDto[]
+     */
     public function findActiveSummaries(): array
     {
-        return $this->createQueryBuilder('u')
-            ->select('NEW App\Dto\UserSummaryDto(u.id, u.name, u.email)')
+        $rows = $this->createQueryBuilder('u')
+            ->select('u.id', 'u.name', 'u.email')
             ->where('u.active = true')
             ->getQuery()
-            ->getResult();
+            ->getArrayResult();
+
+        return array_map(fn($row) => new UserSummaryDto($row), $rows);
     }
 }
 ```
