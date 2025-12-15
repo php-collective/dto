@@ -58,6 +58,72 @@ $array = $car->toArray();
 
 See [Quick Start Guide](docs/README.md) for detailed examples.
 
+## Immutable DTOs
+
+A more realistic example using immutable DTOs for a blog system:
+
+```php
+// config/dto.php
+return Schema::create()
+    ->dto(Dto::create('Article')->immutable()->fields(
+        Field::int('id')->required(),
+        Field::string('title')->required(),
+        Field::string('slug')->required(),
+        Field::string('content'),
+        Field::dto('author', 'Author')->required(),
+        Field::collection('tags', 'Tag')->singular('tag'),
+        Field::bool('published')->defaultValue(false),
+        Field::string('publishedAt'),
+    ))
+    ->dto(Dto::create('Author')->immutable()->fields(
+        Field::string('name')->required(),
+        Field::string('email'),
+        Field::string('avatarUrl'),
+    ))
+    ->dto(Dto::create('Tag')->immutable()->fields(
+        Field::string('name')->required(),
+        Field::string('slug')->required(),
+    ))
+    ->toArray();
+```
+
+Immutable DTOs use `with*()` methods that return new instances:
+
+```php
+// Creating from API/database response
+$article = ArticleDto::createFromArray($apiResponse);
+
+// Modifications return new instances (original unchanged)
+$published = $article
+    ->withPublished(true)
+    ->withPublishedAt(date('Y-m-d H:i:s'));
+```
+
+Reading in a template (e.g., Twig, Blade, or plain PHP):
+
+```php
+<!-- templates/article/view.php -->
+<article>
+    <h1><?= htmlspecialchars($article->getTitle()) ?></h1>
+    <p class="meta">
+        By <?= htmlspecialchars($article->getAuthor()->getName()) ?>
+        <?php if ($article->getPublishedAt()) { ?>
+            on <?= $article->getPublishedAt() ?>
+        <?php } ?>
+    </p>
+
+    <div class="tags">
+        <?php foreach ($article->getTags() as $tag) { ?>
+            <a href="/tag/<?= $tag->getSlug() ?>"><?= htmlspecialchars($tag->getName()) ?></a>
+        <?php } ?>
+    </div>
+
+    <div class="content">
+        <?= $article->getContent() ?>
+    </div>
+</article>
+```
+
 ## Features
 
 - **Types**: `int`, `float`, `string`, `bool`, `array`, `mixed`, DTOs, classes, enums
