@@ -8,7 +8,10 @@
 	 */
 	public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
 	{
-		return $this->_toArrayInternal($type, $fields, $touched);
+		/** @var {{ arrayShape }} $result */
+		$result = $this->_toArrayInternal($type, $fields, $touched);
+
+		return $result;
 	}
 
 	/**
