@@ -17,11 +17,13 @@ use PhpCollective\Dto\Test\Generator\Fixtures\ToArrayClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
 use PhpCollective\Dto\Test\TestDto\AdvancedDto;
 use PhpCollective\Dto\Test\TestDto\CollectionDto;
+use PhpCollective\Dto\Test\TestDto\CustomCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableDto;
 use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
 use PhpCollective\Dto\Test\TestDto\SerializableDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
+use PhpCollective\Dto\Test\TestDto\TestCollection;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -1061,5 +1063,106 @@ class DtoTest extends TestCase
         $this->assertSame('b', $clonedItems[1]);
         $this->assertSame(123, $clonedItems[2]);
         $this->assertTrue($clonedItems[3]);
+    }
+
+    public function testCustomCollectionFactoryIsUsedForNonArrayObjectType(): void
+    {
+        // Set up a factory that creates TestCollection instances
+        $factoryCalled = false;
+        Dto::setCollectionFactory(function (array $items) use (&$factoryCalled) {
+            $factoryCalled = true;
+
+            return new TestCollection($items);
+        });
+
+        // Create DTO from array - should use the factory for the custom collection type
+        $dto = new CustomCollectionDto([
+            'items' => [
+                ['name' => 'Item 1', 'count' => 10],
+                ['name' => 'Item 2', 'count' => 20],
+            ],
+        ], true); // ignoreMissing=true to use setFromArray path
+
+        $this->assertTrue($factoryCalled, 'Collection factory should be called for non-ArrayObject type');
+        $this->assertInstanceOf(TestCollection::class, $dto->getItems());
+        $this->assertCount(2, $dto->getItems());
+
+        // Verify items are SimpleDto instances
+        $items = $dto->getItems()->toArray();
+        $this->assertInstanceOf(SimpleDto::class, $items[0]);
+        $this->assertSame('Item 1', $items[0]->getName());
+        $this->assertSame(10, $items[0]->getCount());
+    }
+
+    public function testCustomCollectionFactoryWithFrameworkMethods(): void
+    {
+        // Set up factory
+        Dto::setCollectionFactory(fn (array $items) => new TestCollection($items));
+
+        $dto = new CustomCollectionDto([
+            'items' => [
+                ['name' => 'Active', 'count' => 10, 'active' => true],
+                ['name' => 'Inactive', 'count' => 5, 'active' => false],
+                ['name' => 'Also Active', 'count' => 15, 'active' => true],
+            ],
+        ], true);
+
+        $collection = $dto->getItems();
+        $this->assertInstanceOf(TestCollection::class, $collection);
+
+        // Test filter() - framework collection method
+        $activeItems = $collection->filter(fn (SimpleDto $item) => $item->getActive() === true);
+        $this->assertCount(2, $activeItems);
+
+        // Test map() - framework collection method
+        $names = $collection->map(fn (SimpleDto $item) => $item->getName());
+        $this->assertSame(['Active', 'Inactive', 'Also Active'], $names->toArray());
+
+        // Test first() - framework collection method
+        $first = $collection->first();
+        $this->assertSame('Active', $first->getName());
+    }
+
+    public function testCustomCollectionToArray(): void
+    {
+        Dto::setCollectionFactory(fn (array $items) => new TestCollection($items));
+
+        $dto = new CustomCollectionDto([
+            'items' => [
+                ['name' => 'Item 1', 'count' => 10],
+                ['name' => 'Item 2', 'count' => 20],
+            ],
+        ], true);
+
+        $array = $dto->toArray();
+
+        $this->assertIsArray($array['items']);
+        $this->assertCount(2, $array['items']);
+        $this->assertSame('Item 1', $array['items'][0]['name']);
+        $this->assertSame('Item 2', $array['items'][1]['name']);
+    }
+
+    public function testCustomCollectionClone(): void
+    {
+        Dto::setCollectionFactory(fn (array $items) => new TestCollection($items));
+
+        $dto = new CustomCollectionDto([
+            'items' => [
+                ['name' => 'Item 1'],
+                ['name' => 'Item 2'],
+            ],
+        ], true);
+
+        $clone = $dto->clone();
+
+        // Collections should be different instances
+        $this->assertNotSame($dto->getItems(), $clone->getItems());
+        $this->assertInstanceOf(TestCollection::class, $clone->getItems());
+
+        // Items should be cloned too
+        $originalItems = $dto->getItems()->toArray();
+        $clonedItems = $clone->getItems()->toArray();
+        $this->assertNotSame($originalItems[0], $clonedItems[0]);
+        $this->assertSame('Item 1', $clonedItems[0]->getName());
     }
 }
