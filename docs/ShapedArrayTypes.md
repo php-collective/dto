@@ -1,107 +1,67 @@
-# Shaped Array Types (Proposal)
+# Shaped Array Types
 
 ## Overview
 
-Generate PHPStan/Psalm shaped array annotations for `toArray()` and `createFromArray()` methods, enabling full static analysis of array structures.
+Generated DTOs include PHPStan/Psalm shaped array annotations for `toArray()` and `createFromArray()` methods, enabling full static analysis of array structures.
 
-## Current State
+## Generated Output
 
-Currently, `toArray()` returns an untyped array:
-
-```php
-/**
- * @return array
- */
-public function toArray(): array
-```
-
-PHPStan cannot infer what keys exist or their types.
-
-## Proposed Change
-
-Generate shaped array PHPDoc annotations based on DTO field definitions:
+Each DTO gets overridden methods with shaped array PHPDoc annotations based on field definitions:
 
 ```php
 /**
- * @return array{name: ?string, count: ?int, active: ?bool}
+ * @return array{name: string|null, count: int|null, active: bool|null}
  */
-public function toArray(): array
+#[\Override]
+public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
+{
+    return parent::toArray($type, $fields, $touched);
+}
 
 /**
- * @param array{name?: string, count?: int, active?: bool} $array
+ * @param array{name: string|null, count: int|null, active: bool|null} $data
  */
-public static function createFromArray(array $array): static
+#[\Override]
+public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
+{
+    return parent::createFromArray($data, $ignoreMissing, $type);
+}
 ```
 
 ## Benefits
 
 1. **IDE Autocomplete** - `$dto->toArray()['na` suggests `name`
 2. **Typo Detection** - `$dto->toArray()['naem']` shows error
-3. **Type Inference** - `['name' => $name] = $dto->toArray()` infers `$name` as `?string`
+3. **Type Inference** - `['name' => $name] = $dto->toArray()` infers `$name` as `string|null`
 4. **Destructuring Support** - Full type safety when unpacking arrays
 
-## Implementation Notes
-
-### Type Mapping
+## Type Mapping
 
 | DTO Field Type | Shaped Array Type |
 |----------------|-------------------|
-| `string` (nullable) | `?string` |
+| `string` (nullable) | `string\|null` |
 | `int` (required) | `int` |
-| `NestedDto` | `array{...}` or `NestedDtoArrayShape` |
+| Nested DTO | `array{...}` (inline nested shape) |
 | `Item[]` collection | `array<int, array{...}>` |
 | Associative collection | `array<string, array{...}>` |
 
-### Nested DTOs
+## Nested DTOs
 
-For nested DTOs, two approaches:
-
-**Option A: Inline nested shapes**
-```php
-/** @return array{owner: array{name: ?string, email: ?string}} */
-```
-
-**Option B: Type aliases**
-```php
-/**
- * @phpstan-type OwnerArrayShape array{name: ?string, email: ?string}
- * @return array{owner: OwnerArrayShape}
- */
-```
-
-### Optional vs Required Keys
-
-- Required fields: `array{name: string}` (key always present)
-- Optional fields: `array{name?: string}` (key may be absent)
-
-For `toArray()` return type, all keys are always present (use `?type` for nullable).
-For `createFromArray()` input, use `key?:` for optional fields.
-
-## Configuration
-
-Could be enabled via generator config:
+Nested DTOs are resolved to their full shaped array type:
 
 ```php
-// config/dto.php
-return Schema::create()
-    ->config(['shapedArrayTypes' => true])
-    // ...
+// Order DTO with Customer DTO field
+/** @return array{id: int|null, customer: array{name: string|null, email: string|null}} */
 ```
 
-Or per-DTO:
+## Collections
+
+Collections include the element's shaped array type:
 
 ```php
-Dto::create('User')
-    ->shapedArrayTypes(true)
-    // ...
+// Order DTO with Item[] collection
+/** @return array{id: int|null, items: array<int, array{name: string|null, price: float|null}>} */
 ```
-
-## Considerations
-
-1. **Long type definitions** - DTOs with many fields create verbose PHPDoc
-2. **Nested depth** - Deeply nested DTOs may need type aliases for readability
-3. **Collection types** - Collections need special handling for the inner shape
-4. **Backward compatibility** - This is additive; existing code unaffected
 
 ## Related
 
