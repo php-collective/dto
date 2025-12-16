@@ -87,8 +87,8 @@
 			$this->{{ field.name }} = {{ field.defaultValue | phpExport | raw }};
 		}
 {% endfor %}
-{% endif %}
 
+{% endif %}
 		return $this;
 	}
 {% set requiredFields = [] %}
