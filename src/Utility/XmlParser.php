@@ -13,15 +13,15 @@ use SimpleXMLElement;
  */
 class XmlParser
 {
- /**
-  * Build a SimpleXMLElement from a string.
-  *
-  * @param string $xml
-  *
-  * @throws \RuntimeException
-  *
-  * @return \SimpleXMLElement
-  */
+    /**
+     * Build a SimpleXMLElement from a string.
+     *
+     * @param string $xml
+     *
+     * @throws \RuntimeException
+     *
+     * @return \SimpleXMLElement
+     */
     public static function build(string $xml): SimpleXMLElement
     {
         libxml_use_internal_errors(true);

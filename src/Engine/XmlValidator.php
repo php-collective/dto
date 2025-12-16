@@ -10,11 +10,11 @@ use LibXMLError;
 
 class XmlValidator
 {
- /**
-  * Path to the XSD schema file.
-  *
-  * @var string|null
-  */
+    /**
+     * Path to the XSD schema file.
+     *
+     * @var string|null
+     */
     protected static ?string $xsdPath = null;
 
     /**

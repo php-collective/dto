@@ -8,9 +8,9 @@ use PhpCollective\Dto\Utility\XmlParser;
 
 class XmlEngine implements EngineInterface
 {
- /**
-  * @var string
-  */
+    /**
+     * @var string
+     */
     public const EXT = 'xml';
 
     /**

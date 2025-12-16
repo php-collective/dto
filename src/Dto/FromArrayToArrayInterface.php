@@ -9,11 +9,11 @@ namespace PhpCollective\Dto\Dto;
  */
 interface FromArrayToArrayInterface
 {
- /**
-  * @param array<string, mixed> $array
-  *
-  * @return static
-  */
+    /**
+     * @param array<string, mixed> $array
+     *
+     * @return static
+     */
     public static function createFromArray(array $array);
 
     /**

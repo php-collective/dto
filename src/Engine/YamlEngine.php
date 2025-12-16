@@ -8,9 +8,9 @@ use InvalidArgumentException;
 
 class YamlEngine implements EngineInterface
 {
- /**
-  * @var string
-  */
+    /**
+     * @var string
+     */
     public const EXT = 'yml';
 
     /**

@@ -10,9 +10,9 @@ use Nette\Neon\Neon;
 
 class NeonEngine implements EngineInterface
 {
- /**
-  * @var string
-  */
+    /**
+     * @var string
+     */
     public const EXT = 'neon';
 
     /**

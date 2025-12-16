@@ -8,15 +8,15 @@ use RuntimeException;
 
 abstract class AbstractImmutableDto extends Dto
 {
- /**
-  * @param string $field
-  * @param mixed $value
-  * @param string|null $type
-  *
-  * @throws \RuntimeException
-  *
-  * @return static
-  */
+    /**
+     * @param string $field
+     * @param mixed $value
+     * @param string|null $type
+     *
+     * @throws \RuntimeException
+     *
+     * @return static
+     */
     public function with(string $field, $value, ?string $type = null)
     {
         $type = $this->keyType($type);

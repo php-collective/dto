@@ -12,16 +12,16 @@ use RuntimeException;
  */
 class Json
 {
- /**
-  * Encode data to JSON.
-  *
-  * @param mixed $data
-  * @param int $flags
-  *
-  * @throws \RuntimeException
-  *
-  * @return string
-  */
+    /**
+     * Encode data to JSON.
+     *
+     * @param mixed $data
+     * @param int $flags
+     *
+     * @throws \RuntimeException
+     *
+     * @return string
+     */
     public function encode(mixed $data, int $flags = JSON_THROW_ON_ERROR): string
     {
         try {

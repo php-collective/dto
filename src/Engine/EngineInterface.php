@@ -6,11 +6,11 @@ namespace PhpCollective\Dto\Engine;
 
 interface EngineInterface
 {
- /**
-  * The file extension to look for.
-  *
-  * @return string
-  */
+    /**
+     * The file extension to look for.
+     *
+     * @return string
+     */
     public function extension(): string;
 
     /**

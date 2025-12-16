@@ -9,9 +9,9 @@ namespace PhpCollective\Dto\Utility;
  */
 class Inflector
 {
- /**
-  * @var array<string, string>
-  */
+    /**
+     * @var array<string, string>
+     */
     protected static array $singularRules = [
         '/(s)tatuses$/i' => '\1tatus',
         '/^(.*)(menu)s$/i' => '\1\2',
