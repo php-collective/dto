@@ -30,6 +30,14 @@ Generate TypeScript interfaces from configuration files.
 vendor/bin/dto typescript [options]
 ```
 
+### jsonschema
+
+Generate JSON Schema from configuration files.
+
+```bash
+vendor/bin/dto jsonschema [options]
+```
+
 ## Common Options
 
 Options available for all commands:
@@ -67,6 +75,18 @@ Options specific to TypeScript generation:
 | `--readonly` | Make all interface fields readonly |
 | `--strict-nulls` | Use `\| null` instead of `?` for nullable fields |
 | `--file-case=CASE` | File naming: `pascal`, `dashed`, `snake` (default: `pascal`) |
+
+## JSON Schema Options
+
+Options specific to JSON Schema generation:
+
+| Option | Description |
+|--------|-------------|
+| `--output=PATH` | Path for JSON Schema output (default: `schemas/`) |
+| `--single-file` | Generate all schemas in one file with `$defs` (default) |
+| `--multi-file` | Generate each schema in separate file |
+| `--no-refs` | Inline nested DTOs instead of using `$ref` |
+| `--date-format=FMT` | Date format: `date-time`, `date`, `string` (default: `date-time`) |
 
 ## Examples
 
@@ -146,6 +166,26 @@ vendor/bin/dto typescript --multi-file --file-case=dashed
 vendor/bin/dto typescript --readonly --strict-nulls
 ```
 
+### JSON Schema Generation
+
+```bash
+# Generate JSON Schema (single file with $defs)
+vendor/bin/dto jsonschema
+
+# Custom output directory
+vendor/bin/dto jsonschema --output=api/schemas/
+
+# Separate files with external $ref
+vendor/bin/dto jsonschema --multi-file
+# Creates: UserDto.json, OrderDto.json, etc.
+
+# Inline nested DTOs instead of using $ref
+vendor/bin/dto jsonschema --no-refs
+
+# Custom date format
+vendor/bin/dto jsonschema --date-format=date
+```
+
 ### CI/CD Integration
 
 ```bash
@@ -217,7 +257,8 @@ Add to `composer.json`:
     "dto:generate": "dto generate",
     "dto:generate-mapper": "dto generate --mapper",
     "dto:check": "dto generate --dry-run",
-    "dto:typescript": "dto typescript --output=frontend/types/"
+    "dto:typescript": "dto typescript --output=frontend/types/",
+    "dto:schema": "dto jsonschema --output=api/schemas/"
   }
 }
 ```
