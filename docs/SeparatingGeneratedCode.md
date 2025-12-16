@@ -103,38 +103,8 @@ composer dto:generate
 
 ## Static Analysis Configuration
 
-### PHPStan
-
-Exclude the generated directory from analysis in `phpstan.neon`:
-
-```neon
-parameters:
-    excludePaths:
-        - generated/*
-```
-
-### PHPCS
-
-Exclude from code style checks in `phpcs.xml`:
-
-```xml
-<ruleset>
-    <exclude-pattern>generated/*</exclude-pattern>
-</ruleset>
-```
-
-### PHP-CS-Fixer
-
-Exclude in `.php-cs-fixer.php`:
-
-```php
-return (new PhpCsFixer\Config())
-    ->setFinder(
-        PhpCsFixer\Finder::create()
-            ->in(__DIR__)
-            ->exclude('generated')
-    );
-```
+By design, PHPCS, PHPStan and CO are all excluded already.
+So nothing to be configured here.
 
 ## Git Configuration
 
@@ -316,21 +286,14 @@ Here's a complete `composer.json` setup:
         }
     },
     "require": {
-        "php": ">=8.1"
-    },
-    "require-dev": {
-        "php-collective/dto": "^1.0",
-        "phpstan/phpstan": "^1.0",
-        "squizlabs/php_codesniffer": "^3.0"
+        "php": ">=8.1",
+		"php-collective/dto": "^1.0"
     },
     "scripts": {
         "dto:generate": "dto generate --src-path=generated/",
         "dto:check": "dto generate --src-path=generated/ --dry-run",
         "dto:typescript": "dto typescript --output=generated/types/",
         "dto:schema": "dto jsonschema --output=generated/schemas/",
-        "test": "phpunit",
-        "analyse": "phpstan analyse src/",
-        "cs": "phpcs src/"
     }
 }
 ```
