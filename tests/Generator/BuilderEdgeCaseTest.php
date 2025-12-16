@@ -100,7 +100,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Extended DTO is immutable');
+        $this->expectExceptionMessage('cannot extend immutable DTO');
         $builder->build($this->tempDir . '/config/');
     }
 
@@ -130,7 +130,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Extended DTO is not immutable');
+        $this->expectExceptionMessage('immutable DTO cannot extend mutable DTO');
         $builder->build($this->tempDir . '/config/');
     }
 
@@ -154,7 +154,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Class does not seem to exist');
+        $this->expectExceptionMessage('does not exist');
         $builder->build($this->tempDir . '/config/');
     }
 
@@ -330,7 +330,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('cannot be singularized');
+        $this->expectExceptionMessage('Cannot auto-singularize');
         $builder->build($this->tempDir . '/config/');
     }
 
@@ -428,7 +428,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('already exists as field');
+        $this->expectExceptionMessage('conflicts with existing field');
         $builder->build($this->tempDir . '/config/');
     }
 
@@ -453,7 +453,7 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Invalid field attribute');
+        $this->expectExceptionMessage('Invalid type');
         $builder->build($this->tempDir . '/config/');
     }
 
