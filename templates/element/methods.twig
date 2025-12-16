@@ -22,4 +22,7 @@
 {% else %}
 {% include 'element/method_add.twig' with fieldVars only %}
 {% endif %}
+{% if not loop.last %}
+
+{% endif %}
 {% endfor -%}
