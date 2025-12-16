@@ -9,13 +9,13 @@ namespace PhpCollective\Dto\Generator;
  */
 interface RendererInterface
 {
- /**
-  * Set template variables.
-  *
-  * @param array<string, mixed> $vars
-  *
-  * @return void
-  */
+    /**
+     * Set template variables.
+     *
+     * @param array<string, mixed> $vars
+     *
+     * @return void
+     */
     public function set(array $vars): void;
 
     /**

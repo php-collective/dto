@@ -9,14 +9,14 @@ namespace PhpCollective\Dto\Generator;
  */
 interface ConfigInterface
 {
- /**
-  * Get a configuration value.
-  *
-  * @param string $key
-  * @param mixed $default
-  *
-  * @return mixed
-  */
+    /**
+     * Get a configuration value.
+     *
+     * @param string $key
+     * @param mixed $default
+     *
+     * @return mixed
+     */
     public function get(string $key, mixed $default = null): mixed;
 
     /**
