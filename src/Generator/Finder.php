@@ -8,12 +8,12 @@ use DirectoryIterator;
 
 class Finder implements FinderInterface
 {
- /**
-  * @param string $configPath
-  * @param string $extension
-  *
-  * @return array<string>
-  */
+    /**
+     * @param string $configPath
+     * @param string $extension
+     *
+     * @return array<string>
+     */
     public function collect(string $configPath, string $extension): array
     {
         $files = [];

@@ -19,9 +19,9 @@ use RuntimeException;
 
 class Builder
 {
- /**
-  * @var array<string, mixed>
-  */
+    /**
+     * @var array<string, mixed>
+     */
     protected array $config = [
         'finder' => Finder::class,
         'scalarAndReturnTypes' => true,

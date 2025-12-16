@@ -14,9 +14,9 @@ use Twig\TwigFilter;
  */
 class TwigRenderer implements RendererInterface
 {
- /**
-  * @var \Twig\Environment
-  */
+    /**
+     * @var \Twig\Environment
+     */
     protected Environment $twig;
 
     /**

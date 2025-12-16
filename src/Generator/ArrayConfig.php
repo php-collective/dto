@@ -9,9 +9,9 @@ namespace PhpCollective\Dto\Generator;
  */
 class ArrayConfig implements ConfigInterface
 {
- /**
-  * @var array<string, mixed>
-  */
+    /**
+     * @var array<string, mixed>
+     */
     protected array $config;
 
     /**
