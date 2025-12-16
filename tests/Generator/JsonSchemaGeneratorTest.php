@@ -446,4 +446,163 @@ class JsonSchemaGeneratorTest extends TestCase
         // Multi-file mode should use external file refs
         $this->assertSame('UserDto.json', $orderSchema['properties']['customer']['$ref']);
     }
+
+    public function testExtractDtoNameFromDeepNamespace(): void
+    {
+        $definitions = [
+            'Address' => [
+                'name' => 'Address',
+                'fields' => [
+                    'city' => ['name' => 'city', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'address' => [
+                        'name' => 'address',
+                        'type' => '\\App\\Module\\User\\Dto\\AddressDto',
+                        'required' => true,
+                        'dto' => 'Address',
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new JsonSchemaGenerator($this->createIo(), ['useRefs' => true]);
+        $generator->generate($definitions, $this->tempDir);
+
+        $schema = json_decode(file_get_contents($this->tempDir . '/dto-schemas.json'), true);
+
+        // Should correctly extract 'Address' from deeply nested FQCN
+        $this->assertSame('#/$defs/AddressDto', $schema['$defs']['UserDto']['properties']['address']['$ref']);
+    }
+
+    public function testExtractDtoNameWithoutSuffix(): void
+    {
+        $definitions = [
+            'Profile' => [
+                'name' => 'Profile',
+                'fields' => [
+                    'bio' => ['name' => 'bio', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'profile' => [
+                        'name' => 'profile',
+                        'type' => '\\App\\Model\\Profile',
+                        'required' => true,
+                        'dto' => 'Profile',
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new JsonSchemaGenerator($this->createIo(), ['useRefs' => true]);
+        $generator->generate($definitions, $this->tempDir);
+
+        $schema = json_decode(file_get_contents($this->tempDir . '/dto-schemas.json'), true);
+
+        // Should handle type without Dto suffix
+        $this->assertSame('#/$defs/ProfileDto', $schema['$defs']['UserDto']['properties']['profile']['$ref']);
+    }
+
+    public function testExtractDtoNameForCollectionWithDeepNamespace(): void
+    {
+        $definitions = [
+            'Tag' => [
+                'name' => 'Tag',
+                'fields' => [
+                    'name' => ['name' => 'name', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'Article' => [
+                'name' => 'Article',
+                'fields' => [
+                    'tags' => [
+                        'name' => 'tags',
+                        'type' => 'Tag[]',
+                        'collection' => true,
+                        'singularType' => 'Tag',
+                        'singularClass' => '\\App\\Blog\\Content\\Dto\\TagDto',
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new JsonSchemaGenerator($this->createIo());
+        $generator->generate($definitions, $this->tempDir);
+
+        $schema = json_decode(file_get_contents($this->tempDir . '/dto-schemas.json'), true);
+        $tagsSchema = $schema['$defs']['ArticleDto']['properties']['tags'];
+
+        $this->assertSame('array', $tagsSchema['type']);
+        $this->assertSame('#/$defs/TagDto', $tagsSchema['items']['$ref']);
+    }
+
+    public function testExtractDtoNameWithLeadingBackslash(): void
+    {
+        $definitions = [
+            'Category' => [
+                'name' => 'Category',
+                'fields' => [
+                    'name' => ['name' => 'name', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'Product' => [
+                'name' => 'Product',
+                'fields' => [
+                    'category' => [
+                        'name' => 'category',
+                        'type' => '\\CategoryDto',
+                        'required' => true,
+                        'dto' => 'Category',
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new JsonSchemaGenerator($this->createIo(), ['useRefs' => true]);
+        $generator->generate($definitions, $this->tempDir);
+
+        $schema = json_decode(file_get_contents($this->tempDir . '/dto-schemas.json'), true);
+
+        // Should handle FQCN with leading backslash but no namespace
+        $this->assertSame('#/$defs/CategoryDto', $schema['$defs']['ProductDto']['properties']['category']['$ref']);
+    }
+
+    public function testCustomSuffixExtraction(): void
+    {
+        $definitions = [
+            'Settings' => [
+                'name' => 'Settings',
+                'fields' => [
+                    'theme' => ['name' => 'theme', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'settings' => [
+                        'name' => 'settings',
+                        'type' => '\\App\\Transfer\\SettingsTransfer',
+                        'required' => true,
+                        'dto' => 'Settings',
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new JsonSchemaGenerator($this->createIo(), ['suffix' => 'Transfer', 'useRefs' => true]);
+        $generator->generate($definitions, $this->tempDir);
+
+        $schema = json_decode(file_get_contents($this->tempDir . '/dto-schemas.json'), true);
+
+        // With custom suffix, definitions should use 'Transfer' suffix
+        $this->assertArrayHasKey('SettingsTransfer', $schema['$defs']);
+        $this->assertArrayHasKey('UserTransfer', $schema['$defs']);
+        $this->assertSame('#/$defs/SettingsTransfer', $schema['$defs']['UserTransfer']['properties']['settings']['$ref']);
+    }
 }
