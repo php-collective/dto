@@ -9,8 +9,17 @@ use PhpCollective\Dto\Importer\Importer;
 
 $importer = new Importer();
 
-// From JSON data example
-$json = '{"name": "John", "age": 30, "email": "john@example.com"}';
+// From JSON data example with nested object
+$json = '{
+    "id": 1,
+    "name": "John",
+    "email": "john@example.com",
+    "address": {
+        "street": "123 Main St",
+        "city": "New York",
+        "zipCode": "10001"
+    }
+}';
 echo $importer->import($json);
 ```
 
@@ -25,9 +34,15 @@ use PhpCollective\Dto\Config\Field;
 return DtoBuilder::create()
     ->dtos(
         Dto::create('Object')->fields(
+            Field::int('id'),
             Field::string('name'),
-            Field::int('age'),
             Field::string('email'),
+            Field::dto('address', 'Address'),
+        ),
+        Dto::create('Address')->fields(
+            Field::string('street'),
+            Field::string('city'),
+            Field::string('zipCode'),
         ),
     )
     ->build();
