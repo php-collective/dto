@@ -9,13 +9,13 @@ use RuntimeException;
 
 abstract class AbstractDto extends Dto
 {
- /**
-  * @param array<string, mixed> $data
-  * @param bool $ignoreMissing
-  * @param string|null $type
-  *
-  * @return static
-  */
+    /**
+     * @param array<string, mixed> $data
+     * @param bool $ignoreMissing
+     * @param string|null $type
+     *
+     * @return static
+     */
     public function fromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
         return $this->setFromArray($data, $ignoreMissing, $type);

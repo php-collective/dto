@@ -39,11 +39,11 @@ abstract class Dto implements Serializable
      */
     abstract public static function createFromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static;
 
- /**
-  * Default key type for conversions. Can be set globally.
-  *
-  * @var string|null
-  */
+    /**
+     * Default key type for conversions. Can be set globally.
+     *
+     * @var string|null
+     */
     protected static ?string $defaultKeyType = null;
 
     /**
