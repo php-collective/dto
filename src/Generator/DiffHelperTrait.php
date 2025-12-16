@@ -9,9 +9,9 @@ use SebastianBergmann\Diff\Output\DiffOnlyOutputBuilder;
 
 trait DiffHelperTrait
 {
- /**
-  * @var \PhpCollective\Dto\Generator\IoInterface
-  */
+    /**
+     * @var \PhpCollective\Dto\Generator\IoInterface
+     */
     protected IoInterface $io;
 
     /**
