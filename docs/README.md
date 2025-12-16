@@ -13,6 +13,7 @@
 [TypeScript Generation](TypeScriptGeneration.md) |
 [Shaped Array Types](ShapedArrayTypes.md) |
 [Framework Integration](FrameworkIntegration.md) |
+[Separating Generated Code](SeparatingGeneratedCode.md) |
 [Motivation](Motivation.md)
 
 ---
