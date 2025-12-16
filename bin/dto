@@ -9,15 +9,17 @@ declare(strict_types=1);
  * Usage:
  *   vendor/bin/dto generate [options]
  *   vendor/bin/dto typescript [options]
+ *   vendor/bin/dto jsonschema [options]
  *
  * Commands:
- *   generate    Generate PHP DTOs from configuration (default)
- *   typescript  Generate TypeScript interfaces from configuration
+ *   generate Generate PHP DTOs from configuration (default)
+ *   typescript Generate TypeScript interfaces from configuration
+ *   jsonschema Generate JSON Schema from configuration
  *
  * Options:
  *   --config-path=PATH Path to config directory (default: config/)
  *   --src-path=PATH Path to src directory (default: src/)
- *   --output=PATH Path for TypeScript output (default: types/)
+ *   --output=PATH Path for TypeScript/JSON Schema output (default: types/ or schemas/)
  *   --namespace=NS Namespace for generated DTOs (default: App)
  *   --format=FORMAT Config format: xml, yaml, neon (default: auto-detect)
  *   --dry-run Show what would be generated without writing files
@@ -32,6 +34,12 @@ declare(strict_types=1);
  *   --readonly Make all fields readonly
  *   --strict-nulls Use '| null' instead of '?'
  *   --file-case=CASE File naming: pascal, dashed, snake (default: pascal)
+ *
+ * JSON Schema Options:
+ *   --single-file Generate all schemas in one file with $defs (default: true)
+ *   --multi-file Generate each schema in separate file
+ *   --no-refs Inline nested DTOs instead of using $ref
+ *   --date-format=FORMAT Date format: date-time, date, string (default: date-time)
  */
 
 // Find autoloader
@@ -64,6 +72,7 @@ use PhpCollective\Dto\Generator\Builder;
 use PhpCollective\Dto\Generator\ConsoleIo;
 use PhpCollective\Dto\Generator\Generator;
 use PhpCollective\Dto\Generator\IoInterface;
+use PhpCollective\Dto\Generator\JsonSchemaGenerator;
 use PhpCollective\Dto\Generator\TwigRenderer;
 use PhpCollective\Dto\Generator\TypeScriptGenerator;
 
@@ -80,7 +89,7 @@ function parseArgs(array $argv): array
         'command' => null,
         'config-path' => 'config/',
         'src-path' => 'src/',
-        'output' => 'types/',
+        'output' => null, // Will be set based on command
         'namespace' => 'App',
         'format' => null,
         'dry-run' => false,
@@ -95,6 +104,9 @@ function parseArgs(array $argv): array
         'readonly' => false,
         'strict-nulls' => false,
         'file-case' => 'pascal',
+        // JSON Schema options
+        'use-refs' => true,
+        'date-format' => 'date-time',
     ];
 
     array_shift($argv); // Remove script name
@@ -134,6 +146,10 @@ function parseArgs(array $argv): array
             $options['format'] = substr($arg, 9);
         } elseif (str_starts_with($arg, '--file-case=')) {
             $options['file-case'] = substr($arg, 12);
+        } elseif ($arg === '--no-refs') {
+            $options['use-refs'] = false;
+        } elseif (str_starts_with($arg, '--date-format=')) {
+            $options['date-format'] = substr($arg, 14);
         } elseif (!str_starts_with($arg, '-') && $options['command'] === null) {
             $options['command'] = $arg;
         }
@@ -155,11 +171,13 @@ DTO Generator - Generate Data Transfer Objects from configuration files
 Usage:
   vendor/bin/dto generate [options]
   vendor/bin/dto typescript [options]
+  vendor/bin/dto jsonschema [options]
   vendor/bin/dto [options]
 
 Commands:
   generate    Generate PHP DTOs from configuration (default)
   typescript  Generate TypeScript interfaces from configuration
+  jsonschema  Generate JSON Schema from configuration
 
 Common Options:
   --config-path=PATH   Path to config directory (default: config/)
@@ -184,6 +202,13 @@ TypeScript Options:
   --strict-nulls       Use '| null' instead of '?'
   --file-case=CASE     File naming: pascal, dashed, snake (default: pascal)
 
+JSON Schema Options:
+  --output=PATH        Path for JSON Schema output (default: schemas/)
+  --single-file        Generate all schemas in one file with \$defs (default)
+  --multi-file         Generate each schema in separate file
+  --no-refs            Inline nested DTOs instead of using \$ref
+  --date-format=FMT    Date format: date-time, date, string (default: date-time)
+
 Examples:
   # Generate PHP DTOs with defaults (config/ -> src/Dto/)
   vendor/bin/dto generate
@@ -205,6 +230,15 @@ Examples:
 
   # TypeScript with readonly interfaces
   vendor/bin/dto typescript --readonly --strict-nulls
+
+  # Generate JSON Schema
+  vendor/bin/dto jsonschema --output=api/schemas/
+
+  # JSON Schema with separate files
+  vendor/bin/dto jsonschema --multi-file
+
+  # JSON Schema with inline DTOs (no \$ref)
+  vendor/bin/dto jsonschema --no-refs
 
 Configuration Formats:
   The generator supports XML (default), YAML, NEON, and PHP formats.
@@ -281,7 +315,7 @@ if ($args['help']) {
 // Default command is generate
 $command = $args['command'] ?? 'generate';
 
-if (!in_array($command, ['generate', 'typescript'], true)) {
+if (!in_array($command, ['generate', 'typescript', 'jsonschema'], true)) {
     fwrite(STDERR, "Unknown command: {$command}\n");
     fwrite(STDERR, "Run 'vendor/bin/dto --help' for usage.\n");
     exit(1);
@@ -310,9 +344,44 @@ if ($args['quiet']) {
 $io = new ConsoleIo($verbosity);
 
 // Handle commands
+if ($command === 'jsonschema') {
+    // JSON Schema generation
+    $outputPath = rtrim($args['output'] ?? 'schemas/', '/') . '/';
+
+    $namespace = $args['namespace'];
+    $config = new ArrayConfig([
+        'namespace' => $namespace,
+    ]);
+
+    $engine = createEngine($format);
+    $builder = new Builder($engine, $config);
+
+    $io->out("Generating JSON Schema from {$configPath} to {$outputPath}", 1, IoInterface::VERBOSE);
+    $io->out("Format: {$format}", 1, IoInterface::VERBOSE);
+    $io->out('', 1, IoInterface::VERBOSE);
+
+    try {
+        $definitions = $builder->build($configPath, []);
+    } catch (Exception $e) {
+        $io->error($e->getMessage());
+        exit(1);
+    }
+
+    $schemaGenerator = new JsonSchemaGenerator($io, [
+        'singleFile' => $args['single-file'],
+        'useRefs' => $args['use-refs'],
+        'dateFormat' => $args['date-format'],
+    ]);
+
+    $count = $schemaGenerator->generate($definitions, $outputPath);
+    $io->out("Generated {$count} JSON Schema file(s).");
+
+    exit(0);
+}
+
 if ($command === 'typescript') {
     // TypeScript generation
-    $outputPath = rtrim($args['output'], '/') . '/';
+    $outputPath = rtrim($args['output'] ?? 'types/', '/') . '/';
 
     $namespace = $args['namespace'];
     $config = new ArrayConfig([
