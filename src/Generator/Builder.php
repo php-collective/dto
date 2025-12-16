@@ -5,15 +5,12 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Generator;
 
 use InvalidArgumentException;
-use JsonSerializable;
 use PhpCollective\Dto\Dto\AbstractDto;
 use PhpCollective\Dto\Dto\AbstractImmutableDto;
-use PhpCollective\Dto\Dto\FromArrayToArrayInterface;
 use PhpCollective\Dto\Engine\EngineInterface;
 use PhpCollective\Dto\Engine\FileBasedEngineInterface;
 use PhpCollective\Dto\Utility\Inflector;
 use ReflectionClass;
-use ReflectionEnum;
 use ReflectionException;
 use RuntimeException;
 
@@ -39,25 +36,24 @@ class Builder
     protected EngineInterface $engine;
 
     /**
-     * @var array<string>
+     * @var \PhpCollective\Dto\Generator\TypeValidator
      */
-    protected array $simpleTypeWhitelist = [
-        'int',
-        'float',
-        'string',
-        'bool',
-        'callable',
-        'iterable',
-        'object',
-    ];
+    protected TypeValidator $typeValidator;
 
     /**
-     * @var array<string>
+     * @var \PhpCollective\Dto\Generator\TypeResolver
      */
-    protected array $simpleTypeAdditionsForDocBlock = [
-        'resource',
-        'mixed', // Not for [] array notation
-    ];
+    protected TypeResolver $typeResolver;
+
+    /**
+     * @var \PhpCollective\Dto\Generator\ArrayShapeBuilder
+     */
+    protected ArrayShapeBuilder $arrayShapeBuilder;
+
+    /**
+     * @var \PhpCollective\Dto\Generator\DependencyAnalyzer
+     */
+    protected DependencyAnalyzer $dependencyAnalyzer;
 
     /**
      * Needed for Dto to work dynamically.
@@ -92,11 +88,17 @@ class Builder
     {
         $this->engine = $engine;
 
-        $this->simpleTypeWhitelist = $this->simpleTypeWhitelist($this->simpleTypeWhitelist);
-
         if ($config !== null) {
             $this->config = array_merge($this->config, $config->all());
         }
+
+        $this->typeValidator = new TypeValidator();
+        $this->typeResolver = new TypeResolver(
+            $this->typeValidator,
+            (bool)$this->config['scalarAndReturnTypes'],
+        );
+        $this->arrayShapeBuilder = new ArrayShapeBuilder($this->config['suffix']);
+        $this->dependencyAnalyzer = new DependencyAnalyzer($this->config['suffix']);
     }
 
     /**
@@ -145,6 +147,9 @@ class Builder
 
         $result = $this->_merge($config);
 
+        // Detect circular dependencies before processing
+        $this->dependencyAnalyzer->analyze($result);
+
         return $this->_createDtos($result, $namespace);
     }
 
@@ -192,26 +197,61 @@ class Builder
             if (isset($config[$extendedDto])) {
                 $config[$name]['extends'] = $extendedDto . $this->getConfigOrFail('suffix');
                 if (!$isImmutable && !empty($config[$extendedDto]['immutable'])) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Extended DTO is immutable.', $dto['name'], $dto['extends']));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: cannot extend immutable DTO '%s'.\n"
+                        . "Hint: Either make '%s' immutable, or extend a mutable DTO instead.",
+                        $dto['name'],
+                        $dto['extends'],
+                        $dto['name'],
+                    ));
                 }
                 if ($isImmutable && empty($config[$extendedDto]['immutable'])) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Extended DTO is not immutable.', $dto['name'], $dto['extends']));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: immutable DTO cannot extend mutable DTO '%s'.\n"
+                        . "Hint: Either make '%s' mutable, or make '%s' immutable.",
+                        $dto['name'],
+                        $dto['extends'],
+                        $dto['name'],
+                        $dto['extends'],
+                    ));
                 }
             } else {
                 try {
                     $extendedDtoReflectionClass = new ReflectionClass($extendedDto);
                 } catch (ReflectionException $e) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Class does not seem to exist.', $dto['name'], $dto['extends']));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: class '%s' does not exist.\n"
+                        . 'Hint: Check the class name spelling and ensure the class is autoloadable.',
+                        $dto['name'],
+                        $dto['extends'],
+                    ));
                 }
 
                 if ($extendedDtoReflectionClass->getParentClass() === false) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Parent class should extend `%s`.', $dto['name'], $dto['extends'], $isImmutable ? AbstractImmutableDto::class : AbstractDto::class));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: '%s' must extend %s.\n"
+                        . 'Hint: The parent class should be a DTO class extending the appropriate base.',
+                        $dto['name'],
+                        $dto['extends'],
+                        $isImmutable ? AbstractImmutableDto::class : AbstractDto::class,
+                    ));
                 }
                 if ($isImmutable && !$extendedDtoReflectionClass->isSubclassOf(AbstractImmutableDto::class)) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Extended DTO is not immutable.', $dto['name'], $dto['extends']));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: '%s' is not immutable.\n"
+                        . 'Hint: Immutable DTOs must extend other immutable DTOs or AbstractImmutableDto.',
+                        $dto['name'],
+                        $dto['extends'],
+                    ));
                 }
                 if (!$isImmutable && !$extendedDtoReflectionClass->isSubclassOf(AbstractDto::class)) {
-                    throw new InvalidArgumentException(sprintf('Invalid %s DTO attribute `extends`: `%s`. Extended DTO is immutable.', $dto['name'], $dto['extends']));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'extends' attribute for '%s' DTO: '%s' is immutable.\n"
+                        . "Hint: Mutable DTOs cannot extend immutable DTOs. Either make '%s' immutable or change the parent.",
+                        $dto['name'],
+                        $dto['extends'],
+                        $dto['name'],
+                    ));
                 }
             }
 
@@ -234,31 +274,10 @@ class Builder
 
         // Add shaped array types for toArray()/createFromArray() PHPDoc
         foreach ($config as $name => $dto) {
-            $config[$name]['arrayShape'] = $this->buildArrayShape($dto['fields'], $config, $dto);
+            $config[$name]['arrayShape'] = $this->arrayShapeBuilder->buildArrayShape($dto['fields'], $config, $dto);
         }
 
         return $config;
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return bool
-     */
-    protected function isValidType(string $type): bool
-    {
-        if ($this->isValidSimpleType($type, $this->simpleTypeAdditionsForDocBlock)) {
-            return true;
-        }
-        if ($this->isValidDto($type) || $this->isValidInterfaceOrClass($type)) {
-            return true;
-        }
-
-        if ($this->isValidArray($type) || $this->isValidCollection($type)) {
-            return true;
-        }
-
-        return false;
     }
 
     /**
@@ -271,50 +290,105 @@ class Builder
     protected function _validateDto(array $dto): void
     {
         if (empty($dto['name'])) {
-            throw new InvalidArgumentException('DTO name missing, but required.');
+            throw new InvalidArgumentException(
+                "DTO name missing, but required.\n"
+                . 'Hint: Each DTO definition must have a "name" attribute.',
+            );
         }
         $dtoName = $dto['name'];
-        if (!$this->isValidDto($dtoName)) {
-            throw new InvalidArgumentException(sprintf('Invalid DTO name `%s`.', $dtoName));
+        if (!$this->typeValidator->isValidDto($dtoName)) {
+            throw new InvalidArgumentException(sprintf(
+                "Invalid DTO name '%s'.\n"
+                . 'Hint: DTO names must be PascalCase starting with uppercase letter (e.g., "UserProfile", "OrderItem").',
+                $dtoName,
+            ));
         }
 
         $fields = $dto['fields'];
 
         foreach ($fields as $name => $array) {
             if (empty($array['name'])) {
-                throw new InvalidArgumentException(sprintf('Field field attribute `%s:name` in %s DTO missing, but required.', $name, $dtoName));
+                throw new InvalidArgumentException(sprintf(
+                    "Field attribute 'name' missing for field '%s' in '%s' DTO.\n"
+                    . 'Hint: Each field must have a "name" attribute.',
+                    $name,
+                    $dtoName,
+                ));
             }
             if (empty($array['type'])) {
-                throw new InvalidArgumentException(sprintf('Field field attribute `%s:type` in %s DTO missing, but required.', $name, $dtoName));
+                throw new InvalidArgumentException(sprintf(
+                    "Field attribute 'type' missing for field '%s' in '%s' DTO.\n"
+                    . 'Hint: Each field must have a "type" attribute (e.g., "string", "int", "ItemDto[]").',
+                    $name,
+                    $dtoName,
+                ));
             }
             foreach ($array as $key => $value) {
                 $expected = Inflector::variable(Inflector::underscore($key));
                 if ($key !== $expected) {
-                    throw new InvalidArgumentException(sprintf('Invalid field attribute `%s:%s` in %s DTO, expected `%s`.', $name, $key, $dtoName, $expected));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid field attribute '%s' for field '%s' in '%s' DTO.\n"
+                        . "Hint: Expected '%s' (camelCase format).",
+                        $key,
+                        $name,
+                        $dtoName,
+                        $expected,
+                    ));
                 }
             }
 
-            if (!$this->isValidName($array['name'])) {
-                throw new InvalidArgumentException(sprintf('Invalid field attribute `name` in %s DTO: `%s`.', $name, $array['name']));
+            if (!$this->typeValidator->isValidName($array['name'])) {
+                throw new InvalidArgumentException(sprintf(
+                    "Invalid field name '%s' in '%s' DTO.\n"
+                    . 'Hint: Field names must be alphanumeric starting with a letter (e.g., "userName", "itemCount").',
+                    $array['name'],
+                    $dtoName,
+                ));
             }
-            if (!$this->isValidType($array['type'])) {
-                throw new InvalidArgumentException(sprintf('Invalid field attribute `%s:type` in %s DTO: `%s`.', $name, $dtoName, $array['type']));
+            if (!$this->typeValidator->isValidType($array['type'])) {
+                throw new InvalidArgumentException(sprintf(
+                    "Invalid type '%s' for field '%s' in '%s' DTO.\n"
+                    . 'Hint: Valid types include: scalar types (int, string, bool, float), '
+                    . 'DTO references (OtherDto), arrays (string[], OtherDto[]), '
+                    . 'or fully qualified class names (\\App\\MyClass).',
+                    $array['type'],
+                    $name,
+                    $dtoName,
+                ));
             }
 
             if (!empty($array['collection'])) {
-                if (!$this->isValidArray($array['type']) || !$this->isValidCollection($array['type'])) {
-                    throw new InvalidArgumentException(sprintf('Invalid field type `%s` in %s DTO, expected a collection `...[]`.', $array['type'], $dtoName));
+                if (!$this->typeValidator->isValidArray($array['type']) || !$this->typeValidator->isValidCollection($array['type'])) {
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid collection type '%s' for field '%s' in '%s' DTO.\n"
+                        . 'Hint: Collection types must use array notation (e.g., "string[]", "ItemDto[]").',
+                        $array['type'],
+                        $name,
+                        $dtoName,
+                    ));
                 }
             }
 
             if (!empty($array['singular'])) {
                 $expected = Inflector::variable(Inflector::underscore($array['singular']));
                 if ($array['singular'] !== $expected) {
-                    throw new InvalidArgumentException(sprintf('Invalid field attribute `%s:singular` in %s DTO, expected `%s`.', $name, $dtoName, $expected));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid singular name '%s' for field '%s' in '%s' DTO.\n"
+                        . "Hint: Expected '%s' (camelCase format).",
+                        $array['singular'],
+                        $name,
+                        $dtoName,
+                        $expected,
+                    ));
                 }
 
                 if (isset($array['collection']) && $array['collection'] === false) {
-                    throw new InvalidArgumentException(sprintf('Invalid field attribute `%s:singular` in %s DTO, only collections can define this.', $name, $dtoName));
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid 'singular' attribute for non-collection field '%s' in '%s' DTO.\n"
+                        . 'Hint: The "singular" attribute is only valid for collection fields.',
+                        $name,
+                        $dtoName,
+                    ));
                 }
             }
         }
@@ -351,6 +425,7 @@ class Builder
      */
     protected function _complete(array $dto, string $namespace): array
     {
+        $dtoName = $dto['name'];
         $fields = $dto['fields'];
         foreach ($fields as $field => $data) {
             $data += [
@@ -379,31 +454,38 @@ class Builder
         }
 
         foreach ($fields as $key => $field) {
-            if ($this->isValidSimpleType($field['type'], $this->simpleTypeAdditionsForDocBlock)) {
+            if ($this->typeValidator->isValidSimpleType($field['type'], $this->typeValidator->getSimpleTypeAdditionsForDocBlock())) {
                 continue;
             }
-            if ($this->isValidDto($field['type'])) {
+            if ($this->typeValidator->isValidDto($field['type'])) {
                 $fields[$key]['dto'] = $field['type'];
 
                 continue;
             }
             if ($this->isCollection($field)) {
                 $fields[$key]['collection'] = true;
-                $fields[$key]['collectionType'] = $this->collectionType($field);
+                $fields[$key]['collectionType'] = $this->typeResolver->collectionType($field, $this->config['defaultCollectionType']);
                 $fields[$key]['nullable'] = false;
 
-                $fields[$key] = $this->_completeCollectionSingular($fields[$key], $dto['name'], $namespace, $fields);
+                $fields[$key] = $this->_completeCollectionSingular($fields[$key], $dtoName, $namespace, $fields);
                 $fields[$key]['singularNullable'] = substr($fields[$key]['type'], 0, 1) === '?';
 
                 if (!empty($fields[$key]['singular'])) {
                     $singular = $fields[$key]['singular'];
                     if (!empty($fields[$singular])) {
-                        throw new InvalidArgumentException(sprintf('Invalid singular name `%s` for field `%s` in %s DTO, already exists as field.', $singular, $key, $dto['name']));
+                        throw new InvalidArgumentException(sprintf(
+                            "Invalid singular name '%s' for collection field '%s' in '%s' DTO.\n"
+                            . "Hint: The singular name conflicts with existing field '%s'. Use a different singular name.",
+                            $singular,
+                            $key,
+                            $dtoName,
+                            $singular,
+                        ));
                     }
                 }
 
                 if (preg_match('#^([A-Z][a-zA-Z/]+)\[\]$#', $field['type'], $matches)) {
-                    $fields[$key]['type'] = $this->dtoTypeToClass($matches[1], $namespace) . '[]';
+                    $fields[$key]['type'] = $this->typeResolver->dtoTypeToClass($matches[1], $namespace, $this->getConfigOrFail('suffix')) . '[]';
                 }
 
                 if ($fields[$key]['singularNullable']) {
@@ -412,28 +494,36 @@ class Builder
 
                 continue;
             }
-            if ($this->isValidArray($field['type'])) {
+            if ($this->typeValidator->isValidArray($field['type'])) {
                 $fields[$key]['isArray'] = true;
                 if (preg_match('#^([A-Z][a-zA-Z/]+)\[\]$#', $field['type'], $matches)) {
-                    $fields[$key]['type'] = $this->dtoTypeToClass($matches[1], $namespace) . '[]';
+                    $fields[$key]['type'] = $this->typeResolver->dtoTypeToClass($matches[1], $namespace, $this->getConfigOrFail('suffix')) . '[]';
                 }
 
                 continue;
             }
 
-            if ($this->isValidInterfaceOrClass($field['type'])) {
+            if ($this->typeValidator->isValidInterfaceOrClass($field['type'])) {
                 $fields[$key]['isClass'] = true;
 
                 if (empty($fields[$key]['serialize'])) {
-                    $fields[$key]['serialize'] = $this->detectSerialize($fields[$key]);
+                    $fields[$key]['serialize'] = $this->typeResolver->detectSerialize($fields[$key]);
                 }
 
-                $fields[$key]['enum'] = $this->enumType($field['type']);
+                $fields[$key]['enum'] = $this->typeResolver->enumType($field['type']);
 
                 continue;
             }
 
-            throw new InvalidArgumentException(sprintf('Invalid type `%s` for field `%s` in %s DTO', $field['type'], $key, $dto['name']));
+            throw new InvalidArgumentException(sprintf(
+                "Invalid type '%s' for field '%s' in '%s' DTO.\n"
+                . 'Hint: Valid types include: scalar types (int, string, bool, float), '
+                . 'DTO references (OtherDto), arrays (string[], OtherDto[]), '
+                . 'or fully qualified class names (\\App\\MyClass).',
+                $field['type'],
+                $key,
+                $dtoName,
+            ));
         }
 
         $dto['fields'] = $fields;
@@ -472,9 +562,9 @@ class Builder
             return $data;
         }
 
-        $data['singularType'] = $this->singularType($data['type']);
-        if ($data['singularType'] && $this->isValidDto($data['singularType'])) {
-            $data['singularType'] = $this->dtoTypeToClass($data['singularType'], $namespace);
+        $data['singularType'] = $this->typeResolver->singularType($data['type']);
+        if ($data['singularType'] && $this->typeValidator->isValidDto($data['singularType'])) {
+            $data['singularType'] = $this->typeResolver->dtoTypeToClass($data['singularType'], $namespace, $this->getConfigOrFail('suffix'));
             $data['singularClass'] = $data['singularType'];
         }
 
@@ -484,16 +574,23 @@ class Builder
 
         $singular = Inflector::singularize($fieldName);
         if ($singular === $fieldName) {
-            throw new InvalidArgumentException(sprintf('Field name `%s` of %s DTO cannot be singularized automatically, please set `singular` value.', $fieldName, $dtoName));
+            throw new InvalidArgumentException(sprintf(
+                "Cannot auto-singularize field name '%s' in '%s' DTO.\n"
+                . "Hint: The field name '%s' has no singular form. Add an explicit 'singular' attribute (e.g., singular=\"%sItem\").",
+                $fieldName,
+                $dtoName,
+                $fieldName,
+                $fieldName,
+            ));
         }
         // Collision detection - throw exception instead of silent failure
         if (!empty($fields[$singular])) {
             throw new InvalidArgumentException(sprintf(
-                "Collection field '%s' in %s DTO has auto-generated singular '%s' that collides with existing field. "
-                . "Please set an explicit 'singular' attribute to avoid this collision.",
+                "Auto-generated singular '%s' for collection field '%s' in '%s' DTO collides with existing field.\n"
+                . "Hint: Add an explicit 'singular' attribute with a unique name to avoid this collision.",
+                $singular,
                 $fieldName,
                 $dtoName,
-                $singular,
             ));
         }
 
@@ -514,32 +611,32 @@ class Builder
 
         foreach ($fields as $key => $field) {
             if ($field['dto']) {
-                $className = $this->dtoTypeToClass($field['type'], $namespace);
+                $className = $this->typeResolver->dtoTypeToClass($field['type'], $namespace, $this->getConfigOrFail('suffix'));
                 $fields[$key]['type'] = $className;
                 $fields[$key]['typeHint'] = $className;
             } else {
                 $fields[$key]['typeHint'] = $field['type'];
             }
-            $fields[$key]['typeHint'] = $this->typehint($fields[$key]['typeHint']);
+            $fields[$key]['typeHint'] = $this->typeResolver->typehint($fields[$key]['typeHint']);
 
             if ($field['collection']) {
                 if ($field['collectionType'] === 'array') {
                     $fields[$key]['typeHint'] = 'array';
                     // Generic PHPDoc type for arrays: array<int, ElementType>
-                    $fields[$key]['docBlockType'] = $this->buildGenericArrayType($field);
+                    $fields[$key]['docBlockType'] = $this->arrayShapeBuilder->buildGenericArrayType($field);
                 } else {
                     $fields[$key]['typeHint'] = $field['collectionType'];
 
                     $fields[$key]['type'] .= '|' . $fields[$key]['typeHint'];
                     // Generic PHPDoc type for collections: \ArrayObject<int, ElementType>
-                    $fields[$key]['docBlockType'] = $this->buildGenericCollectionType($field);
+                    $fields[$key]['docBlockType'] = $this->arrayShapeBuilder->buildGenericCollectionType($field);
                 }
             }
             if ($field['isArray']) {
                 if ($field['type'] !== 'array') {
                     $fields[$key]['typeHint'] = 'array';
                     // Generic PHPDoc type for typed arrays: array<int, ElementType>
-                    $fields[$key]['docBlockType'] = $this->buildGenericArrayType($field);
+                    $fields[$key]['docBlockType'] = $this->arrayShapeBuilder->buildGenericArrayType($field);
                 }
             }
 
@@ -549,7 +646,7 @@ class Builder
                 // Pre-compute nullable return type hint (for getters)
                 if ($fields[$key]['nullable']) {
                     // For union types, use |null suffix instead of ? prefix
-                    if ($this->isUnionType($fields[$key]['typeHint'])) {
+                    if ($this->typeResolver->isUnionType($fields[$key]['typeHint'])) {
                         $fields[$key]['nullableReturnTypeHint'] = $fields[$key]['typeHint'] . '|null';
                     } else {
                         $fields[$key]['nullableReturnTypeHint'] = '?' . $fields[$key]['typeHint'];
@@ -559,7 +656,7 @@ class Builder
 
             if ($fields[$key]['typeHint'] && $this->config['scalarAndReturnTypes'] && $fields[$key]['nullable']) {
                 // For union types, use |null suffix instead of ? prefix
-                if ($this->isUnionType($fields[$key]['typeHint'])) {
+                if ($this->typeResolver->isUnionType($fields[$key]['typeHint'])) {
                     $fields[$key]['nullableTypeHint'] = $fields[$key]['typeHint'] . '|null';
                 } else {
                     $fields[$key]['nullableTypeHint'] = '?' . $fields[$key]['typeHint'];
@@ -574,7 +671,7 @@ class Builder
                     'singularNullableReturnTypeHint' => null,
                 ];
                 if ($fields[$key]['singularType']) {
-                    $fields[$key]['singularTypeHint'] = $this->typehint($fields[$key]['singularType']);
+                    $fields[$key]['singularTypeHint'] = $this->typeResolver->typehint($fields[$key]['singularType']);
                 }
 
                 if ($fields[$key]['singularTypeHint'] && $this->config['scalarAndReturnTypes']) {
@@ -582,7 +679,7 @@ class Builder
 
                     // Pre-compute nullable singular return type hint for associative collections
                     if ($fields[$key]['singularNullable']) {
-                        if ($this->isUnionType($fields[$key]['singularTypeHint'])) {
+                        if ($this->typeResolver->isUnionType($fields[$key]['singularTypeHint'])) {
                             $fields[$key]['singularNullableReturnTypeHint'] = $fields[$key]['singularTypeHint'] . '|null';
                         } else {
                             $fields[$key]['singularNullableReturnTypeHint'] = '?' . $fields[$key]['singularTypeHint'];
@@ -606,167 +703,6 @@ class Builder
     }
 
     /**
-     * @param array<string, mixed> $field
-     *
-     * @return string
-     */
-    protected function collectionType(array $field): string
-    {
-        if ($field['collectionType']) {
-            return $field['collectionType'];
-        }
-        if ($field['collection']) {
-            return $this->config['defaultCollectionType'];
-        }
-
-        return 'array';
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
-    protected function isValidName(string $name): bool
-    {
-        if (preg_match('#^[a-zA-Z][a-zA-Z0-9]+$#', $name)) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * @param string $name
-     *
-     * @return bool
-     */
-    protected function isValidDto(string $name): bool
-    {
-        if (!preg_match('#^[A-Z][a-zA-Z0-9/]+$#', $name)) {
-            return false;
-        }
-
-        $pieces = explode('/', $name);
-        foreach ($pieces as $piece) {
-            $expected = Inflector::camelize(Inflector::underscore($piece));
-            if ($piece !== $expected) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return bool
-     */
-    protected function isValidArray(string $type): bool
-    {
-        if ($type === 'array') {
-            return true;
-        }
-
-        if (substr($type, -2) !== '[]') {
-            return false;
-        }
-
-        $type = substr($type, 0, -2);
-        if (substr($type, 0, 1) === '?') {
-            $type = substr($type, 1);
-        }
-
-        return $this->isValidSimpleType($type) || $this->isValidDto($type) || $this->isValidInterfaceOrClass($type);
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return bool
-     */
-    protected function isValidCollection(string $type): bool
-    {
-        if ($type === 'array') {
-            return true;
-        }
-
-        if (substr($type, -2) !== '[]') {
-            return false;
-        }
-
-        $type = substr($type, 0, -2);
-
-        return $this->isValidSimpleType($type) || $this->isValidDto($type) || $this->isValidInterfaceOrClass($type);
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return bool
-     */
-    protected function isValidInterfaceOrClass(string $type): bool
-    {
-        if (substr($type, 0, 1) !== '\\') {
-            return false;
-        }
-
-        return interface_exists($type) || class_exists($type);
-    }
-
-    /**
-     * @param class-string<\BackedEnum|\UnitEnum> $type
-     *
-     * @return string|null
-     */
-    protected function enumType(string $type): ?string
-    {
-        try {
-            $reflectionEnum = new ReflectionEnum($type);
-        } catch (ReflectionException $e) {
-            return null;
-        }
-
-        if (!$reflectionEnum->isBacked()) {
-            return 'unit';
-        }
-
-        $namedType = (string)$reflectionEnum->getBackingType();
-
-        return $namedType;
-    }
-
-    /**
-     * @param string $type
-     * @param array<string> $additional
-     *
-     * @return bool
-     */
-    protected function isValidSimpleType(string $type, array $additional = []): bool
-    {
-        $whitelist = array_merge($this->simpleTypeWhitelist, $additional);
-        $types = explode('|', $type);
-
-        // Non-union simple types with brackets are arrays
-        if (count($types) === 1 && str_ends_with($types[0], '[]')) {
-            return false;
-        }
-
-        $types = array_map(function ($value) {
-            return !str_ends_with($value, '[]') ? $value : substr($value, 0, -2);
-        }, $types);
-
-        foreach ($types as $t) {
-            if (!in_array($t, $whitelist, true)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
      * @param array|null $existing
      * @param array|null $new
      *
@@ -780,6 +716,8 @@ class Builder
             return;
         }
 
+        $dtoName = $existing['name'] ?? 'unknown';
+
         foreach ($existing as $field => $info) {
             if (!isset($new[$field])) {
                 continue;
@@ -792,7 +730,15 @@ class Builder
             }
 
             if ($info['type'] !== $new[$field]['type']) {
-                throw new RuntimeException('Invalid type mismatch for ' . $existing['name']);
+                throw new RuntimeException(sprintf(
+                    "Type mismatch for field '%s' in '%s' DTO during merge.\n"
+                    . "Existing type: '%s', new type: '%s'.\n"
+                    . 'Hint: Field types must be consistent across all configuration files.',
+                    $field,
+                    $dtoName,
+                    $info['type'],
+                    $new[$field]['type'],
+                ));
             }
         }
     }
@@ -832,277 +778,6 @@ class Builder
     }
 
     /**
-     * @param array<string> $types
-     *
-     * @return array<string>
-     */
-    protected function simpleTypeWhitelist(array $types): array
-    {
-        return $types;
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return string|null
-     */
-    protected function typehint(string $type): ?string
-    {
-        // Handle simple type unions
-        if ($this->isValidSimpleType($type)) {
-            $types = explode('|', $type);
-            if (count($types) > 1) {
-                // PHP doesn't support array notation in union types (e.g., string[]|int[] is invalid)
-                // Convert to 'array' if any part uses array notation
-                foreach ($types as $t) {
-                    if (str_ends_with($t, '[]')) {
-                        return 'array';
-                    }
-                }
-
-                // Return union type
-                return $type;
-            }
-        }
-        if (in_array($type, $this->simpleTypeAdditionsForDocBlock, true)) {
-            return null;
-        }
-        if (!$this->config['scalarAndReturnTypes'] && in_array($type, $this->simpleTypeWhitelist, true)) {
-            return null;
-        }
-
-        return $type;
-    }
-
-    /**
-     * Check if a type is a union type.
-     *
-     * @param string $type
-     *
-     * @return bool
-     */
-    protected function isUnionType(string $type): bool
-    {
-        return str_contains($type, '|');
-    }
-
-    /**
-     * @param string $type
-     *
-     * @return string|null
-     */
-    protected function singularType(string $type): ?string
-    {
-        if (substr($type, -2) !== '[]') {
-            return null;
-        }
-
-        $type = substr($type, 0, -2);
-        if (substr($type, 0, 1) === '?') {
-            $type = substr($type, 1);
-        }
-
-        if (!$this->isValidSimpleType($type) && !$this->isValidDto($type) && !$this->isValidInterfaceOrClass($type)) {
-            return null;
-        }
-
-        return $type;
-    }
-
-    /**
-     * Build a generic PHPDoc type for array collections.
-     *
-     * Converts `string[]` to `array<int, string>` or `list<string>`.
-     *
-     * @param array<string, mixed> $field
-     *
-     * @return string
-     */
-    protected function buildGenericArrayType(array $field): string
-    {
-        $elementType = $field['singularType'] ?? null;
-
-        // Extract element type from type[] notation if not already set
-        if (!$elementType && isset($field['type'])) {
-            $type = $field['type'];
-            if (str_ends_with($type, '[]')) {
-                $elementType = substr($type, 0, -2);
-            }
-        }
-
-        // Include nullable in element type if singularNullable is set
-        if (!empty($field['singularNullable']) && $elementType) {
-            $elementType .= '|null';
-        }
-
-        $keyType = ($field['associative'] ?? false) ? 'string' : 'int';
-
-        return sprintf('array<%s, %s>', $keyType, $elementType ?: 'mixed');
-    }
-
-    /**
-     * Build a generic PHPDoc type for object collections (ArrayObject, etc.).
-     *
-     * Converts `ItemDto[]|\ArrayObject` to `\ArrayObject<int, ItemDto>`.
-     *
-     * @param array<string, mixed> $field
-     *
-     * @return string
-     */
-    protected function buildGenericCollectionType(array $field): string
-    {
-        $collectionType = $field['collectionType'] ?? '\ArrayObject';
-        $elementType = $field['singularType'] ?? 'mixed';
-
-        // Include nullable in element type if singularNullable is set
-        if (!empty($field['singularNullable']) && $elementType !== 'mixed') {
-            $elementType .= '|null';
-        }
-
-        $keyType = $field['associative'] ? 'string' : 'int';
-
-        return sprintf('%s<%s, %s>', $collectionType, $keyType, $elementType);
-    }
-
-    /**
-     * Build a shaped array type for PHPDoc annotations on toArray()/createFromArray().
-     *
-     * Generates types like: array{name: string, count: int, items: array<int, ItemDto>}
-     *
-     * When a DTO extends another DTO, the parent's fields are included first to ensure
-     * the child's return type is covariant (compatible with LSP).
-     *
-     * @param array<string, array<string, mixed>> $fields
-     * @param array<string, array<string, mixed>> $allDtos All DTOs for resolving nested shapes
-     * @param array<string, mixed>|null $dto The current DTO definition (for inheritance)
-     *
-     * @return string
-     */
-    protected function buildArrayShape(array $fields, array $allDtos = [], ?array $dto = null): string
-    {
-        $allFields = [];
-
-        // If DTO extends another DTO, include parent fields first (for LSP covariance)
-        if ($dto !== null && !empty($dto['extends'])) {
-            $parentDtoName = $this->extractDtoName($dto['extends']);
-            if ($parentDtoName && isset($allDtos[$parentDtoName])) {
-                $parentDto = $allDtos[$parentDtoName];
-                // Recursively get parent fields (handles multi-level inheritance)
-                $parentFields = $this->collectInheritedFields($parentDto, $allDtos);
-                $allFields = $parentFields;
-            }
-        }
-
-        // Add/override with current DTO's fields
-        foreach ($fields as $name => $field) {
-            $allFields[$name] = $field;
-        }
-
-        $parts = [];
-        foreach ($allFields as $name => $field) {
-            $type = $this->buildFieldShapeType($field, $allDtos);
-            $parts[] = $name . ': ' . $type;
-        }
-
-        return 'array{' . implode(', ', $parts) . '}';
-    }
-
-    /**
-     * Collect all inherited fields from parent DTOs recursively.
-     *
-     * @param array<string, mixed> $dto
-     * @param array<string, array<string, mixed>> $allDtos
-     *
-     * @return array<string, array<string, mixed>>
-     */
-    protected function collectInheritedFields(array $dto, array $allDtos): array
-    {
-        $fields = [];
-
-        // First, get grandparent fields if this DTO also extends something
-        if (!empty($dto['extends'])) {
-            $parentDtoName = $this->extractDtoName($dto['extends']);
-            if ($parentDtoName && isset($allDtos[$parentDtoName])) {
-                $fields = $this->collectInheritedFields($allDtos[$parentDtoName], $allDtos);
-            }
-        }
-
-        // Then add this DTO's fields
-        foreach ($dto['fields'] as $name => $field) {
-            $fields[$name] = $field;
-        }
-
-        return $fields;
-    }
-
-    /**
-     * Build the shaped array type for a single field.
-     *
-     * @param array<string, mixed> $field
-     * @param array<string, array<string, mixed>> $allDtos
-     *
-     * @return string
-     */
-    protected function buildFieldShapeType(array $field, array $allDtos = []): string
-    {
-        // For collections, use array<keyType, elementType>
-        if (!empty($field['collection']) || !empty($field['isArray'])) {
-            $elementType = $field['singularType'] ?? 'mixed';
-            $keyType = !empty($field['associative']) ? 'string' : 'int';
-
-            // If element is a DTO, try to resolve its shape
-            $dtoName = $this->extractDtoName($elementType);
-            if ($dtoName && isset($allDtos[$dtoName])) {
-                $nestedShape = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
-                $elementType = $nestedShape;
-            }
-
-            $type = sprintf('array<%s, %s>', $keyType, $elementType);
-        } elseif (!empty($field['dto'])) {
-            // For nested DTOs, build nested shape if available
-            $dtoName = $this->extractDtoName($field['type']);
-            if ($dtoName && isset($allDtos[$dtoName])) {
-                $type = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
-            } else {
-                $type = 'array<string, mixed>';
-            }
-        } else {
-            // Simple type
-            $type = $field['typeHint'] ?? $field['type'] ?? 'mixed';
-        }
-
-        // Add null if nullable
-        if (!empty($field['nullable'])) {
-            $type .= '|null';
-        }
-
-        return $type;
-    }
-
-    /**
-     * Extract the DTO name from a fully qualified class name.
-     *
-     * @param string $type
-     *
-     * @return string|null
-     */
-    protected function extractDtoName(string $type): ?string
-    {
-        // Remove leading backslash and namespace, extract class name without Dto suffix
-        $className = ltrim($type, '\\');
-        $parts = explode('\\', $className);
-        $shortName = end($parts);
-
-        // Remove Dto suffix if present
-        $suffix = $this->getConfigOrFail('suffix');
-        if (str_ends_with($shortName, $suffix)) {
-            return substr($shortName, 0, -strlen($suffix));
-        }
-
-        return $shortName;
-    }
-
-    /**
      * @param array<string, mixed> $fields
      *
      * @return array<string, mixed>
@@ -1133,43 +808,6 @@ class Builder
         $finderClass = $this->config['finder'];
 
         return new $finderClass();
-    }
-
-    /**
-     * @param string $singularType
-     * @param string $namespace
-     *
-     * @return string
-     */
-    protected function dtoTypeToClass(string $singularType, string $namespace): string
-    {
-        $className = str_replace('/', '\\', $singularType) . $this->getConfigOrFail('suffix');
-
-        return '\\' . $namespace . '\\Dto\\' . $className;
-    }
-
-    /**
-     * @param array<string, mixed> $config
-     *
-     * @return string|null
-     */
-    protected function detectSerialize(array $config): ?string
-    {
-        $serializable = is_subclass_of($config['type'], FromArrayToArrayInterface::class);
-        if ($serializable) {
-            return 'FromArrayToArray';
-        }
-
-        $jsonSafeToString = is_subclass_of($config['type'], JsonSerializable::class);
-        if ($jsonSafeToString) {
-            return null;
-        }
-
-        if (method_exists($config['type'], 'toArray')) {
-            return 'array';
-        }
-
-        return null;
     }
 
     /**
