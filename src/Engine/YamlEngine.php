@@ -49,7 +49,7 @@ class YamlEngine implements EngineInterface
                 throw new InvalidArgumentException("Cannot read file: {$file}");
             }
 
-            $data = yaml_parse($content);
+            $data = @yaml_parse($content);
             if (!$data) {
                 throw new InvalidArgumentException("Invalid YAML file: {$file}");
             }
@@ -70,7 +70,7 @@ class YamlEngine implements EngineInterface
      */
     public function parse(string $content): array
     {
-        $result = yaml_parse($content);
+        $result = @yaml_parse($content);
         if (!$result) {
             throw new InvalidArgumentException('Invalid YAML file');
         }

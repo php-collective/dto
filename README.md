@@ -3,7 +3,7 @@
 [![CI](https://github.com/php-collective/dto/actions/workflows/ci.yml/badge.svg)](https://github.com/php-collective/dto/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/php-collective/dto/branch/master/graph/badge.svg)](https://codecov.io/gh/php-collective/dto)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%208-brightgreen.svg?style=flat)](https://phpstan.org/)
-[![Latest Stable Version](https://poser.pugx.org/php-collective/dto/v/stable.svg)](https://packagist.org/packages/dereuromark/cakephp-ide-helper)
+[![Latest Stable Version](https://poser.pugx.org/php-collective/dto/v/stable.svg)](https://packagist.org/packages/php-collective/dto)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-blue.svg)](https://php.net)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
