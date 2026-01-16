@@ -51,7 +51,9 @@ class SchemaParser implements ParserInterface
 
             // Handle OpenAPI documents: parse all schemas from components/schemas
             if ($this->isOpenApi($input)) {
-                return $this->parseOpenApiSchemas($input, $options);
+                $this->parseOpenApiSchemas($input, $options);
+
+                return $this;
             }
         }
 
