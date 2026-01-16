@@ -101,8 +101,48 @@ Features:
 - Uses `title` for DTO name
 - Respects `required` array for field validation
 - Handles `anyOf`/`oneOf` type unions
-- Processes nested `$ref` definitions (skipped for manual handling)
+- Resolves `$ref` pointers to `$defs`, `definitions`, and `components/schemas`
 - Normalizes types (integer→int, boolean→bool, number→float)
+
+### 3. OpenAPI Documents
+
+Pass an OpenAPI 3.x specification and all schemas from `components/schemas` will be imported:
+
+```php
+$openapi = json_encode([
+    'openapi' => '3.0.0',
+    'info' => ['title' => 'My API', 'version' => '1.0.0'],
+    'components' => [
+        'schemas' => [
+            'User' => [
+                'type' => 'object',
+                'properties' => [
+                    'id' => ['type' => 'integer'],
+                    'name' => ['type' => 'string'],
+                    'profile' => ['$ref' => '#/components/schemas/Profile'],
+                ],
+                'required' => ['id', 'name'],
+            ],
+            'Profile' => [
+                'type' => 'object',
+                'properties' => [
+                    'bio' => ['type' => 'string'],
+                    'avatar' => ['type' => 'string'],
+                ],
+            ],
+        ],
+    ],
+]);
+
+$result = $importer->import($openapi);
+```
+
+Features:
+- Auto-detects OpenAPI documents (requires `openapi` key and `components/schemas`)
+- Parses all object schemas from `components/schemas`
+- Resolves `$ref` pointers between schemas
+- Handles collections with `$ref` in array items
+- Skips non-object schemas (enums, primitives)
 
 ## Output Formats
 
@@ -233,7 +273,7 @@ The importer is a scaffolding tool. Generated configs typically need manual refi
 2. **No custom types** - DateTime, custom classes need manual configuration
 3. **Limited validation** - Only `required` from JSON Schema is used
 4. **Type inference from data** - Single example may not represent all cases
-5. **No `$ref` resolution** - Schema references are skipped
+5. **External `$ref` not supported** - Only local references (`#/...`) are resolved; external file references are skipped
 
 ## Example: API Response
 

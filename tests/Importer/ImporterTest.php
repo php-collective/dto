@@ -269,4 +269,139 @@ class ImporterTest extends TestCase
         $this->assertArrayHasKey('lastName', $result['Object']);
         $this->assertArrayHasKey('userEmail', $result['Object']);
     }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiDocument(): void
+    {
+        $openapi = json_encode([
+            'openapi' => '3.0.0',
+            'info' => ['title' => 'Test API', 'version' => '1.0.0'],
+            'paths' => [],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer'],
+                            'name' => ['type' => 'string'],
+                        ],
+                    ],
+                    'Profile' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'bio' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $result = $this->importer->parse($openapi);
+
+        // Both schemas should be parsed
+        $this->assertArrayHasKey('User', $result);
+        $this->assertArrayHasKey('Profile', $result);
+        $this->assertSame('int', $result['User']['id']['type']);
+        $this->assertSame('string', $result['Profile']['bio']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiWithRefs(): void
+    {
+        $openapi = json_encode([
+            'openapi' => '3.0.0',
+            'info' => ['title' => 'Test API', 'version' => '1.0.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer'],
+                            'profile' => ['$ref' => '#/components/schemas/Profile'],
+                        ],
+                    ],
+                    'Profile' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'bio' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $result = $this->importer->parse($openapi);
+
+        $this->assertArrayHasKey('User', $result);
+        $this->assertArrayHasKey('Profile', $result);
+        $this->assertSame('Profile', $result['User']['profile']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiWithCollectionRef(): void
+    {
+        $openapi = json_encode([
+            'openapi' => '3.0.0',
+            'info' => ['title' => 'Test API', 'version' => '1.0.0'],
+            'components' => [
+                'schemas' => [
+                    'Order' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer'],
+                            'items' => [
+                                'type' => 'array',
+                                'items' => ['$ref' => '#/components/schemas/LineItem'],
+                            ],
+                        ],
+                    ],
+                    'LineItem' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'productId' => ['type' => 'integer'],
+                            'quantity' => ['type' => 'integer'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $result = $this->importer->parse($openapi);
+
+        $this->assertArrayHasKey('Order', $result);
+        $this->assertArrayHasKey('LineItem', $result);
+        $this->assertSame('LineItem[]', $result['Order']['items']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testAutoDetectOpenApi(): void
+    {
+        // OpenAPI documents should be auto-detected
+        $openapi = [
+            'openapi' => '3.0.0',
+            'components' => [
+                'schemas' => [
+                    'Test' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->importer->parseArray($openapi);
+
+        $this->assertArrayHasKey('Test', $result);
+        $this->assertArrayNotHasKey('Object', $result);
+    }
 }
