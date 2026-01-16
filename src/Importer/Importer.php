@@ -131,6 +131,11 @@ class Importer
      */
     protected function guessType(array $array): string
     {
+        // OpenAPI 3.x documents have an 'openapi' key with version string
+        if (!empty($array['openapi']) && !empty($array['components']['schemas'])) {
+            return SchemaParser::NAME;
+        }
+
         // JSON Schema typically has type: object and properties
         if (!empty($array['type']) && $array['type'] === 'object' && !empty($array['properties'])) {
             return SchemaParser::NAME;

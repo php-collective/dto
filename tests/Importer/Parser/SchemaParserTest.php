@@ -498,4 +498,136 @@ class SchemaParserTest extends TestCase
         $this->assertArrayHasKey('name', $result['Object']);
         $this->assertArrayNotHasKey('_internal', $result['Object']);
     }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiDocument(): void
+    {
+        $openapi = [
+            'openapi' => '3.0.0',
+            'info' => ['title' => 'Test API', 'version' => '1.0.0'],
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'id' => ['type' => 'integer'],
+                            'email' => ['type' => 'string'],
+                        ],
+                        'required' => ['id'],
+                    ],
+                    'Product' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'sku' => ['type' => 'string'],
+                            'price' => ['type' => 'number'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($openapi)->result();
+
+        // Both schemas should be parsed
+        $this->assertArrayHasKey('User', $result);
+        $this->assertArrayHasKey('Product', $result);
+
+        // Check User fields
+        $this->assertSame('int', $result['User']['id']['type']);
+        $this->assertTrue($result['User']['id']['required']);
+        $this->assertSame('string', $result['User']['email']['type']);
+
+        // Check Product fields
+        $this->assertSame('string', $result['Product']['sku']['type']);
+        $this->assertSame('float', $result['Product']['price']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiWithCrossReferences(): void
+    {
+        $openapi = [
+            'openapi' => '3.0.0',
+            'components' => [
+                'schemas' => [
+                    'Author' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                        ],
+                    ],
+                    'Book' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'title' => ['type' => 'string'],
+                            'author' => ['$ref' => '#/components/schemas/Author'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($openapi)->result();
+
+        $this->assertArrayHasKey('Author', $result);
+        $this->assertArrayHasKey('Book', $result);
+        $this->assertSame('Author', $result['Book']['author']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiSkipsNonObjectSchemas(): void
+    {
+        $openapi = [
+            'openapi' => '3.0.0',
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                        ],
+                    ],
+                    'Status' => [
+                        'type' => 'string',
+                        'enum' => ['active', 'inactive'],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($openapi)->result();
+
+        // Only object schemas should be parsed
+        $this->assertArrayHasKey('User', $result);
+        $this->assertArrayNotHasKey('Status', $result);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseOpenApiWithNamespace(): void
+    {
+        $openapi = [
+            'openapi' => '3.0.0',
+            'components' => [
+                'schemas' => [
+                    'User' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'name' => ['type' => 'string'],
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($openapi, ['namespace' => 'Api'])->result();
+
+        $this->assertArrayHasKey('Api/User', $result);
+    }
 }

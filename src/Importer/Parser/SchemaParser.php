@@ -48,6 +48,13 @@ class SchemaParser implements ParserInterface
         // Extract definitions on first call (no parent data)
         if (!$parentData) {
             $this->extractDefinitions($input);
+
+            // Handle OpenAPI documents: parse all schemas from components/schemas
+            if ($this->isOpenApi($input)) {
+                $this->parseOpenApiSchemas($input, $options);
+
+                return $this;
+            }
         }
 
         if (!$input || empty($input['properties'])) {
@@ -447,5 +454,51 @@ class SchemaParser implements ParserInterface
         }
 
         return null;
+    }
+
+    /**
+     * Check if the input is an OpenAPI document.
+     *
+     * @param array<string, mixed> $input
+     *
+     * @return bool
+     */
+    protected function isOpenApi(array $input): bool
+    {
+        return !empty($input['openapi']) && !empty($input['components']['schemas']);
+    }
+
+    /**
+     * Parse all schemas from an OpenAPI document's components/schemas.
+     *
+     * @param array<string, mixed> $input The OpenAPI document
+     * @param array<string, mixed> $options Parser options
+     *
+     * @return static
+     */
+    protected function parseOpenApiSchemas(array $input, array $options): static
+    {
+        $schemas = $input['components']['schemas'] ?? [];
+
+        foreach ($schemas as $name => $schema) {
+            // Skip if not an object type or already processed
+            if (empty($schema['type']) || $schema['type'] !== 'object') {
+                continue;
+            }
+            if (isset($this->processedRefs[$name])) {
+                continue;
+            }
+
+            // Use schema name as title if not set
+            if (empty($schema['title'])) {
+                $schema['title'] = $name;
+            }
+
+            // Mark as processed and parse
+            $this->processedRefs[$name] = Inflector::camelize($schema['title']);
+            $this->parse($schema, $options, ['dto' => '__openapi__', 'field' => $name]);
+        }
+
+        return $this;
     }
 }
