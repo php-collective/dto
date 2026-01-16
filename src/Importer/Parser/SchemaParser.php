@@ -171,6 +171,11 @@ class SchemaParser implements ParserInterface
                 'required' => $required,
             ];
 
+            // Handle format specifiers (e.g., date-time, date, email)
+            if (!empty($details['format'])) {
+                $fieldDetails = $this->applyFormat($fieldDetails, $details['format']);
+            }
+
             // Handle nested objects
             if ($fieldDetails['type'] === 'object') {
                 // Check if this was a resolved $ref - use the pre-processed DTO name
@@ -500,5 +505,30 @@ class SchemaParser implements ParserInterface
         }
 
         return $this;
+    }
+
+    /**
+     * Apply format specifier to field details.
+     *
+     * Maps JSON Schema format values to appropriate DTO types:
+     * - date-time, date → \DateTimeInterface class
+     * - Other formats remain as their base type (string)
+     *
+     * @param array<string, mixed> $fieldDetails
+     * @param string $format
+     *
+     * @return array<string, mixed>
+     */
+    protected function applyFormat(array $fieldDetails, string $format): array
+    {
+        // Only apply format mapping to string types
+        if ($fieldDetails['type'] !== 'string') {
+            return $fieldDetails;
+        }
+
+        return match ($format) {
+            'date-time', 'date' => array_merge($fieldDetails, ['type' => '\\DateTimeInterface']),
+            default => $fieldDetails,
+        };
     }
 }

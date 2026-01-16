@@ -630,4 +630,78 @@ class SchemaParserTest extends TestCase
 
         $this->assertArrayHasKey('Api/User', $result);
     }
+
+    /**
+     * @return void
+     */
+    public function testFormatDateTime(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'createdAt' => ['type' => 'string', 'format' => 'date-time'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('\\DateTimeInterface', $result['Object']['createdAt']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testFormatDate(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'birthDate' => ['type' => 'string', 'format' => 'date'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('\\DateTimeInterface', $result['Object']['birthDate']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testFormatEmailRemainsString(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'email' => ['type' => 'string', 'format' => 'email'],
+                'website' => ['type' => 'string', 'format' => 'uri'],
+                'id' => ['type' => 'string', 'format' => 'uuid'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        // These formats don't change the type - they're just validation hints
+        $this->assertSame('string', $result['Object']['email']['type']);
+        $this->assertSame('string', $result['Object']['website']['type']);
+        $this->assertSame('string', $result['Object']['id']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testFormatOnlyAppliestoStringType(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                // Format on non-string type should be ignored
+                'timestamp' => ['type' => 'integer', 'format' => 'int64'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('int', $result['Object']['timestamp']['type']);
+    }
 }
