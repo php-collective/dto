@@ -27,10 +27,29 @@ class SchemaParser implements ParserInterface
     protected array $map = [];
 
     /**
+     * Definitions extracted from $defs, definitions, or components/schemas.
+     *
+     * @var array<string, array<string, mixed>>
+     */
+    protected array $definitions = [];
+
+    /**
+     * Track which $ref definitions have been processed to create DTOs.
+     *
+     * @var array<string, string>
+     */
+    protected array $processedRefs = [];
+
+    /**
      * @inheritDoc
      */
     public function parse(array $input, array $options = [], array $parentData = []): static
     {
+        // Extract definitions on first call (no parent data)
+        if (!$parentData) {
+            $this->extractDefinitions($input);
+        }
+
         if (!$input || empty($input['properties'])) {
             return $this;
         }
@@ -55,11 +74,20 @@ class SchemaParser implements ParserInterface
         $requiredFields = $input['required'] ?? [];
 
         foreach ($input['properties'] as $fieldName => $details) {
-            if (str_starts_with($fieldName, '_') || !empty($details['$ref'])) {
+            if (str_starts_with($fieldName, '_')) {
                 continue;
             }
             if (!is_array($details)) {
                 continue;
+            }
+
+            // Resolve $ref to actual schema
+            if (!empty($details['$ref'])) {
+                $resolved = $this->resolveRef($details['$ref'], $options);
+                if ($resolved === null) {
+                    continue;
+                }
+                $details = $resolved;
             }
 
             $required = in_array($fieldName, $requiredFields, true);
@@ -89,12 +117,25 @@ class SchemaParser implements ParserInterface
                 $required = false;
             }
 
-            // Handle array of objects (collection)
-            if (!empty($details['type']) && $details['type'] === 'array' && !empty($details['items']['type']) && $details['items']['type'] === 'object') {
-                $details['collection'] = true;
-                $details['type'] = 'object';
-                $details['properties'] = $details['items']['properties'] ?? [];
-                $details['required'] = $details['items']['required'] ?? null;
+            // Handle array of objects (collection) - including $ref in items
+            if (!empty($details['type']) && $details['type'] === 'array' && !empty($details['items'])) {
+                // Resolve $ref in items if present
+                if (!empty($details['items']['$ref'])) {
+                    $resolvedItems = $this->resolveRef($details['items']['$ref'], $options);
+                    if ($resolvedItems !== null) {
+                        $details['items'] = $resolvedItems;
+                    }
+                }
+
+                if (!empty($details['items']['type']) && $details['items']['type'] === 'object') {
+                    $details['collection'] = true;
+                    $details['type'] = 'object';
+                    $details['properties'] = $details['items']['properties'] ?? [];
+                    $details['required'] = $details['items']['required'] ?? null;
+                    if (!empty($details['items']['_resolvedRef'])) {
+                        $details['_resolvedRef'] = $details['items']['_resolvedRef'];
+                    }
+                }
             }
 
             // Handle type arrays (union types with null)
@@ -125,26 +166,38 @@ class SchemaParser implements ParserInterface
 
             // Handle nested objects
             if ($fieldDetails['type'] === 'object') {
-                $parseDetails = ['dto' => $dtoName, 'field' => $fieldName];
-                if (!empty($details['collection'])) {
-                    $parseDetails['collection'] = $details['collection'];
-                }
-                $this->parse($details, $options, $parseDetails);
-
-                if (isset($this->map[$dtoName][$fieldName])) {
-                    $fieldDetails['type'] = $this->map[$dtoName][$fieldName];
+                // Check if this was a resolved $ref - use the pre-processed DTO name
+                if (!empty($details['_resolvedRef'])) {
+                    $fieldDetails['type'] = $details['_resolvedRef'];
                     if (!empty($details['collection'])) {
                         $singular = Inflector::singularize($fieldName);
-                        // Skip on conflicting/existing field
-                        if (!isset($this->map[$dtoName][$singular])) {
+                        if (!isset($fields[$singular])) {
                             $fieldDetails['singular'] = $singular;
                         }
-                        $dtoFields = $details['items']['properties'] ?? [];
-                        $keyField = $this->detectKeyField($dtoFields);
-                        if ($keyField) {
-                            $fieldDetails['associative'] = $keyField;
-                        }
                         $fieldDetails['type'] .= '[]';
+                    }
+                } else {
+                    $parseDetails = ['dto' => $dtoName, 'field' => $fieldName];
+                    if (!empty($details['collection'])) {
+                        $parseDetails['collection'] = $details['collection'];
+                    }
+                    $this->parse($details, $options, $parseDetails);
+
+                    if (isset($this->map[$dtoName][$fieldName])) {
+                        $fieldDetails['type'] = $this->map[$dtoName][$fieldName];
+                        if (!empty($details['collection'])) {
+                            $singular = Inflector::singularize($fieldName);
+                            // Skip on conflicting/existing field
+                            if (!isset($this->map[$dtoName][$singular])) {
+                                $fieldDetails['singular'] = $singular;
+                            }
+                            $dtoFields = $details['items']['properties'] ?? [];
+                            $keyField = $this->detectKeyField($dtoFields);
+                            if ($keyField) {
+                                $fieldDetails['associative'] = $keyField;
+                            }
+                            $fieldDetails['type'] .= '[]';
+                        }
                     }
                 }
             }
@@ -286,6 +339,110 @@ class SchemaParser implements ParserInterface
         foreach ($strings as $string) {
             if (!empty($dtoFields[$string]) && !empty($dtoFields[$string]['type']) && $dtoFields[$string]['type'] === 'string') {
                 return $string;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Extract definitions from $defs, definitions, or components/schemas.
+     *
+     * @param array<string, mixed> $schema
+     *
+     * @return void
+     */
+    protected function extractDefinitions(array $schema): void
+    {
+        // JSON Schema draft-07+ uses $defs
+        if (!empty($schema['$defs'])) {
+            $this->definitions = array_merge($this->definitions, $schema['$defs']);
+        }
+
+        // Older JSON Schema uses definitions
+        if (!empty($schema['definitions'])) {
+            $this->definitions = array_merge($this->definitions, $schema['definitions']);
+        }
+
+        // OpenAPI 3.x uses components/schemas
+        if (!empty($schema['components']['schemas'])) {
+            $this->definitions = array_merge($this->definitions, $schema['components']['schemas']);
+        }
+    }
+
+    /**
+     * Resolve a $ref pointer to its schema definition.
+     *
+     * Supports:
+     * - #/$defs/Name
+     * - #/definitions/Name
+     * - #/components/schemas/Name
+     *
+     * @param string $ref The $ref pointer
+     * @param array<string, mixed> $options Parser options
+     *
+     * @return array<string, mixed>|null The resolved schema or null if not found
+     */
+    protected function resolveRef(string $ref, array $options): ?array
+    {
+        // Only support local references (same file)
+        if (!str_starts_with($ref, '#/')) {
+            return null;
+        }
+
+        // Extract the definition name from the pointer
+        $name = $this->extractRefName($ref);
+        if ($name === null || !isset($this->definitions[$name])) {
+            return null;
+        }
+
+        $schema = $this->definitions[$name];
+
+        // If this is an object type, parse it as a separate DTO
+        if (!empty($schema['type']) && $schema['type'] === 'object' && !empty($schema['properties'])) {
+            // Use the definition name as title if not set
+            if (empty($schema['title'])) {
+                $schema['title'] = $name;
+            }
+
+            // Only process each ref once to avoid duplicates
+            if (!isset($this->processedRefs[$name])) {
+                $this->processedRefs[$name] = Inflector::camelize($schema['title']);
+                $this->parse($schema, $options, ['dto' => '__ref__', 'field' => $name]);
+            }
+
+            // Return a schema that references the DTO type
+            return [
+                'type' => 'object',
+                'properties' => $schema['properties'],
+                'required' => $schema['required'] ?? [],
+                'title' => $schema['title'],
+                '_resolvedRef' => $this->processedRefs[$name],
+            ];
+        }
+
+        // For non-object types, just return the schema
+        return $schema;
+    }
+
+    /**
+     * Extract the definition name from a $ref pointer.
+     *
+     * @param string $ref The $ref pointer
+     *
+     * @return string|null The definition name or null if invalid
+     */
+    protected function extractRefName(string $ref): ?string
+    {
+        $patterns = [
+            '~^#/\\$defs/(.+)$~' => 1,
+            '~^#/definitions/(.+)$~' => 1,
+            '~^#/components/schemas/(.+)$~' => 1,
+        ];
+
+        foreach ($patterns as $pattern => $group) {
+            if (preg_match($pattern, $ref, $matches)) {
+                return $matches[$group];
             }
         }
 
