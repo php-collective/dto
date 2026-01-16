@@ -22,7 +22,7 @@ interface ParserInterface
     /**
      * Returns the parsed result.
      *
-     * @return array<string, array<string, array<string, mixed>>>
+     * @return array<string, array<string, array<string, mixed>|string>>
      */
     public function result(): array;
 }

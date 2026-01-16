@@ -17,7 +17,7 @@ class SchemaParser implements ParserInterface
     public const NAME = 'Schema';
 
     /**
-     * @var array<string, array<string, array<string, mixed>>>
+     * @var array<string, array<string, array<string, mixed>|string>>
      */
     protected array $result = [];
 
@@ -55,6 +55,12 @@ class SchemaParser implements ParserInterface
 
                 return $this;
             }
+        }
+
+        // Handle allOf composition (inheritance)
+        $extends = null;
+        if (!empty($input['allOf'])) {
+            [$input, $extends] = $this->processAllOf($input, $options);
         }
 
         if (!$input || empty($input['properties'])) {
@@ -210,6 +216,11 @@ class SchemaParser implements ParserInterface
             }
 
             $fields[$fieldName] = $fieldDetails;
+        }
+
+        // Add extends if this DTO inherits from another
+        if ($extends) {
+            $fields['_extends'] = $extends;
         }
 
         $this->result[$dtoName] = $fields;
@@ -500,5 +511,68 @@ class SchemaParser implements ParserInterface
         }
 
         return $this;
+    }
+
+    /**
+     * Process allOf composition to merge schemas and detect inheritance.
+     *
+     * @param array<string, mixed> $input The schema with allOf
+     * @param array<string, mixed> $options Parser options
+     *
+     * @return array{0: array<string, mixed>, 1: string|null} Merged schema and parent DTO name
+     */
+    protected function processAllOf(array $input, array $options): array
+    {
+        $extends = null;
+        $mergedProperties = [];
+        $mergedRequired = [];
+        $title = $input['title'] ?? null;
+
+        foreach ($input['allOf'] as $schema) {
+            // Handle $ref - this indicates inheritance
+            if (!empty($schema['$ref'])) {
+                $resolved = $this->resolveRef($schema['$ref'], $options);
+                if ($resolved !== null) {
+                    // Get the parent DTO name
+                    $extends = $resolved['_resolvedRef'] ?? null;
+
+                    // Optionally merge parent properties (for complete DTO)
+                    // Skip this to only include own properties in child DTO
+                }
+
+                continue;
+            }
+
+            // Merge properties from this schema
+            if (!empty($schema['properties'])) {
+                $mergedProperties = array_merge($mergedProperties, $schema['properties']);
+            }
+
+            // Merge required fields
+            if (!empty($schema['required'])) {
+                $mergedRequired = array_merge($mergedRequired, $schema['required']);
+            }
+
+            // Use title from inline schema if not set
+            if (!$title && !empty($schema['title'])) {
+                $title = $schema['title'];
+            }
+        }
+
+        // Build merged schema
+        $merged = [
+            'type' => 'object',
+            'properties' => $mergedProperties,
+        ];
+
+        if ($title) {
+            $merged['title'] = $title;
+        }
+
+        if ($mergedRequired) {
+            $merged['required'] = array_unique($mergedRequired);
+        }
+
+        return [$merged, $extends];
     }
 }

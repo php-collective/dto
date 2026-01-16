@@ -73,21 +73,29 @@ class SchemaBuilder implements BuilderInterface
      * Build XML output for a single DTO.
      *
      * @param string $name
-     * @param array<string, array<string, mixed>> $fields
+     * @param array<string, array<string, mixed>|string> $fields
      *
      * @return string
      */
     protected function buildXml(string $name, array $fields): string
     {
+        // Extract extends if present
+        /** @var string|null $extends */
+        $extends = isset($fields['_extends']) && is_string($fields['_extends']) ? $fields['_extends'] : null;
+        unset($fields['_extends']);
+
         $fieldLines = [];
         foreach ($fields as $fieldName => $fieldDetails) {
+            if (!is_array($fieldDetails)) {
+                continue;
+            }
             if (isset($fieldDetails['_include']) && !$fieldDetails['_include']) {
                 continue;
             }
 
             $attr = [
                 'name="' . $this->escapeXml($fieldName) . '"',
-                'type="' . $this->escapeXml($fieldDetails['type'] ?? 'mixed') . '"',
+                'type="' . $this->escapeXml((string)($fieldDetails['type'] ?? 'mixed')) . '"',
             ];
 
             if (!empty($fieldDetails['required'])) {
@@ -105,9 +113,10 @@ class SchemaBuilder implements BuilderInterface
         }
 
         $fieldsStr = implode("\n", $fieldLines);
+        $extendsAttr = $extends ? ' extends="' . $this->escapeXml($extends) . '"' : '';
 
         return <<<XML
-	<dto name="{$name}">
+	<dto name="{$name}"{$extendsAttr}>
 {$fieldsStr}
 	</dto>
 XML;
@@ -116,7 +125,7 @@ XML;
     /**
      * Build XML output for all DTOs.
      *
-     * @param array<string, array<string, array<string, mixed>>> $definitions
+     * @param array<string, array<string, array<string, mixed>|string>> $definitions
      *
      * @return string
      */
@@ -141,14 +150,22 @@ XML;
      * Build PHP output for a single DTO.
      *
      * @param string $name
-     * @param array<string, array<string, mixed>> $fields
+     * @param array<string, array<string, mixed>|string> $fields
      *
      * @return string
      */
     protected function buildPhp(string $name, array $fields): string
     {
+        // Extract extends if present
+        /** @var string|null $extends */
+        $extends = isset($fields['_extends']) && is_string($fields['_extends']) ? $fields['_extends'] : null;
+        unset($fields['_extends']);
+
         $fieldLines = [];
         foreach ($fields as $fieldName => $fieldDetails) {
+            if (!is_array($fieldDetails)) {
+                continue;
+            }
             if (isset($fieldDetails['_include']) && !$fieldDetails['_include']) {
                 continue;
             }
@@ -174,9 +191,10 @@ XML;
         }
 
         $fieldsStr = implode("\n", $fieldLines);
+        $extendsStr = $extends ? "->extends('{$extends}')" : '';
 
         return <<<PHP
-        Dto::create('{$name}')->fields(
+        Dto::create('{$name}'){$extendsStr}->fields(
 {$fieldsStr}
         ),
 PHP;
@@ -226,7 +244,7 @@ PHP;
     /**
      * Build PHP output for all DTOs.
      *
-     * @param array<string, array<string, array<string, mixed>>> $definitions
+     * @param array<string, array<string, array<string, mixed>|string>> $definitions
      *
      * @return string
      */
@@ -258,16 +276,29 @@ PHP;
      * Build YAML output for a single DTO.
      *
      * @param string $name
-     * @param array<string, array<string, mixed>> $fields
+     * @param array<string, array<string, mixed>|string> $fields
      *
      * @return string
      */
     protected function buildYaml(string $name, array $fields): string
     {
+        // Extract extends if present
+        /** @var string|null $extends */
+        $extends = isset($fields['_extends']) && is_string($fields['_extends']) ? $fields['_extends'] : null;
+        unset($fields['_extends']);
+
         $lines = ["{$name}:"];
+
+        if ($extends) {
+            $lines[] = "  extends: {$extends}";
+        }
+
         $lines[] = '  fields:';
 
         foreach ($fields as $fieldName => $fieldDetails) {
+            if (!is_array($fieldDetails)) {
+                continue;
+            }
             if (isset($fieldDetails['_include']) && !$fieldDetails['_include']) {
                 continue;
             }
@@ -302,7 +333,7 @@ PHP;
     /**
      * Build YAML output for all DTOs.
      *
-     * @param array<string, array<string, array<string, mixed>>> $definitions
+     * @param array<string, array<string, array<string, mixed>|string>> $definitions
      *
      * @return string
      */
@@ -320,16 +351,29 @@ PHP;
      * Build NEON output for a single DTO.
      *
      * @param string $name
-     * @param array<string, array<string, mixed>> $fields
+     * @param array<string, array<string, mixed>|string> $fields
      *
      * @return string
      */
     protected function buildNeon(string $name, array $fields): string
     {
+        // Extract extends if present
+        /** @var string|null $extends */
+        $extends = isset($fields['_extends']) && is_string($fields['_extends']) ? $fields['_extends'] : null;
+        unset($fields['_extends']);
+
         $lines = ["{$name}:"];
+
+        if ($extends) {
+            $lines[] = "\textends: {$extends}";
+        }
+
         $lines[] = "\tfields:";
 
         foreach ($fields as $fieldName => $fieldDetails) {
+            if (!is_array($fieldDetails)) {
+                continue;
+            }
             if (isset($fieldDetails['_include']) && !$fieldDetails['_include']) {
                 continue;
             }
@@ -364,7 +408,7 @@ PHP;
     /**
      * Build NEON output for all DTOs.
      *
-     * @param array<string, array<string, array<string, mixed>>> $definitions
+     * @param array<string, array<string, array<string, mixed>|string>> $definitions
      *
      * @return string
      */

@@ -630,4 +630,141 @@ class SchemaParserTest extends TestCase
 
         $this->assertArrayHasKey('Api/User', $result);
     }
+
+    /**
+     * @return void
+     */
+    public function testParseAllOfWithRef(): void
+    {
+        $schema = [
+            '$defs' => [
+                'BaseEntity' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'integer'],
+                        'createdAt' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'type' => 'object',
+            'title' => 'User',
+            'allOf' => [
+                ['$ref' => '#/$defs/BaseEntity'],
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'email' => ['type' => 'string'],
+                        'name' => ['type' => 'string'],
+                    ],
+                    'required' => ['email'],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        // User should exist with its own properties
+        $this->assertArrayHasKey('User', $result);
+        $this->assertArrayHasKey('email', $result['User']);
+        $this->assertArrayHasKey('name', $result['User']);
+        $this->assertTrue($result['User']['email']['required']);
+
+        // User should extend BaseEntity
+        $this->assertArrayHasKey('_extends', $result['User']);
+        $this->assertSame('BaseEntity', $result['User']['_extends']);
+
+        // BaseEntity should also be parsed as a separate DTO
+        $this->assertArrayHasKey('BaseEntity', $result);
+        $this->assertArrayHasKey('id', $result['BaseEntity']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseAllOfMergesProperties(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Combined',
+            'allOf' => [
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'first' => ['type' => 'string'],
+                    ],
+                ],
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'second' => ['type' => 'integer'],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertArrayHasKey('Combined', $result);
+        $this->assertArrayHasKey('first', $result['Combined']);
+        $this->assertArrayHasKey('second', $result['Combined']);
+        $this->assertSame('string', $result['Combined']['first']['type']);
+        $this->assertSame('int', $result['Combined']['second']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseAllOfMergesRequiredFields(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'allOf' => [
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'a' => ['type' => 'string'],
+                    ],
+                    'required' => ['a'],
+                ],
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'b' => ['type' => 'string'],
+                    ],
+                    'required' => ['b'],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertTrue($result['Object']['a']['required']);
+        $this->assertTrue($result['Object']['b']['required']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseAllOfWithoutRef(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Simple',
+            'allOf' => [
+                [
+                    'type' => 'object',
+                    'properties' => [
+                        'name' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertArrayHasKey('Simple', $result);
+        $this->assertArrayHasKey('name', $result['Simple']);
+        // No _extends since there was no $ref
+        $this->assertArrayNotHasKey('_extends', $result['Simple']);
+    }
 }
