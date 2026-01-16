@@ -265,6 +265,16 @@ $schema = $importer->importArray($data, ['format' => 'php']);
 | `object` | Nested DTO |
 | `["string", "null"]` | `string` (optional) |
 
+### Format Specifiers
+
+| JSON Schema Format | DTO Type |
+|--------------------|----------|
+| `date-time` | `\DateTimeInterface` |
+| `date` | `\DateTimeInterface` |
+| `email`, `uri`, `uuid`, etc. | `string` (unchanged) |
+
+Note: Only `date-time` and `date` formats are mapped to class types. Other formats like `email`, `uri`, `uuid` remain as `string` since they are validation hints rather than type indicators.
+
 ## Limitations
 
 The importer is a scaffolding tool. Generated configs typically need manual refinement:
