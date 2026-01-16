@@ -14,6 +14,8 @@ Unlike runtime reflection libraries, this library generates optimized DTO classe
 - **Perfect IDE autocomplete** with real methods
 - **Excellent static analysis** support (PHPStan/Psalm work out of the box)
 - **Reviewable generated code** in pull requests
+- **JSON Schema generation** for API documentation
+- **Schema importer** to bootstrap DTOs from JSON data or OpenAPI specs
 
 See [Motivation](docs/Motivation.md) for why code generation beats runtime reflection.
 

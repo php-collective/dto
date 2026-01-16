@@ -239,13 +239,164 @@ class SchemaParserTest extends TestCase
     /**
      * @return void
      */
-    public function testSkipRefProperties(): void
+    public function testResolveRefWithDefs(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Customer',
+            '$defs' => [
+                'Address' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'street' => ['type' => 'string'],
+                        'city' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'properties' => [
+                'name' => ['type' => 'string'],
+                'address' => ['$ref' => '#/$defs/Address'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertArrayHasKey('name', $result['Customer']);
+        $this->assertArrayHasKey('address', $result['Customer']);
+        $this->assertSame('Address', $result['Customer']['address']['type']);
+        $this->assertArrayHasKey('Address', $result);
+        $this->assertSame('string', $result['Address']['street']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testResolveRefWithDefinitions(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'definitions' => [
+                'Profile' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'bio' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'properties' => [
+                'profile' => ['$ref' => '#/definitions/Profile'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('Profile', $result['Object']['profile']['type']);
+        $this->assertArrayHasKey('Profile', $result);
+    }
+
+    /**
+     * @return void
+     */
+    public function testResolveRefWithOpenApiComponents(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Order',
+            'components' => [
+                'schemas' => [
+                    'LineItem' => [
+                        'type' => 'object',
+                        'properties' => [
+                            'productId' => ['type' => 'integer'],
+                            'quantity' => ['type' => 'integer'],
+                        ],
+                    ],
+                ],
+            ],
+            'properties' => [
+                'item' => ['$ref' => '#/components/schemas/LineItem'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('LineItem', $result['Order']['item']['type']);
+        $this->assertArrayHasKey('LineItem', $result);
+    }
+
+    /**
+     * @return void
+     */
+    public function testResolveRefInArrayItems(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Order',
+            '$defs' => [
+                'LineItem' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'productId' => ['type' => 'integer'],
+                        'price' => ['type' => 'number'],
+                    ],
+                ],
+            ],
+            'properties' => [
+                'items' => [
+                    'type' => 'array',
+                    'items' => ['$ref' => '#/$defs/LineItem'],
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('LineItem[]', $result['Order']['items']['type']);
+        $this->assertArrayHasKey('LineItem', $result);
+        $this->assertSame('int', $result['LineItem']['productId']['type']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testResolveRefDeduplication(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Customer',
+            '$defs' => [
+                'Address' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'street' => ['type' => 'string'],
+                    ],
+                ],
+            ],
+            'properties' => [
+                'billingAddress' => ['$ref' => '#/$defs/Address'],
+                'shippingAddress' => ['$ref' => '#/$defs/Address'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        // Both fields should reference the same DTO type
+        $this->assertSame('Address', $result['Customer']['billingAddress']['type']);
+        $this->assertSame('Address', $result['Customer']['shippingAddress']['type']);
+        // Address DTO should only be created once
+        $this->assertCount(2, $result); // Customer + Address
+    }
+
+    /**
+     * @return void
+     */
+    public function testSkipUnresolvableRef(): void
     {
         $schema = [
             'type' => 'object',
             'properties' => [
                 'name' => ['type' => 'string'],
-                'related' => ['$ref' => '#/definitions/Other'],
+                'related' => ['$ref' => '#/definitions/NonExistent'],
             ],
         ];
 
@@ -253,6 +404,25 @@ class SchemaParserTest extends TestCase
 
         $this->assertArrayHasKey('name', $result['Object']);
         $this->assertArrayNotHasKey('related', $result['Object']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testSkipExternalRef(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'name' => ['type' => 'string'],
+                'external' => ['$ref' => 'other-file.json#/definitions/Other'],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertArrayHasKey('name', $result['Object']);
+        $this->assertArrayNotHasKey('external', $result['Object']);
     }
 
     /**
