@@ -124,10 +124,14 @@ class SchemaParser implements ParserInterface
                 $details['type'] = 'string';
             }
 
-            // Handle array type in union
+            // Handle array type in union - simplify to just 'array'
+            // Only mark as optional if null was in the type array
             if (!empty($details['type']) && is_array($details['type']) && in_array('array', $details['type'], true)) {
+                $hasNull = in_array('null', $details['type'], true);
                 $details['type'] = 'array';
-                $required = false;
+                if ($hasNull) {
+                    $required = false;
+                }
             }
 
             // Handle array of objects (collection) - including $ref in items
@@ -176,6 +180,11 @@ class SchemaParser implements ParserInterface
                 'type' => $this->type($details['type']),
                 'required' => $required,
             ];
+
+            // Handle format specifiers (e.g., date-time, date, email)
+            if (!empty($details['format'])) {
+                $fieldDetails = $this->applyFormat($fieldDetails, $details['format']);
+            }
 
             // Handle nested objects
             if ($fieldDetails['type'] === 'object') {
@@ -574,5 +583,30 @@ class SchemaParser implements ParserInterface
         }
 
         return [$merged, $extends];
+    }
+
+    /**
+     * Apply format specifier to field details.
+     *
+     * Maps JSON Schema format values to appropriate DTO types:
+     * - date-time, date → \DateTimeInterface class
+     * - Other formats remain as their base type (string)
+     *
+     * @param array<string, mixed> $fieldDetails
+     * @param string $format
+     *
+     * @return array<string, mixed>
+     */
+    protected function applyFormat(array $fieldDetails, string $format): array
+    {
+        // Only apply format mapping to string types
+        if ($fieldDetails['type'] !== 'string') {
+            return $fieldDetails;
+        }
+
+        return match ($format) {
+            'date-time', 'date' => array_merge($fieldDetails, ['type' => '\\DateTimeInterface']),
+            default => $fieldDetails,
+        };
     }
 }
