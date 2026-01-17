@@ -26,7 +26,9 @@ class XmlParser
     {
         libxml_use_internal_errors(true);
 
-        $element = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NOCDATA);
+        // LIBXML_NONET prevents network access during parsing (XXE protection)
+        // LIBXML_NOCDATA converts CDATA to text nodes
+        $element = simplexml_load_string($xml, SimpleXMLElement::class, LIBXML_NOCDATA | LIBXML_NONET);
 
         if ($element === false) {
             $errors = libxml_get_errors();

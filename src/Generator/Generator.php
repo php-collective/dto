@@ -276,7 +276,13 @@ class Generator
      */
     protected function isModified(string $file, string $newContent): bool
     {
-        return file_get_contents($file) !== $newContent;
+        $oldContent = file_get_contents($file);
+        if ($oldContent === false) {
+            // If we can't read the file, assume it's modified to be safe
+            return true;
+        }
+
+        return $oldContent !== $newContent;
     }
 
     /**

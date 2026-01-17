@@ -264,7 +264,7 @@ class Builder
                 $dto['className'] = array_pop($pieces);
                 $dto['namespace'] .= '\\' . implode('\\', $pieces);
             }
-            if (strpos($dto['extends'], '/') !== false) {
+            if (!empty($dto['extends']) && strpos($dto['extends'], '/') !== false) {
                 $pieces = explode('/', $dto['extends']);
                 $dto['extends'] = '\\' . $namespace . '\Dto\\' . implode('\\', $pieces);
             }
@@ -429,7 +429,7 @@ class Builder
         $fields = $dto['fields'];
         foreach ($fields as $field => $data) {
             $data += [
-                'required' => isset($data['defaultValue']),
+                'required' => false,
                 'defaultValue' => null,
                 'nullable' => empty($data['required']),
                 'returnTypeHint' => null,
