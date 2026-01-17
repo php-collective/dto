@@ -6,6 +6,7 @@ namespace PhpCollective\Dto\Test\Importer\Parser;
 
 use PhpCollective\Dto\Importer\Parser\SchemaParser;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 /**
  * Tests for SchemaParser.
@@ -912,5 +913,42 @@ class SchemaParserTest extends TestCase
         $this->assertSame('array', $result['Object']['items']['type']);
         // Should remain required because null is not in union
         $this->assertTrue($result['Object']['items']['required']);
+    }
+
+    /**
+     * Test that deeply nested schemas throw an exception to prevent stack overflow.
+     *
+     * @return void
+     */
+    public function testRecursionDepthLimitThrowsException(): void
+    {
+        // Build a schema that exceeds MAX_DEPTH (50) by creating deeply nested objects
+        // Each nested object with type=object and properties triggers a recursive parse() call
+        // Use unique field names to prevent deduplication
+        $deepestLevel = [
+            'type' => 'object',
+            'properties' => [
+                'value' => ['type' => 'string'],
+            ],
+        ];
+
+        // Build from bottom up: wrap in 55 levels of nesting (exceeds MAX_DEPTH of 50)
+        $current = $deepestLevel;
+        for ($i = 0; $i < 55; $i++) {
+            $current = [
+                'type' => 'object',
+                'properties' => [
+                    'level' . $i => $current,
+                ],
+            ];
+        }
+
+        $schema = $current;
+        $schema['title'] = 'DeeplyNested';
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Maximum schema nesting depth exceeded');
+
+        $this->parser->parse($schema)->result();
     }
 }

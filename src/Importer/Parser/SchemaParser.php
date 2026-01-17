@@ -218,7 +218,7 @@ class SchemaParser implements ParserInterface
                         $fieldDetails['type'] .= '[]';
                     }
                 } else {
-                    $parseDetails = ['dto' => $dtoName, 'field' => $fieldName];
+                    $parseDetails = ['dto' => $dtoName, 'field' => $fieldName, '_depth' => $parentData['_depth']];
                     if (!empty($details['collection'])) {
                         $parseDetails['collection'] = $details['collection'];
                     }
