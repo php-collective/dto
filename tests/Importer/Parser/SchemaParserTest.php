@@ -841,4 +841,76 @@ class SchemaParserTest extends TestCase
         // No _extends since there was no $ref
         $this->assertArrayNotHasKey('_extends', $result['Simple']);
     }
+
+    /**
+     * @return void
+     */
+    public function testParseAllOfInheritanceOnly(): void
+    {
+        $schema = [
+            '$defs' => [
+                'BaseEntity' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'integer'],
+                    ],
+                ],
+            ],
+            'type' => 'object',
+            'title' => 'Empty',
+            'allOf' => [
+                ['$ref' => '#/$defs/BaseEntity'],
+                // No additional properties - only inheritance
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        // Empty should exist even with no own properties
+        $this->assertArrayHasKey('Empty', $result);
+        $this->assertArrayHasKey('_extends', $result['Empty']);
+        $this->assertSame('BaseEntity', $result['Empty']['_extends']);
+        // BaseEntity should also be parsed
+        $this->assertArrayHasKey('BaseEntity', $result);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseArrayUnionWithNull(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'items' => ['type' => ['array', 'null']],
+            ],
+            'required' => ['items'],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('array', $result['Object']['items']['type']);
+        // Should be optional because null is in union
+        $this->assertFalse($result['Object']['items']['required']);
+    }
+
+    /**
+     * @return void
+     */
+    public function testParseArrayUnionWithoutNull(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'items' => ['type' => ['array', 'object']],
+            ],
+            'required' => ['items'],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('array', $result['Object']['items']['type']);
+        // Should remain required because null is not in union
+        $this->assertTrue($result['Object']['items']['required']);
+    }
 }

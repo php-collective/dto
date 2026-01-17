@@ -212,16 +212,21 @@ PHP;
     {
         $indent = '            ';
 
+        // Handle empty type
+        if ($type === '') {
+            return "{$indent}Field::mixed('{$fieldName}')";
+        }
+
         // Handle collection types (ending with [])
         if (str_ends_with($type, '[]')) {
             $baseType = substr($type, 0, -2);
             // If it's a DTO type (starts with uppercase or contains /), use collection()
-            if (ctype_upper($baseType[0]) || str_contains($baseType, '/')) {
+            if ($baseType !== '' && (ctype_upper($baseType[0]) || str_contains($baseType, '/'))) {
                 return "{$indent}Field::collection('{$fieldName}', '{$baseType}')";
             }
 
-            // Scalar arrays
-            return "{$indent}Field::array('{$fieldName}', '{$baseType}')";
+            // Scalar arrays (including empty baseType which becomes generic array)
+            return $baseType !== '' ? "{$indent}Field::array('{$fieldName}', '{$baseType}')" : "{$indent}Field::array('{$fieldName}')";
         }
 
         // Handle single DTO types (starts with uppercase or contains /)

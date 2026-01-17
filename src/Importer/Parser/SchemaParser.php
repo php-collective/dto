@@ -63,7 +63,9 @@ class SchemaParser implements ParserInterface
             [$input, $extends] = $this->processAllOf($input, $options);
         }
 
-        if (!$input || empty($input['properties'])) {
+        // Skip if no properties and no inheritance
+        // But allow DTOs that only extend (inherit all fields from parent)
+        if (!$input || (empty($input['properties']) && !$extends)) {
             return $this;
         }
 

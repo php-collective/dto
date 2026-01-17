@@ -402,4 +402,32 @@ class SchemaBuilderTest extends TestCase
         $this->assertStringContainsString('User:', $output);
         $this->assertStringContainsString('extends: BaseEntity', $output);
     }
+
+    /**
+     * @return void
+     */
+    public function testBuildPhpWithEmptyType(): void
+    {
+        $fields = [
+            'data' => ['type' => ''],
+        ];
+
+        $output = $this->builder->build('Test', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Field::mixed('data')", $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildPhpWithEmptyArrayType(): void
+    {
+        $fields = [
+            'items' => ['type' => '[]'],
+        ];
+
+        $output = $this->builder->build('Test', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Field::array('items')", $output);
+    }
 }
