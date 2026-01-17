@@ -338,4 +338,96 @@ class SchemaBuilderTest extends TestCase
 
         $this->assertStringContainsString("Field::string('name')", $output);
     }
+
+    /**
+     * @return void
+     */
+    public function testBuildPhpWithExtends(): void
+    {
+        $fields = [
+            '_extends' => 'BaseEntity',
+            'email' => ['type' => 'string'],
+        ];
+
+        $output = $this->builder->build('User', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Dto::create('User')->extends('BaseEntity')", $output);
+        $this->assertStringContainsString("Field::string('email')", $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildXmlWithExtends(): void
+    {
+        $fields = [
+            '_extends' => 'BaseEntity',
+            'email' => ['type' => 'string'],
+        ];
+
+        $output = $this->builder->build('User', $fields, ['format' => 'xml']);
+
+        $this->assertStringContainsString('<dto name="User" extends="BaseEntity">', $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildYamlWithExtends(): void
+    {
+        $fields = [
+            '_extends' => 'BaseEntity',
+            'email' => ['type' => 'string'],
+        ];
+
+        $output = $this->builder->build('User', $fields, ['format' => 'yaml']);
+
+        $this->assertStringContainsString('User:', $output);
+        $this->assertStringContainsString('extends: BaseEntity', $output);
+        $this->assertStringContainsString('email: string', $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildNeonWithExtends(): void
+    {
+        $fields = [
+            '_extends' => 'BaseEntity',
+            'email' => ['type' => 'string'],
+        ];
+
+        $output = $this->builder->build('User', $fields, ['format' => 'neon']);
+
+        $this->assertStringContainsString('User:', $output);
+        $this->assertStringContainsString('extends: BaseEntity', $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildPhpWithEmptyType(): void
+    {
+        $fields = [
+            'data' => ['type' => ''],
+        ];
+
+        $output = $this->builder->build('Test', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Field::mixed('data')", $output);
+    }
+
+    /**
+     * @return void
+     */
+    public function testBuildPhpWithEmptyArrayType(): void
+    {
+        $fields = [
+            'items' => ['type' => '[]'],
+        ];
+
+        $output = $this->builder->build('Test', $fields, ['format' => 'php']);
+
+        $this->assertStringContainsString("Field::array('items')", $output);
+    }
 }

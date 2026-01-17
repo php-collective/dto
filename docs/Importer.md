@@ -144,6 +144,68 @@ Features:
 - Handles collections with `$ref` in array items
 - Skips non-object schemas (enums, primitives)
 
+### 4. Schema Inheritance (allOf)
+
+JSON Schema's `allOf` keyword is used to express inheritance. When a schema uses `allOf` with a `$ref`, the importer creates a DTO that extends the referenced type:
+
+```php
+$schema = json_encode([
+    '$defs' => [
+        'BaseEntity' => [
+            'type' => 'object',
+            'properties' => [
+                'id' => ['type' => 'integer'],
+                'createdAt' => ['type' => 'string', 'format' => 'date-time'],
+            ],
+        ],
+    ],
+    'type' => 'object',
+    'title' => 'User',
+    'allOf' => [
+        ['$ref' => '#/$defs/BaseEntity'],
+        [
+            'type' => 'object',
+            'properties' => [
+                'email' => ['type' => 'string'],
+                'name' => ['type' => 'string'],
+            ],
+            'required' => ['email'],
+        ],
+    ],
+]);
+
+$result = $importer->import($schema);
+```
+
+Output (PHP config format):
+```php
+<?php
+
+use PhpCollective\Dto\Config\Dto;
+use PhpCollective\Dto\Config\DtoBuilder;
+use PhpCollective\Dto\Config\Field;
+
+return DtoBuilder::create()
+    ->dtos(
+        Dto::create('BaseEntity')->fields(
+            Field::int('id'),
+            Field::string('createdAt'),
+        ),
+        Dto::create('User')->extends('BaseEntity')->fields(
+            Field::string('email')->required(),
+            Field::string('name'),
+        ),
+    )
+    ->build();
+```
+
+Features:
+- Detects `allOf` with `$ref` as inheritance
+- Creates separate DTOs for parent and child
+- Child DTO only includes its own properties (not inherited ones)
+- Merges properties from multiple inline schemas in `allOf`
+- Merges `required` arrays from all schemas
+
 ## Output Formats
 
 ### PHP (default)

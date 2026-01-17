@@ -39,7 +39,7 @@ class Importer
      *   - type: 'Data' or 'Schema' (auto-detected if not provided)
      *   - namespace: Namespace prefix for generated DTOs
      *
-     * @return array<string, array<string, array<string, mixed>>> Parsed DTO definitions
+     * @return array<string, array<string, array<string, mixed>|string>> Parsed DTO definitions
      */
     public function parse(string $json, array $options = []): array
     {
@@ -61,7 +61,7 @@ class Importer
      * @param array<string, mixed> $data Data array to parse
      * @param array<string, mixed> $options Same options as parse()
      *
-     * @return array<string, array<string, array<string, mixed>>> Parsed DTO definitions
+     * @return array<string, array<string, array<string, mixed>|string>> Parsed DTO definitions
      */
     public function parseArray(array $data, array $options = []): array
     {
@@ -79,7 +79,7 @@ class Importer
     /**
      * Build DTO schema configuration from parsed definitions.
      *
-     * @param array<string, array<string, array<string, mixed>>> $definitions Parsed definitions from parse()
+     * @param array<string, array<string, array<string, mixed>|string>> $definitions Parsed definitions from parse()
      * @param array<string, mixed> $options Options:
      *   - format: 'php' (default), 'xml', 'yaml', or 'neon'
      *
@@ -138,6 +138,11 @@ class Importer
 
         // JSON Schema typically has type: object and properties
         if (!empty($array['type']) && $array['type'] === 'object' && !empty($array['properties'])) {
+            return SchemaParser::NAME;
+        }
+
+        // JSON Schema with allOf composition
+        if (!empty($array['allOf'])) {
             return SchemaParser::NAME;
         }
 
