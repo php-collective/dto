@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Importer\Parser;
 
 use PhpCollective\Dto\Utility\Inflector;
+use RuntimeException;
 
 /**
  * Parser that converts JSON Schema definitions to DTO schema.
@@ -41,12 +42,28 @@ class SchemaParser implements ParserInterface
     protected array $processedRefs = [];
 
     /**
+     * Maximum recursion depth to prevent stack overflow on deeply nested schemas.
+     *
+     * @var int
+     */
+    protected const MAX_DEPTH = 50;
+
+    /**
      * @inheritDoc
+     *
+     * @throws \RuntimeException
      */
     public function parse(array $input, array $options = [], array $parentData = []): static
     {
+        // Check recursion depth limit
+        $depth = $parentData['_depth'] ?? 0;
+        if ($depth > static::MAX_DEPTH) {
+            throw new RuntimeException("Maximum schema nesting depth exceeded ({$depth}). Possible circular reference.");
+        }
+        $parentData['_depth'] = $depth + 1;
+
         // Extract definitions on first call (no parent data)
-        if (!$parentData) {
+        if ($depth === 0) {
             $this->extractDefinitions($input);
 
             // Handle OpenAPI documents: parse all schemas from components/schemas
@@ -235,9 +252,9 @@ class SchemaParser implements ParserInterface
         }
 
         $this->result[$dtoName] = $fields;
-        if ($parentData) {
+        if (!empty($parentData['dto']) && !empty($parentData['field'])) {
             /** @var string $parentDtoName */
-            $parentDtoName = $parentData['dto'] ?? null;
+            $parentDtoName = $parentData['dto'];
             /** @var string $parentFieldName */
             $parentFieldName = $parentData['field'];
             $this->map[$parentDtoName][$parentFieldName] = $dtoName;

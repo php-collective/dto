@@ -26,11 +26,11 @@ XML;
 
         $code = $this->generateDtoCode($xml, 'BoolDefault');
 
-        // Property should have 'true' not '1'
-        $this->assertStringContainsString('$enabled = true;', $code);
-        $this->assertStringContainsString('$disabled = false;', $code);
-        $this->assertStringNotContainsString('$enabled = 1;', $code);
-        $this->assertStringNotContainsString('$disabled = 0;', $code);
+        // Default values in setDefaults() should use 'true' not '1'
+        $this->assertStringContainsString('$this->enabled = true;', $code);
+        $this->assertStringContainsString('$this->disabled = false;', $code);
+        $this->assertStringNotContainsString('$this->enabled = 1;', $code);
+        $this->assertStringNotContainsString('$this->disabled = 0;', $code);
     }
 
     public function testStringDefaultValueRenderedWithQuotes(): void
@@ -47,9 +47,9 @@ XML;
 
         $code = $this->generateDtoCode($xml, 'StringDefault');
 
-        // Property should have quoted strings
-        $this->assertStringContainsString("\$country = 'USA';", $code);
-        $this->assertStringContainsString("\$status = 'active';", $code);
+        // Default values in setDefaults() should have quoted strings
+        $this->assertStringContainsString("\$this->country = 'USA';", $code);
+        $this->assertStringContainsString("\$this->status = 'active';", $code);
     }
 
     public function testIntegerDefaultValueRenderedWithoutQuotes(): void
@@ -66,9 +66,9 @@ XML;
 
         $code = $this->generateDtoCode($xml, 'IntDefault');
 
-        // Property should have unquoted integers
-        $this->assertStringContainsString('$count = 10;', $code);
-        $this->assertStringContainsString('$priority = 0;', $code);
+        // Default values in setDefaults() should have unquoted integers
+        $this->assertStringContainsString('$this->count = 10;', $code);
+        $this->assertStringContainsString('$this->priority = 0;', $code);
     }
 
     public function testFloatDefaultValueRenderedCorrectly(): void
@@ -84,7 +84,8 @@ XML;
 
         $code = $this->generateDtoCode($xml, 'FloatDefault');
 
-        $this->assertStringContainsString('$rate = 3.14;', $code);
+        // Default value in setDefaults() should be unquoted float
+        $this->assertStringContainsString('$this->rate = 3.14;', $code);
     }
 
     public function testCollectionPropertyInitializedToNull(): void

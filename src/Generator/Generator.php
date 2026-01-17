@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Generator;
 
 use Exception;
+use InvalidArgumentException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
@@ -89,6 +90,10 @@ class Generator
         $returnCode = static::CODE_SUCCESS;
         $changes = 0;
         foreach ($dtos as $name => $content) {
+            // Validate DTO name doesn't contain path traversal sequences
+            if (str_contains($name, '..')) {
+                throw new InvalidArgumentException("Invalid DTO name '{$name}': path traversal not allowed");
+            }
             $isNew = !isset($foundDtos[$name]);
             $isModified = !$isNew && $this->isModified($foundDtos[$name], $content);
 
@@ -276,7 +281,13 @@ class Generator
      */
     protected function isModified(string $file, string $newContent): bool
     {
-        return file_get_contents($file) !== $newContent;
+        $oldContent = file_get_contents($file);
+        if ($oldContent === false) {
+            // If we can't read the file, assume it's modified to be safe
+            return true;
+        }
+
+        return $oldContent !== $newContent;
     }
 
     /**

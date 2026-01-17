@@ -80,9 +80,13 @@ class XmlEngine implements EngineInterface
 
             $fields = [];
             foreach ($dto['field'] as $fieldDefinition) {
+                if (!isset($fieldDefinition['@name'])) {
+                    continue; // Skip malformed field definitions
+                }
                 $fieldName = $fieldDefinition['@name'];
                 foreach ($fieldDefinition as $k => $v) {
-                    $key = substr($k, 1);
+                    // Strip @ prefix from XML attribute keys
+                    $key = str_starts_with($k, '@') ? substr($k, 1) : $k;
                     $v = $this->castBoolValue($v, $key);
                     $v = $this->castDefaultValue($v, $key, $fieldDefinition);
 
