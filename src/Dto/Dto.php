@@ -125,6 +125,8 @@ abstract class Dto implements Serializable
      *
      * @link https://php.net/manual/en/serializable.unserialize.php
      *
+     * @deprecated Use __unserialize() instead. The Serializable interface is deprecated in PHP 8.1+.
+     *
      * @param string $data
      * @param bool $ignoreMissing
      *
@@ -793,6 +795,8 @@ abstract class Dto implements Serializable
      * String representation of object
      *
      * @link https://php.net/manual/en/serializable.serialize.php
+     *
+     * @deprecated Use __serialize() instead. The Serializable interface is deprecated in PHP 8.1+.
      *
      * @return string the string representation of the object or null
      */
