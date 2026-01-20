@@ -1098,7 +1098,7 @@ abstract class Dto implements Serializable
     }
 
     /**
-     * @param class-string<\BackedEnum|\UnitEnum> $field
+     * @param string $field The field name to look up enum class from metadata
      * @param \BackedEnum|\UnitEnum|string|int|null $value
      *
      * @return \BackedEnum|\UnitEnum|null
