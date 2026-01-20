@@ -145,8 +145,13 @@ The key difference: value objects can contain logic and "operations" between eac
 
 ## Performance Benchmark
 
-Depending on the use case, arrays can be twice as fast, but memory usually remains the same or even decreases with objects.
+Benchmarks show `php-collective/dto` is **25-37x faster** than spatie/laravel-data and **37-63x faster** than cuyz/valinor, while being within 1.2-1.6x of hand-written plain PHP DTOs.
 
-If you're not doing millions of DTO operations per request, the benefits clearly outweigh any speed disadvantage. The code behaves more correctly and can be tested and verified more easily.
+See [Performance Guide](Performance.md) for detailed benchmarks and optimization tips, or run them yourself:
+
+```bash
+php benchmark/run.php              # Main benchmark suite
+php benchmark/run-external.php     # Compare with other libraries
+```
 
 **Developer speed, code readability and code reliability strongly increase with only a bit of speed decrease** that usually doesn't matter for a normal web request.

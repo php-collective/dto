@@ -199,6 +199,7 @@ See [Schema Importer](docs/Importer.md) for full documentation.
 - [Examples](docs/Examples.md) - Practical usage patterns
 - [TypeScript Generation](docs/TypeScriptGeneration.md) - Generate TypeScript interfaces
 - [Schema Importer](docs/Importer.md) - Bootstrap DTOs from JSON data/schema
+- [Performance](docs/Performance.md) - Benchmarks and optimization tips
 - [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
 
 ## Integrations
