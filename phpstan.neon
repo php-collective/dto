@@ -7,6 +7,3 @@ parameters:
 		- identifier: missingType.generics
 		- identifier: new.static
 		- identifier: callable.nonCallable
-		-
-			message: '#createEnum\(\) expects class-string#'
-			path: src/Dto/Dto.php
