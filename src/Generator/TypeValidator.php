@@ -63,7 +63,8 @@ class TypeValidator
      */
     public function isValidName(string $name): bool
     {
-        return (bool)preg_match('#^[a-zA-Z][a-zA-Z0-9]+$#', $name);
+        // Allow optional underscore prefix for framework special fields (e.g., _joinData, _matchingData)
+        return (bool)preg_match('#^_?[a-zA-Z][a-zA-Z0-9]*$#', $name);
     }
 
     /**
