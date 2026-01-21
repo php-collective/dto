@@ -7,7 +7,7 @@
 	 *
 	 * @return $this
 	 */
-	public function set{{ name[:1]|upper ~ name[1:] }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if nullable %} = null{% endif %})
+	public function set{{ name|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if nullable %} = null{% endif %})
 	{
 		$this->{{ name }} = ${{ name }};
 		$this->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;

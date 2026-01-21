@@ -10,7 +10,7 @@
 	 * @param {{ singularType }}{% if singularNullable %}|null{% endif %} ${{ singular }}
 	 * @return static
 	 */
-	public function withAdded{{ singular[:1]|upper ~ singular[1:] }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
+	public function withAdded{{ singular|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
 	{
 		$new = clone $this;
 
