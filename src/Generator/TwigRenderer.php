@@ -106,7 +106,7 @@ class TwigRenderer implements RendererInterface
      *
      * @param string $collectionType The collection class name
      *
-     * @return CollectionAdapterInterface
+     * @return \PhpCollective\Dto\Collection\CollectionAdapterInterface
      */
     public function getCollectionAdapter(string $collectionType): CollectionAdapterInterface
     {
