@@ -21,7 +21,7 @@
 {% else %}
 		$this->{{ name }}[] = ${{ singular }};
 {% endif %}
-		$this->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+		$this->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
 
 		return $this;
 	}

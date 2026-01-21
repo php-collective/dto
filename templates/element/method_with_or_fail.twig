@@ -20,7 +20,7 @@
 {% endif %}
 		$new = clone $this;
 		$new->{{ name }} = ${{ name }};
-		$new->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+		$new->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
 
 		return $new;
 	}

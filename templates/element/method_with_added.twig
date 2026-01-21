@@ -23,7 +23,7 @@
 {% else %}
 		$new->{{ name }}[] = ${{ singular }};
 {% endif %}
-		$new->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+		$new->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
 
 		return $new;
 	}
