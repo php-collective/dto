@@ -49,4 +49,61 @@ class TwigRendererTest extends TestCase
         $this->assertStringContainsString("'a'", $result);
         $this->assertStringContainsString("'b'", $result);
     }
+
+    public function testUnderscorePrefixedFieldGeneratesCorrectMethodNames(): void
+    {
+        // Test that underscore-prefixed field names generate camelCase method names
+        $this->renderer->set([
+            'name' => '_joinData',
+            'type' => 'string',
+            'nullable' => true,
+            'typeHint' => 'string',
+            'nullableTypeHint' => '?string',
+            'returnTypeHint' => 'string',
+            'nullableReturnTypeHint' => '?string',
+            'deprecated' => null,
+            'collection' => false,
+            'collectionType' => null,
+        ]);
+
+        // Test getter method name
+        $getterOutput = $this->renderer->generate('element/method_get');
+        $this->assertStringContainsString('public function getJoinData()', $getterOutput);
+        $this->assertStringNotContainsString('get_joinData', $getterOutput);
+
+        // Test has method name
+        $hasOutput = $this->renderer->generate('element/method_has');
+        $this->assertStringContainsString('public function hasJoinData()', $hasOutput);
+        $this->assertStringNotContainsString('has_joinData', $hasOutput);
+
+        // Test setter method name (for mutable DTOs)
+        $setterOutput = $this->renderer->generate('element/method_set');
+        $this->assertStringContainsString('public function setJoinData(', $setterOutput);
+        $this->assertStringNotContainsString('set_joinData', $setterOutput);
+
+        // Test with method name (for immutable DTOs)
+        $withOutput = $this->renderer->generate('element/method_with');
+        $this->assertStringContainsString('public function withJoinData(', $withOutput);
+        $this->assertStringNotContainsString('with_joinData', $withOutput);
+    }
+
+    public function testRegularFieldGeneratesCorrectMethodNames(): void
+    {
+        // Verify regular fields still work correctly
+        $this->renderer->set([
+            'name' => 'userName',
+            'type' => 'string',
+            'nullable' => true,
+            'typeHint' => 'string',
+            'nullableTypeHint' => '?string',
+            'returnTypeHint' => 'string',
+            'nullableReturnTypeHint' => '?string',
+            'deprecated' => null,
+            'collection' => false,
+            'collectionType' => null,
+        ]);
+
+        $getterOutput = $this->renderer->generate('element/method_get');
+        $this->assertStringContainsString('public function getUserName()', $getterOutput);
+    }
 }

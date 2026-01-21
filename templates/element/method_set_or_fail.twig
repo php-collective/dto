@@ -11,7 +11,7 @@
 	 *
 	 * @return $this
 	 */
-	public function set{{ name[:1]|upper ~ name[1:] }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }})
+	public function set{{ name|camelize }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }})
 	{
 {% if not typeHint %}
 		if (${{ name }} === null) {

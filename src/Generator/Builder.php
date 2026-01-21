@@ -392,6 +392,27 @@ class Builder
                 }
             }
         }
+
+        // Check for method name collisions between underscore-prefixed and non-prefixed fields
+        // e.g., '_foo' and 'foo' would both generate 'getFoo()', 'setFoo()', etc.
+        $methodNames = [];
+        foreach ($fields as $array) {
+            $fieldName = $array['name'];
+            $methodName = Inflector::camelize($fieldName);
+
+            if (isset($methodNames[$methodName])) {
+                throw new InvalidArgumentException(sprintf(
+                    "Field name collision in '%s' DTO: fields '%s' and '%s' would generate identical method names.\n"
+                    . "Hint: Both fields would generate methods like 'get%s()', 'set%s()', etc. Use only one of these field names.",
+                    $dtoName,
+                    $methodNames[$methodName],
+                    $fieldName,
+                    $methodName,
+                    $methodName,
+                ));
+            }
+            $methodNames[$methodName] = $fieldName;
+        }
     }
 
     /**

@@ -1428,4 +1428,102 @@ PHP;
         $this->assertSame('AdminUserTransfer', $definitions['AdminUser']['className']);
         $this->assertSame('BaseUserTransfer', $definitions['AdminUser']['extends']);
     }
+
+    // ========== UNDERSCORE-PREFIXED FIELD NAME TESTS ==========
+
+    public function testUnderscorePrefixedFieldNameIsAllowed(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Tag' => [
+        'fields' => [
+            '_joinData' => 'JoinData',
+        ],
+    ],
+    'JoinData' => [
+        'fields' => [
+            'count' => 'int',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('Tag', $definitions);
+        $this->assertArrayHasKey('_joinData', $definitions['Tag']['fields']);
+
+        // Field name should be preserved (for property name and toArray)
+        $this->assertSame('_joinData', $definitions['Tag']['fields']['_joinData']['name']);
+    }
+
+    public function testUnderscorePrefixedFieldNameCollisionThrowsException(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            '_data' => 'string',
+            'data' => 'string',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Field name collision in 'User' DTO");
+        $this->expectExceptionMessage("fields '_data' and 'data' would generate identical method names");
+
+        $builder->build($this->tempDir . '/config/');
+    }
+
+    public function testMultipleUnderscorePrefixedFieldsAreAllowed(): void
+    {
+        $configContent = <<<'PHP'
+<?php
+return [
+    'Entity' => [
+        'fields' => [
+            '_joinData' => 'JoinData',
+            '_matchingData' => 'MatchingData',
+            'regularField' => 'string',
+        ],
+    ],
+    'JoinData' => [
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+    'MatchingData' => [
+        'fields' => [
+            'score' => 'float',
+        ],
+    ],
+];
+PHP;
+        file_put_contents($this->tempDir . '/config/dto.php', $configContent);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('Entity', $definitions);
+        $this->assertArrayHasKey('_joinData', $definitions['Entity']['fields']);
+        $this->assertArrayHasKey('_matchingData', $definitions['Entity']['fields']);
+        $this->assertArrayHasKey('regularField', $definitions['Entity']['fields']);
+    }
 }

@@ -5,7 +5,7 @@
 {% endif %}
 	 * @return bool
 	 */
-	public function has{{ name[:1]|upper ~ name[1:] }}(): bool
+	public function has{{ name|camelize }}(): bool
 	{
 {% if collectionType %}
 		if ($this->{{ name }} === null) {
@@ -32,7 +32,7 @@
 	 * @param {{ keyType }} $key
 	 * @return bool
 	 */
-	public function has{{ singular[:1]|upper ~ singular[1:] }}($key): bool
+	public function has{{ singular|camelize }}($key): bool
 	{
 		return isset($this->{{ name }}[$key]);
 	}
