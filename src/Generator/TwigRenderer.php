@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Generator;
 
+use PhpCollective\Dto\Collection\CollectionAdapterInterface;
+use PhpCollective\Dto\Collection\CollectionAdapterRegistry;
 use PhpCollective\Dto\Utility\Inflector;
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 use Twig\TwigFilter;
+use Twig\TwigFunction;
 
 /**
  * Twig-based template renderer for DTO code generation.
@@ -47,6 +50,7 @@ class TwigRenderer implements RendererInterface
         $this->config = $config ?? new ArrayConfig([]);
 
         $this->registerFilters();
+        $this->registerFunctions();
         $this->setGlobalConfiguration();
     }
 
@@ -66,6 +70,16 @@ class TwigRenderer implements RendererInterface
     }
 
     /**
+     * Register custom Twig functions.
+     *
+     * @return void
+     */
+    protected function registerFunctions(): void
+    {
+        $this->twig->addFunction(new TwigFunction('getCollectionAdapter', [$this, 'getCollectionAdapter']));
+    }
+
+    /**
      * Strip leading underscore from a string.
      *
      * Used for underscore-prefixed field names (e.g., _joinData, _matchingData)
@@ -82,6 +96,21 @@ class TwigRenderer implements RendererInterface
         }
 
         return $value;
+    }
+
+    /**
+     * Get a collection adapter for the given collection type.
+     *
+     * This allows templates to generate collection-type-specific code
+     * without needing separate template files for each collection type.
+     *
+     * @param string $collectionType The collection class name
+     *
+     * @return CollectionAdapterInterface
+     */
+    public function getCollectionAdapter(string $collectionType): CollectionAdapterInterface
+    {
+        return CollectionAdapterRegistry::getOrDefault($collectionType);
     }
 
     /**
