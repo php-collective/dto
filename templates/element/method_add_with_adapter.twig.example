@@ -1,0 +1,55 @@
+{#
+ # Example template demonstrating collection adapter usage.
+ #
+ # This template shows how the adapter pattern can replace collection-specific
+ # templates (like cakephp-dto's method_add_cake_collection.twig).
+ #
+ # Instead of:
+ #   - method_add.twig (for ArrayObject)
+ #   - method_add_cake_collection.twig (for Cake\Collection)
+ #   - method_add_laravel_collection.twig (for Laravel Collection)
+ #
+ # We have a single template that delegates to the registered adapter.
+ #}
+{% if collectionType and singular %}
+{% set adapter = getCollectionAdapter(collectionType) %}
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+{% if associative %}
+	 * @param {{ keyType }} $key
+{% endif %}
+	 * @param {% if singularType %}{{ singularType }}{% else %}mixed{% endif %}{% if singularNullable %}|null{% endif %} ${{ singular }}
+	 * @return $this
+	 */
+	public function add{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
+	{
+		if ($this->{{ name }} === null) {
+{% if collectionType == 'array' %}
+			$this->{{ name }} = [];
+{% else %}
+			$this->{{ name }} = {{ adapter.createEmptyCode(typeHint) }};
+{% endif %}
+		}
+
+{% if associative %}
+		$this->{{ name }}[$key] = ${{ singular }};
+{% elseif collectionType == 'array' %}
+		$this->{{ name }}[] = ${{ singular }};
+{% else %}
+{# Use adapter for collection-specific append logic #}
+{% if adapter.immutable %}
+		/** @var {{ typeHint }} $collection */
+		$collection = $this->{{ name }}->{{ adapter.appendMethod }}(${{ singular }});
+		$this->{{ name }} = $collection;
+{% else %}
+		$this->{{ name }}->{{ adapter.appendMethod }}(${{ singular }});
+{% endif %}
+{% endif %}
+		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
+
+		return $this;
+	}
+{% endif -%}
