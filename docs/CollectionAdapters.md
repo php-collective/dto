@@ -15,9 +15,9 @@ Different collection implementations have different APIs:
 
 Without adapters, each framework would need its own template files. With adapters, we have a single set of templates that delegate to the appropriate adapter.
 
-## Built-in Adapters
+## Default Adapter
 
-### ArrayObjectAdapter (Default)
+The library includes `ArrayObjectAdapter` as the default, which handles PHP's built-in `\ArrayObject`:
 
 ```php
 use PhpCollective\Dto\Collection\ArrayObjectAdapter;
@@ -25,15 +25,14 @@ use PhpCollective\Dto\Collection\ArrayObjectAdapter;
 // This is the default - no registration needed
 ```
 
-### CakeCollectionAdapter
+## Framework Integration
 
-```php
-use PhpCollective\Dto\Collection\CakeCollectionAdapter;
-use PhpCollective\Dto\Collection\CollectionAdapterRegistry;
+Framework-specific adapters should be provided by their respective wrapper packages. For example:
 
-// In CakePHP plugin bootstrap
-CollectionAdapterRegistry::register(new CakeCollectionAdapter());
-```
+- **CakePHP**: `cakephp-dto` provides `CakeCollectionAdapter`
+- **Laravel**: A `laravel-dto` package would provide `LaravelCollectionAdapter`
+
+This keeps the core library framework-agnostic while allowing full customization.
 
 ## Creating Custom Adapters
 
@@ -47,43 +46,43 @@ namespace App\Dto\Collection;
 
 use PhpCollective\Dto\Collection\CollectionAdapterInterface;
 
-class LaravelCollectionAdapter implements CollectionAdapterInterface
+class CakeCollectionAdapter implements CollectionAdapterInterface
 {
     public function getCollectionClass(): string
     {
-        return '\\Illuminate\\Support\\Collection';
+        return '\\Cake\\Collection\\Collection';
     }
 
     public function isImmutable(): bool
     {
-        return false; // Laravel collections are mutable
+        return true; // Cake collections are immutable
     }
 
     public function getAppendMethod(): string
     {
-        return 'push';
+        return 'appendItem';
     }
 
     public function getCreateEmptyCode(string $typeHint): string
     {
-        return "collect([])"; // Laravel helper
+        return "new {$typeHint}([])";
     }
 
     public function getAppendCode(string $collectionVar, string $itemVar): string
     {
-        return "{$collectionVar}->push({$itemVar});";
+        // Cake's appendItem() returns a new Collection instance
+        return "{$collectionVar} = {$collectionVar}->appendItem({$itemVar});";
     }
 }
 ```
 
-Register it in your service provider:
+Register it at bootstrap:
 
 ```php
-// AppServiceProvider.php
-public function boot(): void
-{
-    CollectionAdapterRegistry::register(new LaravelCollectionAdapter());
-}
+// CakePHP plugin bootstrap
+use PhpCollective\Dto\Collection\CollectionAdapterRegistry;
+
+CollectionAdapterRegistry::register(new CakeCollectionAdapter());
 ```
 
 ## How It Works
@@ -108,25 +107,7 @@ public function add{{ singular }}(${{ singular }}) {
 
 ## Benefits
 
-1. **Single source of truth** - One set of templates for all frameworks
-2. **No template duplication** - Framework wrappers don't need their own templates
+1. **Clean separation of concerns** - Core library stays framework-agnostic
+2. **No phantom dependencies** - Core doesn't reference framework classes
 3. **Easy extensibility** - Add support for new collection types without modifying core
-4. **Type safety** - Adapters ensure correct method calls for each collection type
-
-## Migration for cakephp-dto
-
-With collection adapters, `cakephp-dto` can be simplified to:
-
-```php
-// CakeDtoPlugin.php
-public function bootstrap(PluginApplicationInterface $app): void
-{
-    // Register CakePHP collection adapter
-    CollectionAdapterRegistry::register(new CakeCollectionAdapter());
-
-    // Set collection factory (existing functionality)
-    Dto::setCollectionFactory(fn ($items) => new Collection($items));
-}
-```
-
-The CakePHP-specific templates (`method_add_cake_collection.twig`, `method_with_added_cake_collection.twig`) can be removed, and the plugin becomes a thin integration layer.
+4. **Framework ownership** - Each framework wrapper owns its adapter implementation
