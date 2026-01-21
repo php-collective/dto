@@ -3,13 +3,13 @@
 	/**
 	 * @deprecated {{ field.deprecated }}
 	 */
-	public const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const FIELD_{{ field.name | camelize | underscore | upper }} = '{{ field.name }}';
 {% elseif typedConstants %}
-	public const string FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const string FIELD_{{ field.name | camelize | underscore | upper }} = '{{ field.name }}';
 {% else %}
 	/**
 	 * @var string
 	 */
-	public const FIELD_{{ field.name | underscore | upper }} = '{{ field.name }}';
+	public const FIELD_{{ field.name | camelize | underscore | upper }} = '{{ field.name }}';
 {% endif %}
 {% endfor -%}

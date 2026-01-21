@@ -10,7 +10,7 @@
 	public function set{{ name|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if nullable %} = null{% endif %})
 	{
 		$this->{{ name }} = ${{ name }};
-		$this->_touchedFields[static::FIELD_{{ name | underscore | upper }}] = true;
+		$this->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
 
 		return $this;
 	}
