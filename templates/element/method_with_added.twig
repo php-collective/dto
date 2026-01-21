@@ -10,7 +10,7 @@
 	 * @param {{ singularType }}{% if singularNullable %}|null{% endif %} ${{ singular }}
 	 * @return static
 	 */
-	public function withAdded{{ singular|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
+	public function withAdded{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
 	{
 		$new = clone $this;
 
@@ -23,7 +23,7 @@
 {% else %}
 		$new->{{ name }}[] = ${{ singular }};
 {% endif %}
-		$new->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
+		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;
 	}

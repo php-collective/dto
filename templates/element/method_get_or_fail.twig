@@ -7,7 +7,7 @@
 	 *
 	 * @return {{ docBlockType ?? type }}
 	 */
-	public function get{{ name|camelize }}OrFail(){% if returnTypeHint %}: {{ returnTypeHint }}{% endif %}
+	public function get{{ name|stripLeadingUnderscore|camelize }}OrFail(){% if returnTypeHint %}: {{ returnTypeHint }}{% endif %}
 
 	{
 		if ($this->{{ name }} === null) {

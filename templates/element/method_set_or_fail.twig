@@ -11,7 +11,7 @@
 	 *
 	 * @return $this
 	 */
-	public function set{{ name|camelize }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }})
+	public function set{{ name|stripLeadingUnderscore|camelize }}OrFail({% if typeHint %}{{ typeHint }} {% endif %}${{ name }})
 	{
 {% if not typeHint %}
 		if (${{ name }} === null) {
@@ -19,7 +19,7 @@
 		}
 {% endif %}
 		$this->{{ name }} = ${{ name }};
-		$this->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
+		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $this;
 	}

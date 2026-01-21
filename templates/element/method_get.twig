@@ -6,7 +6,7 @@
 	 * @return {{ docBlockType ?? type }}{% if nullable %}|null{% endif %}
 
 	 */
-	public function get{{ name|camelize }}(){% if returnTypeHint %}: {{ nullableReturnTypeHint ?? returnTypeHint }}{% endif %}
+	public function get{{ name|stripLeadingUnderscore|camelize }}(){% if returnTypeHint %}: {{ nullableReturnTypeHint ?? returnTypeHint }}{% endif %}
 
 	{
 {% if collection %}
@@ -33,7 +33,7 @@
 	 * @throws \RuntimeException If value with this key is not set.
 {% endif %}
 	 */
-	public function get{{ singular|camelize }}($key){% if singularReturnTypeHint %}: {{ singularNullableReturnTypeHint ?? singularReturnTypeHint }}{% endif %}
+	public function get{{ singular|stripLeadingUnderscore|camelize }}($key){% if singularReturnTypeHint %}: {{ singularNullableReturnTypeHint ?? singularReturnTypeHint }}{% endif %}
 
 	{
 {% if singularNullable %}

@@ -10,7 +10,7 @@
 	 * @param {% if singularType %}{{ singularType }}{% else %}mixed{% endif %}{% if singularNullable %}|null{% endif %} ${{ singular }}
 	 * @return $this
 	 */
-	public function add{{ singular|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
+	public function add{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
 	{
 		if ($this->{{ name }} === null) {
 			$this->{{ name }} = {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
@@ -21,7 +21,7 @@
 {% else %}
 		$this->{{ name }}[] = ${{ singular }};
 {% endif %}
-		$this->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
+		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $this;
 	}

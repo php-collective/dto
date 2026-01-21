@@ -62,6 +62,26 @@ class TwigRenderer implements RendererInterface
         $this->twig->addFilter(new TwigFilter('underscore', [Inflector::class, 'underscore']));
         $this->twig->addFilter(new TwigFilter('camelize', [Inflector::class, 'camelize']));
         $this->twig->addFilter(new TwigFilter('variable', [Inflector::class, 'variable']));
+        $this->twig->addFilter(new TwigFilter('stripLeadingUnderscore', [$this, 'stripLeadingUnderscore']));
+    }
+
+    /**
+     * Strip leading underscore from a string.
+     *
+     * Used for underscore-prefixed field names (e.g., _joinData, _matchingData)
+     * to generate proper camelCase method names and constant names.
+     *
+     * @param string $value
+     *
+     * @return string
+     */
+    public function stripLeadingUnderscore(string $value): string
+    {
+        if (str_starts_with($value, '_')) {
+            return substr($value, 1);
+        }
+
+        return $value;
     }
 
     /**
