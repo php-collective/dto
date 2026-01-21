@@ -41,7 +41,7 @@ class CollectionAdapterRegistry
      */
     public static function register(CollectionAdapterInterface $adapter): void
     {
-        static::$adapters[$adapter->getCollectionClass()] = $adapter;
+        self::$adapters[$adapter->getCollectionClass()] = $adapter;
     }
 
     /**
@@ -55,7 +55,7 @@ class CollectionAdapterRegistry
         // Normalize class name
         $normalized = ltrim($collectionClass, '\\');
 
-        foreach (static::$adapters as $class => $adapter) {
+        foreach (self::$adapters as $class => $adapter) {
             if (ltrim($class, '\\') === $normalized) {
                 return $adapter;
             }
@@ -96,7 +96,7 @@ class CollectionAdapterRegistry
      */
     public static function setDefaultAdapter(CollectionAdapterInterface $adapter): void
     {
-        static::$defaultAdapter = $adapter;
+        self::$defaultAdapter = $adapter;
     }
 
     /**
@@ -106,11 +106,11 @@ class CollectionAdapterRegistry
      */
     public static function getDefaultAdapter(): CollectionAdapterInterface
     {
-        if (static::$defaultAdapter === null) {
-            static::$defaultAdapter = new ArrayObjectAdapter();
+        if (self::$defaultAdapter === null) {
+            self::$defaultAdapter = new ArrayObjectAdapter();
         }
 
-        return static::$defaultAdapter;
+        return self::$defaultAdapter;
     }
 
     /**
@@ -120,7 +120,7 @@ class CollectionAdapterRegistry
      */
     public static function all(): array
     {
-        return static::$adapters;
+        return self::$adapters;
     }
 
     /**
@@ -130,7 +130,7 @@ class CollectionAdapterRegistry
      */
     public static function clear(): void
     {
-        static::$adapters = [];
-        static::$defaultAdapter = null;
+        self::$adapters = [];
+        self::$defaultAdapter = null;
     }
 }
