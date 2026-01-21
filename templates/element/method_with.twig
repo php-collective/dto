@@ -7,11 +7,11 @@
 	 *
 	 * @return static
 	 */
-	public function with{{ name|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable %} = null{% endif %})
+	public function with{{ name|stripLeadingUnderscore|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable %} = null{% endif %})
 	{
 		$new = clone $this;
 		$new->{{ name }} = ${{ name }};
-		$new->_touchedFields[static::FIELD_{{ name | camelize | underscore | upper }}] = true;
+		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;
 	}

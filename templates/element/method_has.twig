@@ -5,7 +5,7 @@
 {% endif %}
 	 * @return bool
 	 */
-	public function has{{ name|camelize }}(): bool
+	public function has{{ name|stripLeadingUnderscore|camelize }}(): bool
 	{
 {% if collectionType %}
 		if ($this->{{ name }} === null) {
@@ -32,7 +32,7 @@
 	 * @param {{ keyType }} $key
 	 * @return bool
 	 */
-	public function has{{ singular|camelize }}($key): bool
+	public function has{{ singular|stripLeadingUnderscore|camelize }}($key): bool
 	{
 		return isset($this->{{ name }}[$key]);
 	}

@@ -10,7 +10,7 @@
 	 */
 	protected static array $_setters = [
 {% for field in fields %}
-		'{{ field.name }}' => '{% if immutable %}with{% else %}set{% endif %}{{ field.name | camelize }}',
+		'{{ field.name }}' => '{% if immutable %}with{% else %}set{% endif %}{{ field.name | stripLeadingUnderscore | camelize }}',
 {% endfor %}
 	];
 

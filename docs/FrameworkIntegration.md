@@ -48,6 +48,70 @@ use Cake\Collection\Collection;
 Dto::setCollectionFactory(fn (array $items) => new Collection($items));
 ```
 
+### CakePHP projectAs() and Special Fields
+
+CakePHP 5.3+ introduces `projectAs()` for projecting ORM results directly into DTOs. Some CakePHP features use underscore-prefixed field names:
+
+- `_joinData` - BelongsToMany pivot table data
+- `_matchingData` - Data from `matching()` queries
+
+These field names are fully supported:
+
+```xml
+<!-- config/dto.xml -->
+<dto name="Tag" immutable="true">
+    <field name="id" type="int"/>
+    <field name="name" type="string"/>
+    <field name="_joinData" type="Tagged"/>
+</dto>
+
+<dto name="UserWithMatching" immutable="true">
+    <field name="id" type="int"/>
+    <field name="username" type="string"/>
+    <field name="_matchingData" type="MatchingData"/>
+</dto>
+```
+
+The generated methods use proper camelCase (the leading underscore is stripped for method/constant names):
+
+```php
+// Field: _joinData
+$tag->getJoinData();      // getter
+$tag->withJoinData($data); // immutable setter
+TagDto::FIELD_JOIN_DATA;   // constant
+
+// Field: _matchingData
+$user->getMatchingData();
+$user->withMatchingData($data);
+UserWithMatchingDto::FIELD_MATCHING_DATA;
+```
+
+Usage with CakePHP's projectAs():
+
+```php
+// BelongsToMany with _joinData
+$posts = $postsTable->find()
+    ->contain(['Tags'])
+    ->projectAs(PostDto::class)
+    ->toArray();
+
+foreach ($posts as $post) {
+    foreach ($post->getTags() as $tag) {
+        $pivotData = $tag->getJoinData(); // Access pivot table data
+    }
+}
+
+// Matching query with _matchingData
+$users = $usersTable->find()
+    ->matching('Roles', fn ($q) => $q->where(['Roles.id' => 1]))
+    ->projectAs(UserWithMatchingDto::class)
+    ->toArray();
+
+foreach ($users as $user) {
+    $matchingRoles = $user->getMatchingData(); // Access matched association data
+}
+```
+
 ## Controller Usage
 
 ### Laravel
