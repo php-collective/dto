@@ -1,7 +1,10 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PhpCollective\Dto\Collection;
+
+use ArrayObject;
 
 /**
  * Adapter for PHP's built-in ArrayObject collection.
@@ -15,7 +18,7 @@ class ArrayObjectAdapter implements CollectionAdapterInterface
      */
     public function getCollectionClass(): string
     {
-        return \ArrayObject::class;
+        return ArrayObject::class;
     }
 
     /**

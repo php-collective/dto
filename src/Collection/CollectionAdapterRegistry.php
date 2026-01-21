@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PhpCollective\Dto\Collection;
@@ -24,19 +25,20 @@ namespace PhpCollective\Dto\Collection;
 class CollectionAdapterRegistry
 {
     /**
-     * @var array<string, CollectionAdapterInterface>
+     * @var array<string, \PhpCollective\Dto\Collection\CollectionAdapterInterface>
      */
     private static array $adapters = [];
 
     /**
-     * @var CollectionAdapterInterface|null
+     * @var \PhpCollective\Dto\Collection\CollectionAdapterInterface|null
      */
     private static ?CollectionAdapterInterface $defaultAdapter = null;
 
     /**
      * Register a collection adapter.
      *
-     * @param CollectionAdapterInterface $adapter
+     * @param \PhpCollective\Dto\Collection\CollectionAdapterInterface $adapter
+     *
      * @return void
      */
     public static function register(CollectionAdapterInterface $adapter): void
@@ -48,7 +50,8 @@ class CollectionAdapterRegistry
      * Get adapter for a collection type.
      *
      * @param string $collectionClass The collection class name
-     * @return CollectionAdapterInterface|null
+     *
+     * @return \PhpCollective\Dto\Collection\CollectionAdapterInterface|null
      */
     public static function get(string $collectionClass): ?CollectionAdapterInterface
     {
@@ -68,6 +71,7 @@ class CollectionAdapterRegistry
      * Check if an adapter is registered for a collection type.
      *
      * @param string $collectionClass
+     *
      * @return bool
      */
     public static function has(string $collectionClass): bool
@@ -81,7 +85,8 @@ class CollectionAdapterRegistry
      * Returns the registered adapter if available, otherwise returns the default adapter.
      *
      * @param string $collectionClass
-     * @return CollectionAdapterInterface
+     *
+     * @return \PhpCollective\Dto\Collection\CollectionAdapterInterface
      */
     public static function getOrDefault(string $collectionClass): CollectionAdapterInterface
     {
@@ -91,7 +96,8 @@ class CollectionAdapterRegistry
     /**
      * Set the default adapter for unregistered collection types.
      *
-     * @param CollectionAdapterInterface $adapter
+     * @param \PhpCollective\Dto\Collection\CollectionAdapterInterface $adapter
+     *
      * @return void
      */
     public static function setDefaultAdapter(CollectionAdapterInterface $adapter): void
@@ -102,7 +108,7 @@ class CollectionAdapterRegistry
     /**
      * Get the default adapter.
      *
-     * @return CollectionAdapterInterface
+     * @return \PhpCollective\Dto\Collection\CollectionAdapterInterface
      */
     public static function getDefaultAdapter(): CollectionAdapterInterface
     {
@@ -116,7 +122,7 @@ class CollectionAdapterRegistry
     /**
      * Get all registered adapters.
      *
-     * @return array<string, CollectionAdapterInterface>
+     * @return array<string, \PhpCollective\Dto\Collection\CollectionAdapterInterface>
      */
     public static function all(): array
     {

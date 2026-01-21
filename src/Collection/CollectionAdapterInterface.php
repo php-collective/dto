@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace PhpCollective\Dto\Collection;
@@ -41,6 +42,7 @@ interface CollectionAdapterInterface
      * Get PHP code to create a new empty collection.
      *
      * @param string $typeHint The collection type hint (e.g., '\ArrayObject')
+     *
      * @return string PHP code snippet
      */
     public function getCreateEmptyCode(string $typeHint): string;
@@ -53,6 +55,7 @@ interface CollectionAdapterInterface
      *
      * @param string $collectionVar The variable name (e.g., '$this->items')
      * @param string $itemVar The item variable name (e.g., '$item')
+     *
      * @return string PHP code snippet
      */
     public function getAppendCode(string $collectionVar, string $itemVar): string;
