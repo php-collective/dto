@@ -211,6 +211,14 @@ abstract class Dto implements Serializable
     protected array $_keyMap = [];
 
     /**
+     * Cached reverse key maps (flipped versions of $_keyMap).
+     * Lazily populated on first use to avoid array_flip() on every lookup.
+     *
+     * @var array<string, array<string, string>>
+     */
+    protected array $_reverseKeyMap = [];
+
+    /**
      * Custom field mapping for input/output name translation.
      * - mapFrom: maps input key names to field names (used in fromArray)
      * - mapTo: maps field names to output key names (used in toArray)
@@ -852,7 +860,12 @@ abstract class Dto implements Serializable
      */
     protected function key(string $key, string $type): string
     {
-        $map = array_flip($this->_keyMap[$type]);
+        // Lazily cache the flipped key map to avoid array_flip() on every lookup
+        if (!isset($this->_reverseKeyMap[$type])) {
+            $this->_reverseKeyMap[$type] = array_flip($this->_keyMap[$type]);
+        }
+
+        $map = $this->_reverseKeyMap[$type];
         if (!isset($map[$key])) {
             throw new InvalidArgumentException(sprintf('Invalid field lookup for type `%s`: `%s` does not exist.', $type, $key));
         }
