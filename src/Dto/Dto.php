@@ -428,11 +428,14 @@ abstract class Dto implements Serializable
                 $field = $this->_fieldMap['mapFrom'][$field];
             }
 
-            if ($this->_metadata[$field]['dto']) {
+            // Cache metadata lookup for this field to avoid repeated array access
+            $fieldMeta = $this->_metadata[$field];
+
+            if ($fieldMeta['dto']) {
                 $value = $this->createDto($field, $value, $ignoreMissing, $type);
-            } elseif ($this->_metadata[$field]['collectionType'] && $this->_metadata[$field]['collectionType'] !== 'array') {
-                $collectionType = $this->_metadata[$field]['collectionType'];
-                $elementType = $this->_metadata[$field]['singularType'];
+            } elseif ($fieldMeta['collectionType'] && $fieldMeta['collectionType'] !== 'array') {
+                $collectionType = $fieldMeta['collectionType'];
+                $elementType = $fieldMeta['singularType'];
                 if (!$elementType) {
                     throw new RuntimeException('Missing singularType for collection ' . $collectionType);
                 }
@@ -442,23 +445,23 @@ abstract class Dto implements Serializable
                 } else {
                     $value = $this->createCollection($collectionType, $elementType, $value, $ignoreMissing, $type);
                 }
-            } elseif ($this->_metadata[$field]['collectionType']) {
-                $elementType = $this->_metadata[$field]['singularType'];
-                $key = $this->_metadata[$field]['associative'];
-                if ($this->_metadata[$field]['associative'] && $this->_metadata[$field]['key']) {
-                    $key = $this->_metadata[$field]['key'];
+            } elseif ($fieldMeta['collectionType']) {
+                $elementType = $fieldMeta['singularType'];
+                $key = $fieldMeta['associative'];
+                if ($fieldMeta['associative'] && $fieldMeta['key']) {
+                    $key = $fieldMeta['key'];
                 }
                 $value = $this->createArrayCollection($elementType, $value, $ignoreMissing, $type, $key);
-            } elseif ($this->_metadata[$field]['serialize'] === 'FromArrayToArray') {
+            } elseif ($fieldMeta['serialize'] === 'FromArrayToArray') {
                 $value = $this->createObject($field, $value);
-            } elseif ($this->_metadata[$field]['serialize'] === 'array') {
+            } elseif ($fieldMeta['serialize'] === 'array') {
                 $value = $this->createObject($field, $value);
-            } elseif ($this->_metadata[$field]['factory']) {
+            } elseif ($fieldMeta['factory']) {
                 $value = $this->createWithFactory($field, $value);
-            } elseif (!empty($this->_metadata[$field]['isClass']) && !empty($this->_metadata[$field]['enum'])) {
+            } elseif (!empty($fieldMeta['isClass']) && !empty($fieldMeta['enum'])) {
                 $value = $this->createEnum($field, $value);
-            } elseif (!empty($this->_metadata[$field]['isClass']) && !is_object($value)) {
-                $value = $this->createWithConstructor($field, $value, $this->_metadata[$field]);
+            } elseif (!empty($fieldMeta['isClass']) && !is_object($value)) {
+                $value = $this->createWithConstructor($field, $value, $fieldMeta);
             }
 
             if (!$immutable) {
