@@ -512,7 +512,7 @@ abstract class Dto implements Serializable
                 continue;
             }
 
-            if (array_values($arrayElement) !== $arrayElement) {
+            if (!array_is_list($arrayElement)) {
                 /** @var \PhpCollective\Dto\Dto\Dto $dto */
                 $dto = new $elementType($arrayElement, $ignoreMissing, $type);
                 $items[] = $dto;
@@ -650,7 +650,7 @@ abstract class Dto implements Serializable
                 continue;
             }
 
-            if (array_values($arrayElement) !== $arrayElement) {
+            if (!array_is_list($arrayElement)) {
                 /** @var \PhpCollective\Dto\Dto\Dto $dto */
                 $dto = new $elementType($arrayElement, $ignoreMissing, $type);
                 $collection->append($dto);
@@ -687,7 +687,7 @@ abstract class Dto implements Serializable
                 continue;
             }
 
-            if (array_values($arrayElement) !== $arrayElement) {
+            if (!array_is_list($arrayElement)) {
                 /** @var \PhpCollective\Dto\Dto\Dto $dto */
                 $dto = new $elementType($arrayElement, $ignoreMissing, $type);
                 $collection = $this->addValueToArrayCollection($collection, $dto, $arrayElement, $index, $key);
