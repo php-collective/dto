@@ -59,6 +59,42 @@
 			$this->{{ field.name }} = $collection;
 			$this->_touchedFields['{{ field.name }}'] = true;
 		}
+{% elseif field.enum and field.isClass %}
+		if (isset($data['{{ field.name }}'])) {
+			$value = $data['{{ field.name }}'];
+			if (!$value instanceof \UnitEnum) {
+{% if field.enum == 'unit' %}
+				$value = constant({{ field.typeHint }}::class . "::{$value}");
+{% else %}
+				$value = {{ field.typeHint }}::tryFrom($value);
+{% endif %}
+			}
+			$this->{{ field.name }} = $value;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% elseif field.factory and field.isClass %}
+		if (isset($data['{{ field.name }}'])) {
+			$value = $data['{{ field.name }}'];
+			if (!$value instanceof {{ field.typeHint }}) {
+{% if '::' in field.factory %}
+{% set factoryParts = field.factory | split('::') %}
+				$value = {{ factoryParts[0] }}::{{ factoryParts[1] }}($value);
+{% else %}
+				$value = {{ field.typeHint }}::{{ field.factory }}($value);
+{% endif %}
+			}
+			$this->{{ field.name }} = $value;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% elseif field.isClass %}
+		if (isset($data['{{ field.name }}'])) {
+			$value = $data['{{ field.name }}'];
+			if (!is_object($value)) {
+				$value = new {{ field.typeHint }}($value);
+			}
+			$this->{{ field.name }} = $value;
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
 {% else %}
 		if (isset($data['{{ field.name }}'])) {
 			$this->{{ field.name }} = $data['{{ field.name }}'];
