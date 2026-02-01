@@ -197,6 +197,14 @@ abstract class Dto implements Serializable
     public const TYPE_DASHED = 'dashed';
 
     /**
+     * Whether this DTO has generated fast-path methods.
+     * Overridden to `true` by generated DTOs.
+     *
+     * @var bool
+     */
+    protected const HAS_FAST_PATH = false;
+
+    /**
      * For templating rendering.
      *
      * @var array<string, array<string, mixed>>
@@ -242,7 +250,7 @@ abstract class Dto implements Serializable
     public function __construct(?array $data = null, bool $ignoreMissing = false, ?string $type = null)
     {
         if ($data) {
-            if ($type === null && method_exists($this, 'setFromArrayFast')) {
+            if ($type === null && static::HAS_FAST_PATH) {
                 if (!$ignoreMissing) {
                     $this->validateFieldNames($data);
                 }
@@ -301,6 +309,10 @@ abstract class Dto implements Serializable
      */
     protected function _toArrayInternal(?string $type = null, ?array $fields = null, bool $touched = false): array
     {
+        if (!$touched && $fields === null && static::HAS_FAST_PATH && ($type === null || $type === static::TYPE_CAMEL || $type === static::TYPE_DEFAULT)) {
+            return $this->toArrayFast();
+        }
+
         if ($fields === null) {
             $fields = $this->fields();
         }
@@ -801,6 +813,28 @@ abstract class Dto implements Serializable
                 }
             }
         }
+    }
+
+    /**
+     * Optimized array assignment. Overridden by generated DTOs.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return void
+     */
+    protected function setFromArrayFast(array $data): void
+    {
+        $this->setFromArray($data, true);
+    }
+
+    /**
+     * Optimized toArray for default type. Overridden by generated DTOs.
+     *
+     * @return array<string, mixed>
+     */
+    protected function toArrayFast(): array
+    {
+        return $this->_toArrayInternal();
     }
 
     /**
