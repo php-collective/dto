@@ -4,6 +4,11 @@
 	protected const IS_IMMUTABLE = {{ immutable ? 'true' : 'false' }};
 
 	/**
+	 * Whether this DTO has generated fast-path methods.
+	 */
+	protected const HAS_FAST_PATH = true;
+
+	/**
 	 * Pre-computed setter method names for fast lookup.
 	 *
 	 * @var array<string, string>
@@ -103,6 +108,54 @@
 {% endif %}
 {% endfor %}
 	}
+	/**
+	 * Optimized toArray for default type without dynamic dispatch.
+	 *
+	 * @return array<string, mixed>
+	 */
+	protected function toArrayFast(): array
+	{
+		return [
+{% for field in fields %}
+{% set key = field.mapTo is not null ? field.mapTo : field.name %}
+{% if field.dto %}
+			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
+{% elseif field.collection and field.collectionType != 'array' %}
+			'{{ key }}' => $this->{{ field.name }} !== null ? (static function (\Traversable $c): array {
+				$r = [];
+				foreach ($c as $k => $v) {
+					$r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v;
+				}
+				return $r;
+			})($this->{{ field.name }}) : [],
+{% elseif field.collection and field.collectionType == 'array' and field.singularClass is defined and field.singularClass %}
+			'{{ key }}' => (static function (?array $a): array {
+				if (!$a) {
+					return [];
+				}
+				$r = [];
+				foreach ($a as $k => $v) {
+					$r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v;
+				}
+				return $r;
+			})($this->{{ field.name }}),
+{% elseif field.enum and field.isClass %}
+{% if field.enum == 'unit' %}
+			'{{ key }}' => $this->{{ field.name }}?->name,
+{% else %}
+			'{{ key }}' => $this->{{ field.name }}?->value,
+{% endif %}
+{% elseif field.isClass and field.serialize == 'string' %}
+			'{{ key }}' => $this->{{ field.name }} !== null ? (string)$this->{{ field.name }} : null,
+{% elseif field.isClass and (field.serialize == 'array' or field.serialize == 'FromArrayToArray') %}
+			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
+{% else %}
+			'{{ key }}' => $this->{{ field.name }},
+{% endif %}
+{% endfor %}
+		];
+	}
+
 {% set fieldsWithDefaults = [] %}
 {% for field in fields %}
 {% if field.defaultValue is not null %}
