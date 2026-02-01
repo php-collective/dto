@@ -242,9 +242,10 @@ abstract class Dto implements Serializable
     public function __construct(?array $data = null, bool $ignoreMissing = false, ?string $type = null)
     {
         if ($data) {
-            // Use optimized fast path only in lenient mode (ignoreMissing=true)
-            // Strict mode needs full type validation via setFromArray
-            if ($ignoreMissing && $type === null && method_exists($this, 'setFromArrayFast')) {
+            if ($type === null && method_exists($this, 'setFromArrayFast')) {
+                if (!$ignoreMissing) {
+                    $this->validateFieldNames($data);
+                }
                 $this->setFromArrayFast($data);
             } else {
                 $this->setFromArray($data, $ignoreMissing, $type);
@@ -776,6 +777,30 @@ abstract class Dto implements Serializable
         throw new InvalidArgumentException(
             sprintf('Missing field `%s` in `%s` for type `%s`', $field, static::class, $type),
         );
+    }
+
+    /**
+     * Validates that all keys in the data array are known field names.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @throws \InvalidArgumentException
+     *
+     * @return void
+     */
+    protected function validateFieldNames(array $data): void
+    {
+        $unknown = array_diff_key($data, $this->_metadata);
+        if ($unknown) {
+            // Also check mapFrom mappings
+            foreach ($unknown as $field => $value) {
+                if (!isset($this->_fieldMap['mapFrom'][$field])) {
+                    throw new InvalidArgumentException(
+                        sprintf('Missing field `%s` in `%s` for type `default`', $field, static::class),
+                    );
+                }
+            }
+        }
     }
 
     /**
