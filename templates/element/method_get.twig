@@ -43,7 +43,7 @@
 
 {% else %}
 		if (!isset($this->{{ name }}[$key])) {
-			throw new \RuntimeException(sprintf('Value not set for field `{{ name }}` and key `%s` (expected to be not null)', $key));
+			throw new RuntimeException(sprintf('Value not set for field `{{ name }}` and key `%s` (expected to be not null)', $key));
 		}
 
 {% endif %}
