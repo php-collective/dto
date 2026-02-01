@@ -8,6 +8,7 @@
 	 * @param {{ keyType }} $key
 {% endif %}
 	 * @param {% if singularType %}{{ singularType }}{% else %}mixed{% endif %}{% if singularNullable %}|null{% endif %} ${{ singular }}
+	 *
 	 * @return $this
 	 */
 	public function add{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})

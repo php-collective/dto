@@ -15,7 +15,7 @@
 	{
 {% if not typeHint %}
 		if (${{ name }} === null) {
-			throw new \RuntimeException('Value not present (expected to be not null)');
+			throw new RuntimeException('Value not present (expected to be not null)');
 		}
 {% endif %}
 		$new = clone $this;

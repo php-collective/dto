@@ -18,7 +18,11 @@
 		return $this->{{ name }}->count() > 0;
 {% endif %}
 {% else %}
+{% if nullable %}
 		return $this->{{ name }} !== null;
+{% else %}
+		return isset($this->{{ name }});
+{% endif %}
 {% endif %}
 	}
 {% if associative and singular and not singularNullable %}
@@ -30,6 +34,7 @@
 	 *
 {% endif %}
 	 * @param {{ keyType }} $key
+	 *
 	 * @return bool
 	 */
 	public function has{{ singular|stripLeadingUnderscore|camelize }}($key): bool

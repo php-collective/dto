@@ -7,8 +7,21 @@
 
 namespace {{ namespace }};
 
+{% set needsInvalidArgumentException = false -%}
+{% set needsRuntimeException = false -%}
+{% for field in fields -%}
+{% if field.required %}{% set needsInvalidArgumentException = true %}{% endif -%}
+{% if field.nullable %}{% set needsRuntimeException = true %}{% endif -%}
+{% if field.associative and field.singular and not field.singularNullable %}{% set needsRuntimeException = true %}{% endif -%}
+{% endfor -%}
+{% if needsInvalidArgumentException %}
+use InvalidArgumentException;
+{% endif %}
 {% if extends starts with '\\' %}
 use {{ extends[1:] }};
+{% endif %}
+{% if needsRuntimeException %}
+use RuntimeException;
 {% endif %}
 
 /**
