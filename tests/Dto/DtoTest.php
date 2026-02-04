@@ -18,6 +18,7 @@ use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
 use PhpCollective\Dto\Test\TestDto\AdvancedDto;
 use PhpCollective\Dto\Test\TestDto\CollectionDto;
 use PhpCollective\Dto\Test\TestDto\CustomCollectionDto;
+use PhpCollective\Dto\Test\TestDto\ImmutableCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableDto;
 use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
@@ -1223,5 +1224,137 @@ class DtoTest extends TestCase
         $decoded = json_decode($json, true);
 
         $this->assertArrayHasKey('array_items', $decoded);
+    }
+
+    // ========== COLLECTION REMOVE TESTS ==========
+
+    public function testRemoveItemFromArrayObjectCollection(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto->addItem(SimpleDto::create(['name' => 'Item 2']));
+        $dto->addItem(SimpleDto::create(['name' => 'Item 3']));
+
+        $this->assertCount(3, $dto->getItems());
+
+        $dto->removeItem(1);
+
+        $this->assertCount(2, $dto->getItems());
+        $this->assertSame('Item 1', $dto->getItems()[0]->getName());
+        $this->assertSame('Item 3', $dto->getItems()[2]->getName());
+    }
+
+    public function testRemoveItemFromArrayCollection(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addArrayItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto->addArrayItem(SimpleDto::create(['name' => 'Item 2']));
+        $dto->addArrayItem(SimpleDto::create(['name' => 'Item 3']));
+
+        $this->assertCount(3, $dto->getArrayItems());
+
+        $dto->removeArrayItem(1);
+
+        $this->assertCount(2, $dto->getArrayItems());
+        $this->assertSame('Item 1', $dto->getArrayItems()[0]->getName());
+        $this->assertSame('Item 3', $dto->getArrayItems()[2]->getName());
+    }
+
+    public function testRemoveItemFromNullCollectionDoesNothing(): void
+    {
+        $dto = new CollectionDto();
+
+        // Should not throw, just return $this
+        $result = $dto->removeItem(0);
+
+        $this->assertSame($dto, $result);
+        $this->assertNull($dto->getItems());
+    }
+
+    public function testRemoveItemWithNonExistentKeyDoesNothing(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addItem(SimpleDto::create(['name' => 'Item 1']));
+
+        $this->assertCount(1, $dto->getItems());
+
+        $dto->removeItem(999);
+
+        $this->assertCount(1, $dto->getItems());
+    }
+
+    public function testRemoveItemMarksTouchedField(): void
+    {
+        $dto = new CollectionDto();
+        $dto->addItem(SimpleDto::create(['name' => 'Item 1']));
+
+        // Clear touched fields by creating new DTO from array
+        $dto = new CollectionDto(['items' => [['name' => 'Item 1']]]);
+        $touchedBefore = $dto->touchedFields();
+
+        $dto->removeItem(0);
+
+        $this->assertContains('items', $dto->touchedFields());
+    }
+
+    // ========== IMMUTABLE COLLECTION REMOVE TESTS ==========
+
+    public function testWithRemovedItemFromArrayObjectCollection(): void
+    {
+        $dto = new ImmutableCollectionDto();
+        $dto = $dto->withAddedItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto = $dto->withAddedItem(SimpleDto::create(['name' => 'Item 2']));
+        $dto = $dto->withAddedItem(SimpleDto::create(['name' => 'Item 3']));
+
+        $this->assertCount(3, $dto->getItems());
+
+        $updated = $dto->withRemovedItem(1);
+
+        // Original unchanged
+        $this->assertCount(3, $dto->getItems());
+
+        // New instance has item removed
+        $this->assertCount(2, $updated->getItems());
+        $this->assertNotSame($dto, $updated);
+    }
+
+    public function testWithRemovedItemFromArrayCollection(): void
+    {
+        $dto = new ImmutableCollectionDto();
+        $dto = $dto->withAddedArrayItem(SimpleDto::create(['name' => 'Item 1']));
+        $dto = $dto->withAddedArrayItem(SimpleDto::create(['name' => 'Item 2']));
+        $dto = $dto->withAddedArrayItem(SimpleDto::create(['name' => 'Item 3']));
+
+        $this->assertCount(3, $dto->getArrayItems());
+
+        $updated = $dto->withRemovedArrayItem(1);
+
+        // Original unchanged
+        $this->assertCount(3, $dto->getArrayItems());
+
+        // New instance has item removed
+        $this->assertCount(2, $updated->getArrayItems());
+        $this->assertNotSame($dto, $updated);
+    }
+
+    public function testWithRemovedItemFromNullCollectionReturnsNewInstance(): void
+    {
+        $dto = new ImmutableCollectionDto();
+
+        $updated = $dto->withRemovedItem(0);
+
+        $this->assertNotSame($dto, $updated);
+        $this->assertNull($updated->getItems());
+    }
+
+    public function testWithRemovedItemMarksTouchedField(): void
+    {
+        $dto = ImmutableCollectionDto::createFromArray([
+            'items' => [['name' => 'Item 1']],
+        ]);
+
+        $updated = $dto->withRemovedItem(0);
+
+        $this->assertContains('items', $updated->touchedFields());
     }
 }

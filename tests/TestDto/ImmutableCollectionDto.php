@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\TestDto;
 
 use ArrayObject;
-use PhpCollective\Dto\Dto\AbstractDto;
+use PhpCollective\Dto\Dto\AbstractImmutableDto;
 
 /**
- * A DTO with collection fields for testing collection handling.
+ * An immutable DTO with collection fields for testing immutable collection handling.
  */
-class CollectionDto extends AbstractDto
+class ImmutableCollectionDto extends AbstractImmutableDto
 {
+    /**
+     * @var bool
+     */
+    protected const IS_IMMUTABLE = true;
+
     /**
      * @var \ArrayObject<int, \PhpCollective\Dto\Test\TestDto\SimpleDto>|null
      */
@@ -81,49 +86,61 @@ class CollectionDto extends AbstractDto
     /**
      * @param \ArrayObject<int, \PhpCollective\Dto\Test\TestDto\SimpleDto>|null $items
      *
-     * @return $this
+     * @return static
      */
-    public function setItems(?ArrayObject $items)
+    public function withItems(?ArrayObject $items): static
     {
-        $this->items = $items;
-        $this->_touchedFields['items'] = true;
+        $new = clone $this;
+        $new->items = $items;
+        $new->_touchedFields['items'] = true;
 
-        return $this;
+        return $new;
     }
 
     /**
      * @param \PhpCollective\Dto\Test\TestDto\SimpleDto $item
      *
-     * @return $this
+     * @return static
      */
-    public function addItem(SimpleDto $item)
+    public function withAddedItem(SimpleDto $item): static
     {
-        if ($this->items === null) {
-            $this->items = new ArrayObject();
-        }
-        $this->items->append($item);
-        $this->_touchedFields['items'] = true;
+        $new = clone $this;
 
-        return $this;
+        if ($new->items === null) {
+            $new->items = new ArrayObject();
+        } else {
+            // Deep clone the ArrayObject to avoid mutating original
+            $new->items = clone $new->items;
+        }
+
+        $new->items->append($item);
+        $new->_touchedFields['items'] = true;
+
+        return $new;
     }
 
     /**
      * @param string|int $key
      *
-     * @return $this
+     * @return static
      */
-    public function removeItem($key)
+    public function withRemovedItem($key): static
     {
-        if ($this->items === null) {
-            return $this;
+        $new = clone $this;
+
+        if ($new->items === null) {
+            return $new;
         }
 
-        if ($this->items->offsetExists($key)) {
-            $this->items->offsetUnset($key);
-        }
-        $this->_touchedFields['items'] = true;
+        // Deep clone the ArrayObject to avoid mutating original
+        $new->items = clone $new->items;
 
-        return $this;
+        if ($new->items->offsetExists($key)) {
+            $new->items->offsetUnset($key);
+        }
+        $new->_touchedFields['items'] = true;
+
+        return $new;
     }
 
     public function hasItems(): bool
@@ -142,40 +159,43 @@ class CollectionDto extends AbstractDto
     /**
      * @param array<int, \PhpCollective\Dto\Test\TestDto\SimpleDto> $arrayItems
      *
-     * @return $this
+     * @return static
      */
-    public function setArrayItems(array $arrayItems)
+    public function withArrayItems(array $arrayItems): static
     {
-        $this->arrayItems = $arrayItems;
-        $this->_touchedFields['arrayItems'] = true;
+        $new = clone $this;
+        $new->arrayItems = $arrayItems;
+        $new->_touchedFields['arrayItems'] = true;
 
-        return $this;
+        return $new;
     }
 
     /**
      * @param \PhpCollective\Dto\Test\TestDto\SimpleDto $item
      *
-     * @return $this
+     * @return static
      */
-    public function addArrayItem(SimpleDto $item)
+    public function withAddedArrayItem(SimpleDto $item): static
     {
-        $this->arrayItems[] = $item;
-        $this->_touchedFields['arrayItems'] = true;
+        $new = clone $this;
+        $new->arrayItems[] = $item;
+        $new->_touchedFields['arrayItems'] = true;
 
-        return $this;
+        return $new;
     }
 
     /**
      * @param string|int $key
      *
-     * @return $this
+     * @return static
      */
-    public function removeArrayItem($key)
+    public function withRemovedArrayItem($key): static
     {
-        unset($this->arrayItems[$key]);
-        $this->_touchedFields['arrayItems'] = true;
+        $new = clone $this;
+        unset($new->arrayItems[$key]);
+        $new->_touchedFields['arrayItems'] = true;
 
-        return $this;
+        return $new;
     }
 
     public function hasArrayItems(): bool

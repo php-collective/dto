@@ -17,7 +17,9 @@
 
 		if ($new->{{ name }} === null) {
 			$new->{{ name }} = {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
-		}
+		}{% if collectionType != 'array' %} else {
+			$new->{{ name }} = clone $new->{{ name }};
+		}{% endif %}
 
 {% if associative %}
 		$new->{{ name }}[$key] = ${{ singular }};
