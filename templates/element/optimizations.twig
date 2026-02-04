@@ -42,13 +42,16 @@
 			if (is_array($value)) {
 				$value = new {{ field.typeHint }}($value);
 			}
+			/** @var {{ field.nullableTypeHint ?? field.typeHint }} $value */
 			$this->{{ field.name }} = $value;
 			$this->_touchedFields['{{ field.name }}'] = true;
 		}
 {% elseif field.collection and field.collectionType != 'array' %}
 		if (isset($data['{{ field.name }}'])) {
 			$collection = new {{ field.collectionType }}();
-			foreach ($data['{{ field.name }}'] as $item) {
+			/** @var array $items */
+			$items = $data['{{ field.name }}'];
+			foreach ($items as $item) {
 {% if field.transformFrom %}
 				$item = $this->transformValue('{{ field.transformFrom }}', $item);
 {% endif %}
@@ -65,7 +68,9 @@
 {% elseif field.collection and field.collectionType == 'array' and field.singularClass is defined and field.singularClass %}
 		if (isset($data['{{ field.name }}'])) {
 			$collection = [];
-			foreach ($data['{{ field.name }}'] as $key => $item) {
+			/** @var array $items */
+			$items = $data['{{ field.name }}'];
+			foreach ($items as $key => $item) {
 {% if field.transformFrom %}
 				$item = $this->transformValue('{{ field.transformFrom }}', $item);
 {% endif %}
@@ -124,6 +129,7 @@
 		}
 {% else %}
 		if (isset($data['{{ field.name }}'])) {
+			/** @var {{ field.docBlockType ?? field.typeHint }}{% if field.nullable %}|null{% endif %} $value */
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
 			$value = $this->transformValue('{{ field.transformFrom }}', $value);

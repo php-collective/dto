@@ -1,28 +1,11 @@
-{% for field in fields %}
-{% set fieldVars = field|merge({'scalarAndReturnTypes': scalarAndReturnTypes}) %}
-{% if immutable %}
-{% include 'element/method_with.twig' with fieldVars only %}
-{% else %}
-{% include 'element/method_set.twig' with fieldVars only %}
-{% endif %}
-{% if field.nullable and immutable %}
-{% include 'element/method_with_or_fail.twig' with fieldVars only %}
-{% elseif field.nullable %}
-{% include 'element/method_set_or_fail.twig' with fieldVars only %}
-{% endif %}
-{% include 'element/method_get.twig' with fieldVars only %}
-{% if field.nullable %}
-{% include 'element/method_get_or_fail.twig' with fieldVars only %}
-{% endif %}
-{% if field.nullable or field.defaultValue is null %}
-{% include 'element/method_has.twig' with fieldVars only %}
-{% endif %}
-{% if immutable %}
-{% include 'element/method_with_added.twig' with fieldVars only %}
-{% else %}
-{% include 'element/method_add.twig' with fieldVars only %}
-{% endif %}
-{% if not loop.last %}
-
-{% endif %}
+{% set blank = "\n" -%}
+{% for field in fields -%}
+{% set fieldVars = field|merge({'scalarAndReturnTypes': scalarAndReturnTypes}) -%}
+{% if immutable %}{% include 'element/method_with.twig' with fieldVars only %}{% else %}{% include 'element/method_set.twig' with fieldVars only %}{% endif -%}
+{% if field.nullable and immutable %}{{ blank }}{% include 'element/method_with_or_fail.twig' with fieldVars only %}{% elseif field.nullable %}{{ blank }}{% include 'element/method_set_or_fail.twig' with fieldVars only %}{% endif -%}
+{{ blank }}{% include 'element/method_get.twig' with fieldVars only -%}
+{% if field.nullable %}{{ blank }}{% include 'element/method_get_or_fail.twig' with fieldVars only %}{% endif -%}
+{% if field.nullable or field.defaultValue is null %}{{ blank }}{% include 'element/method_has.twig' with fieldVars only %}{% endif -%}
+{% if immutable %}{% if field.collection %}{{ blank }}{% include 'element/method_with_added.twig' with fieldVars only %}{% endif %}{% else %}{% if field.collectionType and field.singular %}{{ blank }}{% include 'element/method_add.twig' with fieldVars only %}{% endif %}{% endif -%}
+{% if not loop.last %}{{ blank }}{% endif -%}
 {% endfor -%}

@@ -8,6 +8,7 @@ use ArrayAccess;
 use ArrayObject;
 use Countable;
 use InvalidArgumentException;
+use JsonSerializable;
 use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
 use Serializable;
@@ -15,7 +16,7 @@ use Throwable;
 use Traversable;
 use UnitEnum;
 
-abstract class Dto implements Serializable
+abstract class Dto implements Serializable, JsonSerializable
 {
     /**
      * Convert DTO to array. Implemented by generated DTOs with shaped array return types.
@@ -90,6 +91,16 @@ abstract class Dto implements Serializable
     public static function setCollectionFactory(?callable $factory): void
     {
         static::$collectionFactory = $factory;
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray();
     }
 
     /**

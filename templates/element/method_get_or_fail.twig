@@ -11,7 +11,7 @@
 
 	{
 		if ($this->{{ name }} === null) {
-			throw new \RuntimeException('Value not set for field `{{ name }}` (expected to be not null)');
+			throw new RuntimeException('Value not set for field `{{ name }}` (expected to be not null)');
 		}
 
 		return $this->{{ name }};

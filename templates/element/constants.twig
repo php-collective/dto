@@ -12,4 +12,5 @@
 	 */
 	public const FIELD_{{ field.name | stripLeadingUnderscore | camelize | underscore | upper }} = '{{ field.name }}';
 {% endif %}
+
 {% endfor -%}
