@@ -410,17 +410,55 @@ class SchemaParserTest extends TestCase
     /**
      * @return void
      */
-    public function testSkipExternalRef(): void
+    public function testResolveExternalRef(): void
+    {
+        $schemaPath = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'dto_external_' . bin2hex(random_bytes(6)) . '.json';
+        $externalSchema = [
+            'definitions' => [
+                'Other' => [
+                    'type' => 'object',
+                    'properties' => [
+                        'id' => ['type' => 'integer'],
+                    ],
+                ],
+            ],
+        ];
+
+        file_put_contents($schemaPath, json_encode($externalSchema, JSON_THROW_ON_ERROR));
+
+        try {
+            $schema = [
+                'type' => 'object',
+                'properties' => [
+                    'name' => ['type' => 'string'],
+                    'external' => ['$ref' => basename($schemaPath) . '#/definitions/Other'],
+                ],
+            ];
+
+            $result = $this->parser->parse($schema, ['basePath' => dirname($schemaPath)])->result();
+
+            $this->assertArrayHasKey('name', $result['Object']);
+            $this->assertSame('Other', $result['Object']['external']['type']);
+            $this->assertSame('int', $result['Other']['id']['type']);
+        } finally {
+            unlink($schemaPath);
+        }
+    }
+
+    /**
+     * @return void
+     */
+    public function testSkipMissingExternalRef(): void
     {
         $schema = [
             'type' => 'object',
             'properties' => [
                 'name' => ['type' => 'string'],
-                'external' => ['$ref' => 'other-file.json#/definitions/Other'],
+                'external' => ['$ref' => 'missing.json#/definitions/Other'],
             ],
         ];
 
-        $result = $this->parser->parse($schema)->result();
+        $result = $this->parser->parse($schema, ['basePath' => sys_get_temp_dir()])->result();
 
         $this->assertArrayHasKey('name', $result['Object']);
         $this->assertArrayNotHasKey('external', $result['Object']);

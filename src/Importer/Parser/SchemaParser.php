@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Importer\Parser;
 
+use PhpCollective\Dto\Importer\Ref\FileRefResolver;
+use PhpCollective\Dto\Importer\Ref\RefResolverInterface;
 use PhpCollective\Dto\Utility\Inflector;
 use RuntimeException;
 
@@ -42,6 +44,11 @@ class SchemaParser implements ParserInterface
     protected array $processedRefs = [];
 
     /**
+     * @var \PhpCollective\Dto\Importer\Ref\RefResolverInterface|null
+     */
+    protected ?RefResolverInterface $refResolver = null;
+
+    /**
      * Maximum recursion depth to prevent stack overflow on deeply nested schemas.
      *
      * @var int
@@ -65,6 +72,7 @@ class SchemaParser implements ParserInterface
         // Extract definitions on first call (no parent data)
         if ($depth === 0) {
             $this->extractDefinitions($input);
+            $this->refResolver = $options['refResolver'] ?? new FileRefResolver($options['basePath'] ?? null);
 
             // Handle OpenAPI documents: parse all schemas from components/schemas
             if ($this->isOpenApi($input)) {
@@ -431,44 +439,32 @@ class SchemaParser implements ParserInterface
      */
     protected function resolveRef(string $ref, array $options): ?array
     {
-        // Only support local references (same file)
-        if (!str_starts_with($ref, '#/')) {
+        // Local references (same file)
+        if (str_starts_with($ref, '#/')) {
+            $name = $this->extractRefName($ref);
+            if ($name === null || !isset($this->definitions[$name])) {
+                return null;
+            }
+
+            return $this->resolveSchemaReference($this->definitions[$name], $name, $options, $name);
+        }
+
+        if ($this->refResolver === null) {
             return null;
         }
 
-        // Extract the definition name from the pointer
-        $name = $this->extractRefName($ref);
-        if ($name === null || !isset($this->definitions[$name])) {
+        $resolved = $this->refResolver->resolve($ref, $options);
+        if ($resolved === null || empty($resolved['schema']) || !is_array($resolved['schema'])) {
             return null;
         }
 
-        $schema = $this->definitions[$name];
-
-        // If this is an object type, parse it as a separate DTO
-        if (!empty($schema['type']) && $schema['type'] === 'object' && !empty($schema['properties'])) {
-            // Use the definition name as title if not set
-            if (empty($schema['title'])) {
-                $schema['title'] = $name;
-            }
-
-            // Only process each ref once to avoid duplicates
-            if (!isset($this->processedRefs[$name])) {
-                $this->processedRefs[$name] = Inflector::camelize($schema['title']);
-                $this->parse($schema, $options, ['dto' => '__ref__', 'field' => $name]);
-            }
-
-            // Return a schema that references the DTO type
-            return [
-                'type' => 'object',
-                'properties' => $schema['properties'],
-                'required' => $schema['required'] ?? [],
-                'title' => $schema['title'],
-                '_resolvedRef' => $this->processedRefs[$name],
-            ];
+        if (!empty($resolved['definitionsSource']) && is_array($resolved['definitionsSource'])) {
+            $this->extractDefinitions($resolved['definitionsSource']);
         }
 
-        // For non-object types, just return the schema
-        return $schema;
+        $name = $this->extractExternalRefName($ref, $resolved['schema']);
+
+        return $this->resolveSchemaReference($resolved['schema'], $name, $options, $ref);
     }
 
     /**
@@ -493,6 +489,102 @@ class SchemaParser implements ParserInterface
         }
 
         return null;
+    }
+
+    /**
+     * @param array<string, mixed> $schema
+     * @param string|null $name
+     * @param array<string, mixed> $options
+     * @param string $refKey
+     *
+     * @return array<string, mixed>|null
+     */
+    protected function resolveSchemaReference(array $schema, ?string $name, array $options, string $refKey): ?array
+    {
+        // If this is an object type, parse it as a separate DTO
+        if (!empty($schema['type']) && $schema['type'] === 'object' && !empty($schema['properties'])) {
+            $title = $schema['title'] ?? null;
+            if ($title === null) {
+                $title = $name ?? $this->fallbackTitleFromRef($refKey);
+                $schema['title'] = $title;
+            }
+
+            if (!isset($this->processedRefs[$refKey])) {
+                $this->processedRefs[$refKey] = Inflector::camelize($title);
+                $this->parse($schema, $options, ['dto' => '__ref__', 'field' => $title]);
+            }
+
+            return [
+                'type' => 'object',
+                'properties' => $schema['properties'],
+                'required' => $schema['required'] ?? [],
+                'title' => $schema['title'],
+                '_resolvedRef' => $this->processedRefs[$refKey],
+            ];
+        }
+
+        return $schema;
+    }
+
+    /**
+     * @param string $ref
+     * @param array<string, mixed> $schema
+     *
+     * @return string|null
+     */
+    protected function extractExternalRefName(string $ref, array $schema): ?string
+    {
+        $fragment = $this->extractRefFragment($ref);
+        if ($fragment !== null) {
+            $name = $this->extractRefName($fragment);
+            if ($name !== null) {
+                return $name;
+            }
+        }
+
+        if (!empty($schema['title']) && is_string($schema['title'])) {
+            return $schema['title'];
+        }
+
+        $path = parse_url($ref, PHP_URL_PATH);
+        if (!$path) {
+            return null;
+        }
+
+        $baseName = pathinfo($path, PATHINFO_FILENAME);
+
+        return $baseName !== '' ? $baseName : null;
+    }
+
+    /**
+     * @param string $ref
+     *
+     * @return string|null
+     */
+    protected function extractRefFragment(string $ref): ?string
+    {
+        $parts = explode('#', $ref, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        return '#' . $parts[1];
+    }
+
+    /**
+     * @param string $ref
+     *
+     * @return string
+     */
+    protected function fallbackTitleFromRef(string $ref): string
+    {
+        $path = parse_url($ref, PHP_URL_PATH);
+        if ($path === false || $path === null) {
+            $path = $ref;
+        }
+        $baseName = pathinfo($path, PATHINFO_FILENAME);
+
+        return $baseName !== '' ? $baseName : 'Object';
     }
 
     /**
