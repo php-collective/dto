@@ -34,7 +34,6 @@ class DtoTest extends TestCase
     {
         parent::tearDown();
         Dto::setDefaultKeyType(null);
-        Dto::setDefaultJsonKeyType(null);
         Dto::setCollectionFactory(null);
     }
 
@@ -1210,50 +1209,9 @@ class DtoTest extends TestCase
         $this->assertSame('Nested', $decoded['simple']['name']);
     }
 
-    public function testDefaultJsonKeyType(): void
+    public function testJsonSerializeRespectsDefaultKeyType(): void
     {
-        Dto::setDefaultJsonKeyType(Dto::TYPE_UNDERSCORED);
-
-        $this->assertSame(Dto::TYPE_UNDERSCORED, Dto::getDefaultJsonKeyType());
-    }
-
-    public function testJsonSerializeWithDefaultJsonKeyType(): void
-    {
-        Dto::setDefaultJsonKeyType(Dto::TYPE_UNDERSCORED);
-
-        $dto = new CollectionDto([
-            'arrayItems' => [
-                ['name' => 'Item 1'],
-            ],
-        ]);
-
-        $json = json_encode($dto);
-        $decoded = json_decode($json, true);
-
-        $this->assertArrayHasKey('array_items', $decoded);
-    }
-
-    public function testJsonSerializeWithDashedKeyType(): void
-    {
-        Dto::setDefaultJsonKeyType(Dto::TYPE_DASHED);
-
-        $dto = new CollectionDto([
-            'arrayItems' => [
-                ['name' => 'Item 1'],
-            ],
-        ]);
-
-        $json = json_encode($dto);
-        $decoded = json_decode($json, true);
-
-        $this->assertArrayHasKey('array-items', $decoded);
-    }
-
-    public function testJsonSerializeIndependentOfDefaultKeyType(): void
-    {
-        // Set different defaults for general use vs JSON
         Dto::setDefaultKeyType(Dto::TYPE_UNDERSCORED);
-        Dto::setDefaultJsonKeyType(Dto::TYPE_DASHED);
 
         $dto = new CollectionDto([
             'array_items' => [
@@ -1261,29 +1219,6 @@ class DtoTest extends TestCase
             ],
         ]);
 
-        // toArray() uses defaultKeyType (underscored)
-        $array = $dto->toArray();
-        $this->assertArrayHasKey('array_items', $array);
-
-        // jsonSerialize() uses defaultJsonKeyType (dashed)
-        $json = json_encode($dto);
-        $decoded = json_decode($json, true);
-        $this->assertArrayHasKey('array-items', $decoded);
-    }
-
-    public function testJsonSerializeUsesDefaultKeyTypeWhenJsonKeyTypeIsNull(): void
-    {
-        Dto::setDefaultKeyType(Dto::TYPE_UNDERSCORED);
-        Dto::setDefaultJsonKeyType(null);
-
-        $dto = new CollectionDto([
-            'array_items' => [
-                ['name' => 'Item 1'],
-            ],
-        ]);
-
-        // When defaultJsonKeyType is null, jsonSerialize passes null to toArray,
-        // which then uses defaultKeyType
         $json = json_encode($dto);
         $decoded = json_decode($json, true);
 
