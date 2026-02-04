@@ -38,6 +38,8 @@ class Importer
      * @param array<string, mixed> $options Options:
      *   - type: 'Data' or 'Schema' (auto-detected if not provided)
      *   - namespace: Namespace prefix for generated DTOs
+     *   - basePath: Base path for external $ref file resolution
+     *   - refResolver: Custom ref resolver instance
      *
      * @return array<string, array<string, array<string, mixed>|string>> Parsed DTO definitions
      */

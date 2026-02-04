@@ -102,6 +102,7 @@ Features:
 - Respects `required` array for field validation
 - Handles `anyOf`/`oneOf` type unions
 - Resolves `$ref` pointers to `$defs`, `definitions`, and `components/schemas`
+- Resolves external file `$ref` pointers when `basePath` is provided
 - Normalizes types (integer→int, boolean→bool, number→float)
 
 ### 3. OpenAPI Documents
@@ -259,6 +260,8 @@ $importer->import($json, ['format' => 'neon']);
 | `type` | Force parser type: `'Data'` or `'Schema'` | Auto-detected |
 | `format` | Output format: `'php'`, `'xml'`, `'yaml'`, `'neon'` | `'php'` |
 | `namespace` | Namespace prefix for generated DTOs | None |
+| `basePath` | Base directory for external file `$ref` resolution | None |
+| `refResolver` | Custom `$ref` resolver (implements `RefResolverInterface`) | Default file resolver |
 
 ### Namespace Example
 
@@ -267,6 +270,19 @@ $importer->import($json, ['namespace' => 'Api/Response']);
 ```
 
 Generates DTOs like `Api/Response/User`, `Api/Response/Address`, etc.
+
+### External `$ref` Example
+
+```php
+$schema = json_encode([
+    'type' => 'object',
+    'properties' => [
+        'user' => ['$ref' => 'schemas/user.json#/definitions/User'],
+    ],
+]);
+
+$result = $importer->import($schema, ['basePath' => __DIR__ . '/openapi']);
+```
 
 ## Step-by-Step Usage
 
@@ -345,7 +361,7 @@ The importer is a scaffolding tool. Generated configs typically need manual refi
 2. **No custom types** - DateTime, custom classes need manual configuration
 3. **Limited validation** - Only `required` from JSON Schema is used
 4. **Type inference from data** - Single example may not represent all cases
-5. **External `$ref` not supported** - Only local references (`#/...`) are resolved; external file references are skipped
+5. **Remote `$ref` not supported** - URL references (http/https) require a custom resolver
 
 ## Example: API Response
 
