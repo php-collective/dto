@@ -36,6 +36,9 @@
 {% if field.dto %}
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
+{% if field.transformFrom %}
+			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+{% endif %}
 			if (is_array($value)) {
 				$value = new {{ field.typeHint }}($value);
 			}
@@ -49,6 +52,9 @@
 			/** @var array $items */
 			$items = $data['{{ field.name }}'];
 			foreach ($items as $item) {
+{% if field.transformFrom %}
+				$item = $this->transformValue('{{ field.transformFrom }}', $item);
+{% endif %}
 {% if field.singularClass is defined and field.singularClass %}
 				if (is_array($item)) {
 					$item = new {{ field.singularClass }}($item);
@@ -65,6 +71,9 @@
 			/** @var array $items */
 			$items = $data['{{ field.name }}'];
 			foreach ($items as $key => $item) {
+{% if field.transformFrom %}
+				$item = $this->transformValue('{{ field.transformFrom }}', $item);
+{% endif %}
 				if (is_array($item)) {
 					$item = new {{ field.singularClass }}($item);
 				}
@@ -76,6 +85,9 @@
 {% elseif field.enum and field.isClass %}
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
+{% if field.transformFrom %}
+			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+{% endif %}
 			if (!$value instanceof \UnitEnum) {
 {% if field.enum == 'unit' %}
 				$value = constant({{ field.typeHint }}::class . "::{$value}");
@@ -89,6 +101,9 @@
 {% elseif field.factory and field.isClass %}
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
+{% if field.transformFrom %}
+			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+{% endif %}
 			if (!$value instanceof {{ field.typeHint }}) {
 {% if '::' in field.factory %}
 {% set factoryParts = field.factory | split('::') %}
@@ -103,6 +118,9 @@
 {% elseif field.isClass %}
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
+{% if field.transformFrom %}
+			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+{% endif %}
 			if (!$value instanceof {{ field.typeHint }}) {
 				$value = new {{ field.typeHint }}($value);
 			}
@@ -113,6 +131,9 @@
 		if (isset($data['{{ field.name }}'])) {
 			/** @var {{ field.docBlockType ?? field.typeHint }}{% if field.nullable %}|null{% endif %} $value */
 			$value = $data['{{ field.name }}'];
+{% if field.transformFrom %}
+			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+{% endif %}
 			$this->{{ field.name }} = $value;
 			$this->_touchedFields['{{ field.name }}'] = true;
 		}
@@ -132,11 +153,33 @@
 {% set key = field.mapTo is not null ? field.mapTo : field.name %}
 {% if field.dto %}
 {% if field.nullable %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->toArray()),
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->toArray(),
 {% endif %}
+{% endif %}
 {% elseif field.collection and field.collectionType != 'array' %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformArrayValues('{{ field.transformTo }}', $this->{{ field.name }} !== null ? (static function (\Traversable $c): array {
+				$r = [];
+				foreach ($c as $k => $v) {
+{% if field.singularClass is defined and field.singularClass %}
+					$r[$k] = $v->toArray();
+{% else %}
+					$r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v;
+{% endif %}
+				}
+
+				return $r;
+			})($this->{{ field.name }}) : []),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? (static function (\Traversable $c): array {
 				$r = [];
 				foreach ($c as $k => $v) {
@@ -149,8 +192,22 @@
 
 				return $r;
 			})($this->{{ field.name }}) : [],
+{% endif %}
 {% elseif field.collection and field.collectionType == 'array' and field.singularClass is defined and field.singularClass %}
 {% if field.nullable %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformArrayValues('{{ field.transformTo }}', (static function (?array $a): array {
+				if (!$a) {
+					return [];
+				}
+				$r = [];
+				foreach ($a as $k => $v) {
+					$r[$k] = $v->toArray();
+				}
+
+				return $r;
+			})($this->{{ field.name }})),
+{% else %}
 			'{{ key }}' => (static function (?array $a): array {
 				if (!$a) {
 					return [];
@@ -162,6 +219,17 @@
 
 				return $r;
 			})($this->{{ field.name }}),
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformArrayValues('{{ field.transformTo }}', (static function (array $a): array {
+				$r = [];
+				foreach ($a as $k => $v) {
+					$r[$k] = $v->toArray();
+				}
+
+				return $r;
+			})($this->{{ field.name }})),
 {% else %}
 			'{{ key }}' => (static function (array $a): array {
 				$r = [];
@@ -172,34 +240,71 @@
 				return $r;
 			})($this->{{ field.name }}),
 {% endif %}
+{% endif %}
 {% elseif field.enum and field.isClass %}
 {% if field.nullable %}
 {% if field.enum == 'unit' %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}?->name),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }}?->name,
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}?->value),
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}?->value,
 {% endif %}
+{% endif %}
 {% else %}
 {% if field.enum == 'unit' %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->name),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }}->name,
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->value),
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->value,
 {% endif %}
 {% endif %}
+{% endif %}
 {% elseif field.isClass and field.serialize == 'string' %}
 {% if field.nullable %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? (string)$this->{{ field.name }} : null),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? (string)$this->{{ field.name }} : null,
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', (string)$this->{{ field.name }}),
 {% else %}
 			'{{ key }}' => (string)$this->{{ field.name }},
 {% endif %}
+{% endif %}
 {% elseif field.isClass and (field.serialize == 'array' or field.serialize == 'FromArrayToArray') %}
 {% if field.nullable %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null),
+{% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->toArray()),
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->toArray(),
 {% endif %}
+{% endif %}
+{% else %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}),
 {% else %}
 			'{{ key }}' => $this->{{ field.name }},
+{% endif %}
 {% endif %}
 {% endfor %}
 		];
@@ -274,4 +379,3 @@
 		}
 {% endif %}
 	}
-

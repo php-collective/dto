@@ -78,6 +78,8 @@ class Builder
         'key',
         'mapFrom',
         'mapTo',
+        'transformFrom',
+        'transformTo',
     ];
 
     /**
@@ -466,6 +468,8 @@ class Builder
                 'factory' => null,
                 'mapFrom' => null,
                 'mapTo' => null,
+                'transformFrom' => null,
+                'transformTo' => null,
             ];
             if ($data['required']) {
                 $data['nullable'] = false;

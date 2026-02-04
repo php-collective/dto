@@ -10,6 +10,7 @@ DTOs support two transformation mechanisms:
 |--------|-----------|---------|
 | `factory` | Array → Object | Create objects from raw values using a factory method |
 | `serialize` | Object → Array | Control how objects are converted in `toArray()` |
+| `transformFrom` / `transformTo` | Array → Value / Value → Array | Apply a callable before hydration or after serialization |
 
 ## Factory - Creating Objects
 
@@ -126,6 +127,39 @@ Order:
             type: \App\ValueObject\Price
             factory: App\Factory\PriceFactory::create
 ```
+
+## Transforms - Pre/Post Processing
+
+Transforms apply a callable to a field value:
+
+```php
+Field::string('email')
+    ->transformFrom('App\\Transform\\Email::normalize')
+    ->transformTo('App\\Transform\\Email::mask');
+```
+
+Transforms run:
+- **Before hydration** (`transformFrom`) - after key mapping, before factories/DTO creation.
+- **After serialization** (`transformTo`) - after `toArray()`/collection conversion, before key mapping.
+
+Order of operations:
+
+1. `mapFrom` (input key mapping)
+2. `transformFrom`
+3. `factory` / DTO creation / enum handling
+4. `serialize` / DTO `toArray()`
+5. `transformTo`
+6. `mapTo` (output key mapping)
+
+For collections, transforms are applied to each element.
+
+## Choosing the Right Option
+
+| Use Case | Recommended |
+|----------|-------------|
+| Create a class instance from raw input | `factory` |
+| Convert an object to array/string on output | `serialize` |
+| Pre/post-process a scalar or array value | `transformFrom` / `transformTo` |
 
 ## Serialize - Converting to Array
 

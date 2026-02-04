@@ -21,6 +21,8 @@
 										<xsd:attribute type="xsd:boolean" name="associative"/>
 										<xsd:attribute type="xsd:string" name="key"/>
 										<xsd:attribute type="xsd:string" name="factory"/>
+										<xsd:attribute type="xsd:string" name="transformFrom"/>
+										<xsd:attribute type="xsd:string" name="transformTo"/>
 										<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
 										<xsd:attribute type="xsd:boolean" name="required"/>
 										<xsd:attribute type="xsd:string" name="defaultValue"/>

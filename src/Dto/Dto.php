@@ -332,6 +332,7 @@ abstract class Dto implements Serializable, JsonSerializable
         $values = [];
         foreach ($fields as $field) {
             $value = $this->$field;
+            $transformTo = $this->_metadata[$field]['transformTo'] ?? null;
 
             $key = $field;
             // Apply custom mapTo mapping first
@@ -343,19 +344,28 @@ abstract class Dto implements Serializable, JsonSerializable
 
             if (is_object($value)) {
                 if ($value instanceof self) {
-                    $values[$key] = $touched ? $value->touchedToArray($type) : $value->toArray($type);
+                    $value = $touched ? $value->touchedToArray($type) : $value->toArray($type);
                 } elseif ($value instanceof Countable) {
                     $values = $this->transformCollectionToArray($value, $values, $key, $touched ? 'touchedToArray' : 'toArray', $type);
+                    if ($transformTo !== null) {
+                        $values[$key] = $this->transformArrayValues($transformTo, $values[$key]);
+                    }
+
+                    continue;
                 } elseif ($this->_metadata[$field]['serialize']) {
-                    $values[$key] = $this->transformSerialized($value, $this->_metadata[$field]['serialize']);
+                    $value = $this->transformSerialized($value, $this->_metadata[$field]['serialize']);
                 } elseif (!empty($this->_metadata[$field]['enum']) && $this->_metadata[$field]['enum'] === 'unit') {
                     if (!$value instanceof UnitEnum) {
                         throw new InvalidArgumentException('Expected UnitEnum instance');
                     }
-                    $values[$key] = $this->transformEnum($value);
-                } else {
-                    $values[$key] = $value;
+                    $value = $this->transformEnum($value);
                 }
+
+                if ($transformTo !== null) {
+                    $value = $this->transformValue($transformTo, $value);
+                }
+
+                $values[$key] = $value;
 
                 continue;
             }
@@ -365,6 +375,17 @@ abstract class Dto implements Serializable, JsonSerializable
                     $value = [];
                 }
                 $value = $this->transformArrayCollectionToArray($value, $touched ? 'touchedToArray' : 'toArray', $type);
+                if ($transformTo !== null) {
+                    $value = $this->transformArrayValues($transformTo, $value);
+                }
+
+                $values[$key] = $value;
+
+                continue;
+            }
+
+            if ($transformTo !== null) {
+                $value = $this->transformValue($transformTo, $value);
             }
 
             $values[$key] = $value;
@@ -462,6 +483,14 @@ abstract class Dto implements Serializable, JsonSerializable
 
             // Cache metadata lookup for this field to avoid repeated array access
             $fieldMeta = $this->_metadata[$field];
+            $transformFrom = $fieldMeta['transformFrom'] ?? null;
+            if ($transformFrom !== null) {
+                if (!empty($fieldMeta['collectionType'])) {
+                    $value = $this->transformInputCollection($transformFrom, $value);
+                } else {
+                    $value = $this->transformValue($transformFrom, $value);
+                }
+            }
 
             if ($fieldMeta['dto']) {
                 $value = $this->createDto($field, $value, $ignoreMissing, $type);
@@ -1152,6 +1181,83 @@ abstract class Dto implements Serializable, JsonSerializable
         }
 
         throw new InvalidArgumentException('Cannot determine serialize type from `' . $serialize . '`.');
+    }
+
+    /**
+     * @param string|null $callable
+     * @param mixed $value
+     *
+     * @throws \InvalidArgumentException
+     *
+     * @return mixed
+     */
+    protected function transformValue(?string $callable, $value)
+    {
+        if ($callable === null || $value === null) {
+            return $value;
+        }
+
+        if (!is_callable($callable)) {
+            throw new InvalidArgumentException(sprintf('Invalid transform callable `%s` for %s', $callable, static::class));
+        }
+
+        return $callable($value);
+    }
+
+    /**
+     * @param string|null $callable
+     * @param array<mixed> $values
+     *
+     * @return array<mixed>
+     */
+    protected function transformArrayValues(?string $callable, array $values): array
+    {
+        if ($callable === null) {
+            return $values;
+        }
+
+        foreach ($values as $key => $value) {
+            $values[$key] = $this->transformValue($callable, $value);
+        }
+
+        return $values;
+    }
+
+    /**
+     * @param string $callable
+     * @param mixed $value
+     *
+     * @return mixed
+     */
+    protected function transformInputCollection(string $callable, $value)
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if ($value instanceof ArrayObject) {
+            $items = [];
+            foreach ($value as $key => $item) {
+                $items[$key] = $this->transformValue($callable, $item);
+            }
+
+            return new ArrayObject($items);
+        }
+
+        if (is_array($value)) {
+            return $this->transformArrayValues($callable, $value);
+        }
+
+        if ($value instanceof Traversable) {
+            $items = [];
+            foreach ($value as $key => $item) {
+                $items[$key] = $this->transformValue($callable, $item);
+            }
+
+            return $items;
+        }
+
+        return $this->transformValue($callable, $value);
     }
 
     /**

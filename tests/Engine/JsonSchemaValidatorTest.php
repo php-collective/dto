@@ -121,6 +121,8 @@ class JsonSchemaValidatorTest extends TestCase
                     'custom' => [
                         'type' => 'MyClass',
                         'factory' => 'MyFactory::create',
+                        'transformFrom' => 'MyTransformer::from',
+                        'transformTo' => 'MyTransformer::to',
                     ],
                 ],
             ],

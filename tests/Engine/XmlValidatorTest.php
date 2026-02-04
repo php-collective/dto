@@ -241,7 +241,7 @@ XML;
         <field name="items" type="Item[]" collection="true" singular="item" associative="true" key="id"/>
         <field name="count" type="int" required="true" defaultValue="0"/>
         <field name="oldField" type="string" deprecated="Use newField instead"/>
-        <field name="custom" type="MyClass" factory="MyFactory::create"/>
+        <field name="custom" type="MyClass" factory="MyFactory::create" transformFrom="MyTransformer::from" transformTo="MyTransformer::to"/>
     </dto>
 </dtos>
 XML;

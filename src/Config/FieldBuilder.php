@@ -47,6 +47,10 @@ class FieldBuilder
 
     protected ?string $mapTo = null;
 
+    protected ?string $transformFrom = null;
+
+    protected ?string $transformTo = null;
+
     public function __construct(string $name, string $type)
     {
         $this->name = $name;
@@ -288,6 +292,30 @@ class FieldBuilder
     }
 
     /**
+     * Transform input value before hydration.
+     *
+     * @example Field::string('email')->transformFrom('App\\Transform\\Email::normalize')
+     */
+    public function transformFrom(string $callable): static
+    {
+        $this->transformFrom = $callable;
+
+        return $this;
+    }
+
+    /**
+     * Transform output value after serialization.
+     *
+     * @example Field::string('email')->transformTo('App\\Transform\\Email::mask')
+     */
+    public function transformTo(string $callable): static
+    {
+        $this->transformTo = $callable;
+
+        return $this;
+    }
+
+    /**
      * Get field name.
      */
     public function getName(): string
@@ -313,7 +341,9 @@ class FieldBuilder
             $this->factory === null &&
             $this->serialize === null &&
             $this->mapFrom === null &&
-            $this->mapTo === null
+            $this->mapTo === null &&
+            $this->transformFrom === null &&
+            $this->transformTo === null
         ) {
             return $this->type;
         }
@@ -366,6 +396,14 @@ class FieldBuilder
 
         if ($this->mapTo !== null) {
             $config['mapTo'] = $this->mapTo;
+        }
+
+        if ($this->transformFrom !== null) {
+            $config['transformFrom'] = $this->transformFrom;
+        }
+
+        if ($this->transformTo !== null) {
+            $config['transformTo'] = $this->transformTo;
         }
 
         return $config;

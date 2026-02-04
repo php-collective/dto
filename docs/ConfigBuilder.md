@@ -196,6 +196,17 @@ Field::class('priceDisplay', Money::class)->serialize('string')
 // toArray() returns: ['priceDisplay' => '1000 USD']
 ```
 
+### Transforms
+
+Apply a callable to transform values before hydration or after serialization:
+
+```php
+Field::string('email')->transformFrom('App\\Transform\\Email::normalize')
+Field::string('email')->transformTo('App\\Transform\\Email::mask')
+```
+
+For collections, transforms are applied to each element.
+
 ### Property Mapping
 
 Map field names between different formats when reading from or writing to arrays:

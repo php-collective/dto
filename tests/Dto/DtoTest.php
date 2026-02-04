@@ -24,6 +24,7 @@ use PhpCollective\Dto\Test\TestDto\RequiredDto;
 use PhpCollective\Dto\Test\TestDto\SerializableDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PhpCollective\Dto\Test\TestDto\TestCollection;
+use PhpCollective\Dto\Test\TestDto\TransformDto;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
@@ -113,6 +114,19 @@ class DtoTest extends TestCase
         $dto->fromArray(['name' => 'Updated', 'count' => 10]);
         $this->assertSame('Updated', $dto->getName());
         $this->assertSame(10, $dto->getCount());
+    }
+
+    public function testTransformFromArray(): void
+    {
+        $dto = new TransformDto(['email' => '  TEST@EXAMPLE.COM  ']);
+        $this->assertSame('test@example.com', $dto->getEmail());
+    }
+
+    public function testTransformToArray(): void
+    {
+        $dto = new TransformDto(['email' => 'test@example.com']);
+        $array = $dto->toArray();
+        $this->assertSame('t***@example.com', $array['email']);
     }
 
     public function testMagicGet(): void

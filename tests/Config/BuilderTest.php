@@ -179,6 +179,19 @@ class BuilderTest extends TestCase
         ], $field->toArray());
     }
 
+    public function testFieldTransforms(): void
+    {
+        $field = Field::string('email')
+            ->transformFrom('App\\Transform\\Email::normalize')
+            ->transformTo('App\\Transform\\Email::mask');
+
+        $this->assertSame([
+            'type' => 'string',
+            'transformFrom' => 'App\\Transform\\Email::normalize',
+            'transformTo' => 'App\\Transform\\Email::mask',
+        ], $field->toArray());
+    }
+
     public function testDtoCreate(): void
     {
         $dto = Dto::create('User')->fields(
