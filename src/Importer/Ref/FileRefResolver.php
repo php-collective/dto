@@ -22,6 +22,8 @@ class FileRefResolver implements RefResolverInterface
 
     /**
      * @inheritDoc
+     *
+     * @param array<string, mixed>|string $options
      */
     public function resolve(string $ref, array $options = []): ?array
     {
@@ -130,6 +132,7 @@ class FileRefResolver implements RefResolverInterface
 
     /**
      * @param array<string, mixed> $document
+     * @param string $fragment
      *
      * @return array<string, mixed>|null
      */
