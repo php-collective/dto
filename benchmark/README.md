@@ -28,6 +28,8 @@ cd ..
 php benchmark/run-external.php
 ```
 
+The external suite covers simple and nested creation comparisons for spatie/data-transfer-object, cuyz/valinor, and symfony/serializer (standalone).
+
 ## Files
 
 | File                | Description                                                   |

@@ -12,9 +12,12 @@ declare(strict_types=1);
  */
 
 // Conditional use statements moved here (only used if library is installed)
+use Symfony\Component\PropertyInfo\Extractor\PhpDocExtractor;
+use Symfony\Component\PropertyInfo\Extractor\ReflectionExtractor;
+use Symfony\Component\PropertyInfo\PropertyInfoExtractor;
 use Symfony\Component\Serializer\Encoder\JsonEncoder;
-use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Normalizer\ArrayDenormalizer;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 use Symfony\Component\Serializer\Serializer;
 
 require_once __DIR__ . '/bootstrap.php';
@@ -79,6 +82,7 @@ $complexOrderData = [
 ];
 
 $results = [];
+$nestedResults = [];
 $readResults = [];
 $realisticResults = [];
 
@@ -161,7 +165,7 @@ if ($libraries['cuyz/valinor']) {
     printSection('CuyZ/Valinor');
 
     // Valinor requires a mapper - expensive to create, so we create once
-    $mapper = (new \CuyZ\Valinor\MapperBuilder())
+    $valinorMapper = (new \CuyZ\Valinor\MapperBuilder())
         ->allowPermissiveTypes()
         ->mapper();
 
@@ -181,8 +185,8 @@ if ($libraries['cuyz/valinor']) {
 
     $valinorClass = get_class($valinorUserClass);
 
-    $results['valinor'] = $r = benchmark('Valinor map()', function () use ($mapper, $simpleUserData, $valinorClass) {
-        return $mapper->map($valinorClass, $simpleUserData);
+    $results['valinor'] = $r = benchmark('Valinor map()', function () use ($valinorMapper, $simpleUserData, $valinorClass) {
+        return $valinorMapper->map($valinorClass, $simpleUserData);
     }, $iterations);
     echo formatResult($r) . "\n";
 
@@ -271,13 +275,211 @@ echo str_repeat('=', 100) . "\n";
 
 printSection('php-collective/dto - Nested');
 
-$results['php-collective/dto-nested'] = $r = benchmark('php-collective/dto OrderDto', function () use ($complexOrderData) {
+$nestedResults['php-collective/dto-nested'] = $r = benchmark('php-collective/dto OrderDto', function () use ($complexOrderData) {
     return \Benchmark\Dto\OrderDto::createFromArray($complexOrderData);
 }, $iterations);
 echo formatResult($r) . "\n";
 
-// Note: Symfony Serializer nested benchmark skipped - requires pre-defined classes with proper annotations
-// for nested object mapping, which defeats the purpose of a fair comparison with anonymous classes.
+if ($libraries['spatie/data-transfer-object']) {
+    printSection('Spatie DTO - Nested');
+
+    if (!class_exists('BenchmarkExternalSpatieCustomerDto')) {
+        class BenchmarkExternalSpatieCustomerDto extends \Spatie\DataTransferObject\DataTransferObject
+        {
+            public int $id;
+            public string $name;
+            public string $email;
+            public ?string $phone;
+            public bool $active;
+            /** @var string[] */
+            public array $roles;
+        }
+
+        class BenchmarkExternalSpatieAddressDto extends \Spatie\DataTransferObject\DataTransferObject
+        {
+            public string $street;
+            public string $city;
+            public string $country;
+            public string $zipCode;
+        }
+
+        class BenchmarkExternalSpatieOrderItemDto extends \Spatie\DataTransferObject\DataTransferObject
+        {
+            public int $productId;
+            public string $name;
+            public int $quantity;
+            public float $price;
+        }
+
+        class BenchmarkExternalSpatieOrderDto extends \Spatie\DataTransferObject\DataTransferObject
+        {
+            public int $id;
+            public BenchmarkExternalSpatieCustomerDto $customer;
+            public BenchmarkExternalSpatieAddressDto $shippingAddress;
+
+            #[\Spatie\DataTransferObject\Attributes\CastWith(
+                \Spatie\DataTransferObject\Casters\ArrayCaster::class,
+                itemType: BenchmarkExternalSpatieOrderItemDto::class
+            )]
+            public array $items;
+
+            public float $total;
+            public string $status;
+        }
+    }
+
+    $nestedResults['spatie-dto-nested'] = $r = benchmark('Spatie DTO OrderDto', function () use ($complexOrderData) {
+        return new BenchmarkExternalSpatieOrderDto($complexOrderData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+if ($libraries['cuyz/valinor']) {
+    printSection('CuyZ/Valinor - Nested');
+
+    if (!class_exists('BenchmarkExternalValinorCustomer')) {
+        class BenchmarkExternalValinorCustomer
+        {
+            public function __construct(
+                public int $id,
+                public string $name,
+                public string $email,
+                public ?string $phone,
+                public bool $active,
+                /** @var array<string> */
+                public array $roles,
+            ) {
+            }
+        }
+
+        class BenchmarkExternalValinorAddress
+        {
+            public function __construct(
+                public string $street,
+                public string $city,
+                public string $country,
+                public string $zipCode,
+            ) {
+            }
+        }
+
+        class BenchmarkExternalValinorOrderItem
+        {
+            public function __construct(
+                public int $productId,
+                public string $name,
+                public int $quantity,
+                public float $price,
+            ) {
+            }
+        }
+
+        class BenchmarkExternalValinorOrder
+        {
+            public function __construct(
+                public int $id,
+                public BenchmarkExternalValinorCustomer $customer,
+                public BenchmarkExternalValinorAddress $shippingAddress,
+                /** @var list<BenchmarkExternalValinorOrderItem> */
+                public array $items,
+                public float $total,
+                public string $status,
+            ) {
+            }
+        }
+    }
+
+    $valinorOrderClass = BenchmarkExternalValinorOrder::class;
+    $nestedResults['valinor-nested'] = $r = benchmark('Valinor map() Order', function () use ($valinorMapper, $complexOrderData, $valinorOrderClass) {
+        return $valinorMapper->map($valinorOrderClass, $complexOrderData);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+if ($libraries['symfony/serializer']) {
+    printSection('Symfony Serializer - Nested');
+
+    if (!class_exists('BenchmarkExternalSymfonyCustomer')) {
+        class BenchmarkExternalSymfonyCustomer
+        {
+            public int $id = 0;
+            public string $name = '';
+            public string $email = '';
+            public ?string $phone = null;
+            public bool $active = true;
+            /** @var list<string> */
+            public array $roles = [];
+        }
+
+        class BenchmarkExternalSymfonyAddress
+        {
+            public string $street = '';
+            public string $city = '';
+            public string $country = '';
+            public string $zipCode = '';
+        }
+
+        class BenchmarkExternalSymfonyOrderItem
+        {
+            public int $productId = 0;
+            public string $name = '';
+            public int $quantity = 0;
+            public float $price = 0.0;
+        }
+
+        class BenchmarkExternalSymfonyOrder
+        {
+            public int $id = 0;
+            public ?BenchmarkExternalSymfonyCustomer $customer = null;
+            public ?BenchmarkExternalSymfonyAddress $shippingAddress = null;
+            /** @var list<BenchmarkExternalSymfonyOrderItem> */
+            public array $items = [];
+            public float $total = 0.0;
+            public string $status = '';
+        }
+    }
+
+    $propertyInfo = new PropertyInfoExtractor([], [new PhpDocExtractor(), new ReflectionExtractor()]);
+    $nestedSerializer = new Serializer(
+        [new ObjectNormalizer(null, null, null, $propertyInfo), new ArrayDenormalizer()],
+        [new JsonEncoder()]
+    );
+
+    $symfonyOrderClass = BenchmarkExternalSymfonyOrder::class;
+    $nestedResults['symfony-nested'] = $r = benchmark('Symfony denormalize() Order', function () use ($nestedSerializer, $complexOrderData, $symfonyOrderClass) {
+        return $nestedSerializer->denormalize($complexOrderData, $symfonyOrderClass);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+if (!empty($nestedResults)) {
+    $baseline = $nestedResults['php-collective/dto-nested']['ops_per_sec'] ?? null;
+    if ($baseline) {
+        echo "\nRelative performance (nested, higher is better):\n\n";
+        printf("  %-40s %15s %15s\n", 'Library', 'Ops/sec', 'vs php-collective/dto');
+        echo "  " . str_repeat('-', 70) . "\n";
+
+        foreach ($nestedResults as $name => $result) {
+            $relative = $result['ops_per_sec'] / $baseline;
+            $relativeStr = sprintf('%.2fx', $relative);
+            if ($relative < 1) {
+                $relativeStr = sprintf('%.2fx slower', 1 / $relative);
+            } elseif ($relative > 1) {
+                $relativeStr = sprintf('%.2fx faster', $relative);
+            } else {
+                $relativeStr = 'baseline';
+            }
+
+            printf(
+                "  %-40s %15s %15s\n",
+                $name,
+                number_format($result['ops_per_sec'], 0) . '/s',
+                $relativeStr
+            );
+        }
+        echo "\n";
+    }
+}
 
 // ============================================================================
 // PART 3: Read Operations (Property Access)
