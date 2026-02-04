@@ -34,6 +34,7 @@ class DtoTest extends TestCase
     {
         parent::tearDown();
         Dto::setDefaultKeyType(null);
+        Dto::setDefaultJsonKeyType(null);
         Dto::setCollectionFactory(null);
     }
 
@@ -1164,5 +1165,128 @@ class DtoTest extends TestCase
         $clonedItems = $clone->getItems()->toArray();
         $this->assertNotSame($originalItems[0], $clonedItems[0]);
         $this->assertSame('Item 1', $clonedItems[0]->getName());
+    }
+
+    // ========== JSON SERIALIZABLE TESTS ==========
+
+    public function testJsonSerialize(): void
+    {
+        $dto = new SimpleDto(['name' => 'Test', 'count' => 5, 'active' => true]);
+
+        $array = $dto->jsonSerialize();
+
+        $this->assertSame('Test', $array['name']);
+        $this->assertSame(5, $array['count']);
+        $this->assertTrue($array['active']);
+    }
+
+    public function testJsonEncode(): void
+    {
+        $dto = new SimpleDto(['name' => 'Test', 'count' => 5]);
+
+        $json = json_encode($dto);
+
+        $this->assertJson($json);
+        $decoded = json_decode($json, true);
+        $this->assertSame('Test', $decoded['name']);
+        $this->assertSame(5, $decoded['count']);
+    }
+
+    public function testJsonEncodeWithNestedDto(): void
+    {
+        $dto = new NestedDto([
+            'title' => 'Container',
+            'simple' => [
+                'name' => 'Nested',
+                'count' => 10,
+            ],
+        ]);
+
+        $json = json_encode($dto);
+
+        $this->assertJson($json);
+        $decoded = json_decode($json, true);
+        $this->assertSame('Container', $decoded['title']);
+        $this->assertSame('Nested', $decoded['simple']['name']);
+    }
+
+    public function testDefaultJsonKeyType(): void
+    {
+        Dto::setDefaultJsonKeyType(Dto::TYPE_UNDERSCORED);
+
+        $this->assertSame(Dto::TYPE_UNDERSCORED, Dto::getDefaultJsonKeyType());
+    }
+
+    public function testJsonSerializeWithDefaultJsonKeyType(): void
+    {
+        Dto::setDefaultJsonKeyType(Dto::TYPE_UNDERSCORED);
+
+        $dto = new CollectionDto([
+            'arrayItems' => [
+                ['name' => 'Item 1'],
+            ],
+        ]);
+
+        $json = json_encode($dto);
+        $decoded = json_decode($json, true);
+
+        $this->assertArrayHasKey('array_items', $decoded);
+    }
+
+    public function testJsonSerializeWithDashedKeyType(): void
+    {
+        Dto::setDefaultJsonKeyType(Dto::TYPE_DASHED);
+
+        $dto = new CollectionDto([
+            'arrayItems' => [
+                ['name' => 'Item 1'],
+            ],
+        ]);
+
+        $json = json_encode($dto);
+        $decoded = json_decode($json, true);
+
+        $this->assertArrayHasKey('array-items', $decoded);
+    }
+
+    public function testJsonSerializeIndependentOfDefaultKeyType(): void
+    {
+        // Set different defaults for general use vs JSON
+        Dto::setDefaultKeyType(Dto::TYPE_UNDERSCORED);
+        Dto::setDefaultJsonKeyType(Dto::TYPE_DASHED);
+
+        $dto = new CollectionDto([
+            'array_items' => [
+                ['name' => 'Item 1'],
+            ],
+        ]);
+
+        // toArray() uses defaultKeyType (underscored)
+        $array = $dto->toArray();
+        $this->assertArrayHasKey('array_items', $array);
+
+        // jsonSerialize() uses defaultJsonKeyType (dashed)
+        $json = json_encode($dto);
+        $decoded = json_decode($json, true);
+        $this->assertArrayHasKey('array-items', $decoded);
+    }
+
+    public function testJsonSerializeUsesDefaultKeyTypeWhenJsonKeyTypeIsNull(): void
+    {
+        Dto::setDefaultKeyType(Dto::TYPE_UNDERSCORED);
+        Dto::setDefaultJsonKeyType(null);
+
+        $dto = new CollectionDto([
+            'array_items' => [
+                ['name' => 'Item 1'],
+            ],
+        ]);
+
+        // When defaultJsonKeyType is null, jsonSerialize passes null to toArray,
+        // which then uses defaultKeyType
+        $json = json_encode($dto);
+        $decoded = json_decode($json, true);
+
+        $this->assertArrayHasKey('array_items', $decoded);
     }
 }

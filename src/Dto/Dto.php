@@ -8,6 +8,7 @@ use ArrayAccess;
 use ArrayObject;
 use Countable;
 use InvalidArgumentException;
+use JsonSerializable;
 use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
 use Serializable;
@@ -15,7 +16,7 @@ use Throwable;
 use Traversable;
 use UnitEnum;
 
-abstract class Dto implements Serializable
+abstract class Dto implements Serializable, JsonSerializable
 {
     /**
      * Convert DTO to array. Implemented by generated DTOs with shaped array return types.
@@ -55,6 +56,14 @@ abstract class Dto implements Serializable
     protected static $collectionFactory = null;
 
     /**
+     * Default key type for JSON serialization. Can be set globally.
+     * If null, uses $defaultKeyType (which defaults to camelCase).
+     *
+     * @var string|null
+     */
+    protected static ?string $defaultJsonKeyType = null;
+
+    /**
      * Set the default key type for all DTOs.
      *
      * @param string|null $type One of TYPE_DEFAULT, TYPE_CAMEL, TYPE_UNDERSCORED, TYPE_DASHED
@@ -90,6 +99,39 @@ abstract class Dto implements Serializable
     public static function setCollectionFactory(?callable $factory): void
     {
         static::$collectionFactory = $factory;
+    }
+
+    /**
+     * Set the default key type for JSON serialization.
+     * This affects the output of jsonSerialize() and json_encode($dto).
+     *
+     * @param string|null $type One of TYPE_DEFAULT, TYPE_CAMEL, TYPE_UNDERSCORED, TYPE_DASHED, or null to use $defaultKeyType
+     *
+     * @return void
+     */
+    public static function setDefaultJsonKeyType(?string $type): void
+    {
+        static::$defaultJsonKeyType = $type;
+    }
+
+    /**
+     * Get the default key type for JSON serialization.
+     *
+     * @return string|null
+     */
+    public static function getDefaultJsonKeyType(): ?string
+    {
+        return static::$defaultJsonKeyType;
+    }
+
+    /**
+     * Specify data which should be serialized to JSON.
+     *
+     * @return array<string, mixed>
+     */
+    public function jsonSerialize(): array
+    {
+        return $this->toArray(static::$defaultJsonKeyType);
     }
 
     /**
