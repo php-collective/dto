@@ -87,6 +87,14 @@
                     "type": "string",
                     "description": "Factory class or method for creating the field value"
                 },
+                "transformFrom": {
+                    "type": "string",
+                    "description": "Callable to transform input values before hydration"
+                },
+                "transformTo": {
+                    "type": "string",
+                    "description": "Callable to transform output values after serialization"
+                },
                 "deprecated": {
                     "type": "string",
                     "description": "Deprecation message"
