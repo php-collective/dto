@@ -22,8 +22,6 @@ class FileRefResolver implements RefResolverInterface
 
     /**
      * @inheritDoc
-     *
-     * @param array<string, mixed>|string $options
      */
     public function resolve(string $ref, array $options = []): ?array
     {
@@ -52,7 +50,7 @@ class FileRefResolver implements RefResolverInterface
         }
 
         $schema = $this->resolveFragment($document, $fragment);
-        if ($schema === null || !is_array($schema)) {
+        if ($schema === null) {
             return null;
         }
 
@@ -70,7 +68,7 @@ class FileRefResolver implements RefResolverInterface
     protected function splitRef(string $ref): array
     {
         $parts = explode('#', $ref, 2);
-        $path = $parts[0] ?? '';
+        $path = $parts[0];
         $fragment = $parts[1] ?? '';
 
         if ($path === '') {

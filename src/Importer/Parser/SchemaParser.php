@@ -578,7 +578,10 @@ class SchemaParser implements ParserInterface
      */
     protected function fallbackTitleFromRef(string $ref): string
     {
-        $path = parse_url($ref, PHP_URL_PATH) ?? $ref;
+        $path = parse_url($ref, PHP_URL_PATH);
+        if ($path === false || $path === null) {
+            $path = $ref;
+        }
         $baseName = pathinfo($path, PATHINFO_FILENAME);
 
         return $baseName !== '' ? $baseName : 'Object';
