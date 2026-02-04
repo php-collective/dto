@@ -123,7 +123,7 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 
 - **Types**: `int`, `float`, `string`, `bool`, `array`, `mixed`, DTOs, classes, enums
 - **Union types**: `int|string`, `int|float|string` (PHP 8.0+)
-- **Collections**: `'type' => 'Item[]', 'collection' => true` with add/get/has methods
+- **Collections**: `'type' => 'Item[]', 'collection' => true` with add/remove/get/has methods
 - **Associative collections**: keyed access with `'associative' => true`
 - **Immutable DTOs**: `'immutable' => true` with `with*()` methods
 - **Default values**: `'defaultValue' => 0`
