@@ -13,17 +13,6 @@
 	protected const HAS_FAST_PATH = true;
 
 	/**
-	 * Pre-computed setter method names for fast lookup.
-	 *
-	 * @var array<string, string>
-	 */
-	protected static array $_setters = [
-{% for field in fields %}
-		'{{ field.name }}' => '{% if immutable %}with{% else %}set{% endif %}{{ field.name | stripLeadingUnderscore | camelize }}',
-{% endfor %}
-	];
-
-	/**
 	 * Optimized array assignment without dynamic method calls.
 	 *
 	 * @param array<string, mixed> $data

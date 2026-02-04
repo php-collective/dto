@@ -114,9 +114,10 @@ class SchemaBuilder implements BuilderInterface
 
         $fieldsStr = implode("\n", $fieldLines);
         $extendsAttr = $extends ? ' extends="' . $this->escapeXml($extends) . '"' : '';
+        $escapedName = $this->escapeXml($name);
 
         return <<<XML
-	<dto name="{$name}"{$extendsAttr}>
+	<dto name="{$escapedName}"{$extendsAttr}>
 {$fieldsStr}
 	</dto>
 XML;
