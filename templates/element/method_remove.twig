@@ -1,0 +1,28 @@
+{% if collectionType and singular %}
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param {{ keyType|default('string|int') }} $key
+	 *
+	 * @return $this
+	 */
+	public function remove{{ singular|stripLeadingUnderscore|camelize }}($key)
+	{
+		if ($this->{{ name }} === null) {
+			return $this;
+		}
+
+{% if collectionType == 'array' %}
+		unset($this->{{ name }}[$key]);
+{% else %}
+		if ($this->{{ name }}->offsetExists($key)) {
+			$this->{{ name }}->offsetUnset($key);
+		}
+{% endif %}
+		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
+
+		return $this;
+	}
+{% endif -%}

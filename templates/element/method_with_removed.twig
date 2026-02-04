@@ -1,0 +1,31 @@
+{% if collection %}
+	/**
+{% if deprecated is not null %}
+	 * @deprecated {{ deprecated }}
+	 *
+{% endif %}
+	 * @param {{ keyType|default('string|int') }} $key
+	 *
+	 * @return static
+	 */
+	public function withRemoved{{ singular|stripLeadingUnderscore|camelize }}($key)
+	{
+		$new = clone $this;
+
+		if ($new->{{ name }} === null) {
+			return $new;
+		}
+
+{% if collectionType == 'array' %}
+		unset($new->{{ name }}[$key]);
+{% else %}
+		$new->{{ name }} = clone $new->{{ name }};
+		if ($new->{{ name }}->offsetExists($key)) {
+			$new->{{ name }}->offsetUnset($key);
+		}
+{% endif %}
+		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
+
+		return $new;
+	}
+{% endif -%}

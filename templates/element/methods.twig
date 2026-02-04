@@ -6,6 +6,6 @@
 {{ blank }}{% include 'element/method_get.twig' with fieldVars only -%}
 {% if field.nullable %}{{ blank }}{% include 'element/method_get_or_fail.twig' with fieldVars only %}{% endif -%}
 {% if field.nullable or field.defaultValue is null %}{{ blank }}{% include 'element/method_has.twig' with fieldVars only %}{% endif -%}
-{% if immutable %}{% if field.collection %}{{ blank }}{% include 'element/method_with_added.twig' with fieldVars only %}{% endif %}{% else %}{% if field.collectionType and field.singular %}{{ blank }}{% include 'element/method_add.twig' with fieldVars only %}{% endif %}{% endif -%}
+{% if immutable %}{% if field.collection %}{{ blank }}{% include 'element/method_with_added.twig' with fieldVars only %}{{ blank }}{% include 'element/method_with_removed.twig' with fieldVars only %}{% endif %}{% else %}{% if field.collectionType and field.singular %}{{ blank }}{% include 'element/method_add.twig' with fieldVars only %}{{ blank }}{% include 'element/method_remove.twig' with fieldVars only %}{% endif %}{% endif -%}
 {% if not loop.last %}{{ blank }}{% endif -%}
 {% endfor -%}
