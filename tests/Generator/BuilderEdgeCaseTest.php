@@ -1483,8 +1483,8 @@ PHP;
         $builder = new Builder($engine, $config);
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage("Field name collision in 'User' DTO");
-        $this->expectExceptionMessage("fields '_data' and 'data' would generate identical method names");
+        $this->expectExceptionMessage('Field name collision in `User` DTO');
+        $this->expectExceptionMessage('fields `_data` and `data` would generate identical method names');
 
         $builder->build($this->tempDir . '/config/');
     }
