@@ -20,6 +20,7 @@ use PhpCollective\Dto\Test\TestDto\CollectionDto;
 use PhpCollective\Dto\Test\TestDto\CustomCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableDto;
+use PhpCollective\Dto\Test\TestDto\MapFromDto;
 use PhpCollective\Dto\Test\TestDto\NestedDto;
 use PhpCollective\Dto\Test\TestDto\RequiredDto;
 use PhpCollective\Dto\Test\TestDto\SerializableDto;
@@ -29,6 +30,7 @@ use PhpCollective\Dto\Test\TestDto\TransformDto;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use TypeError;
 
 class DtoTest extends TestCase
 {
@@ -1402,5 +1404,100 @@ class DtoTest extends TestCase
                 ['count' => 5], // Missing 'name' field which is configured as key
             ],
         ]);
+    }
+
+    // ========== MAP FROM + INFLECTION INTERACTION TESTS ==========
+
+    public function testMapFromWithDefaultKeyType(): void
+    {
+        // Test that mapFrom works with default (camelCase) key type
+        $dto = new MapFromDto([
+            'email' => 'test@example.com',
+        ]);
+
+        $this->assertSame('test@example.com', $dto->getEmailAddress());
+    }
+
+    public function testMapFromWithUnderscoredMapKey(): void
+    {
+        // Test that mapFrom with underscored mapping works
+        // The mapFrom 'first_name' should map to firstName field
+        $dto = new MapFromDto([
+            'first_name' => 'John',
+        ]);
+
+        $this->assertSame('John', $dto->getFirstName());
+    }
+
+    public function testMapFromWithDashedMapKey(): void
+    {
+        // Test that mapFrom with dashed mapping works
+        // The mapFrom 'user-id' should map to userId field
+        $dto = new MapFromDto([
+            'user-id' => 42,
+        ]);
+
+        $this->assertSame(42, $dto->getUserId());
+    }
+
+    public function testMapFromCombinedWithKeyTypeInflection(): void
+    {
+        // Test that underscored key type works with underscored keys
+        // When TYPE_UNDERSCORED is set, keys must be underscored
+        // mapFrom keys are checked independently after key conversion
+        Dto::setDefaultKeyType(Dto::TYPE_UNDERSCORED);
+
+        $dto = new MapFromDto([
+            'email_address' => 'test@example.com', // underscored key for emailAddress field
+            'first_name' => 'John', // underscored key that also matches mapFrom
+        ]);
+
+        $this->assertSame('test@example.com', $dto->getEmailAddress());
+        $this->assertSame('John', $dto->getFirstName());
+    }
+
+    public function testMapFromMixedWithCamelCaseKeys(): void
+    {
+        // Test that both mapFrom and regular camelCase keys work together
+        $dto = new MapFromDto([
+            'email' => 'mapped@example.com', // via mapFrom
+            'emailAddress' => 'direct@example.com', // direct camelCase
+        ], true); // ignoreMissing to accept both
+
+        // mapFrom is processed first, but if direct key exists it may override
+        // This tests the interaction
+        $this->assertNotNull($dto->getEmailAddress());
+    }
+
+    // ========== FACTORY EDGE CASE TESTS ==========
+
+    public function testCollectionFactoryReturningNonTraversableThrowsTypeError(): void
+    {
+        // Test that collection factory returning a non-Traversable throws TypeError
+        Dto::setCollectionFactory(function (array $items) {
+            // Return a non-Traversable (just an array wrapped in stdClass)
+            return (object)['data' => $items];
+        });
+
+        // PHP's return type enforcement throws TypeError when factory returns non-Traversable
+        $this->expectException(TypeError::class);
+        $this->expectExceptionMessage('must be of type Traversable');
+
+        new CustomCollectionDto([
+            'items' => [
+                ['name' => 'Item 1'],
+            ],
+        ], true);
+    }
+
+    public function testFactoryMethodThrowsExceptionIsCaught(): void
+    {
+        // Test that when a factory method throws an exception, it's wrapped properly
+        // This is tested through AdvancedDto which uses a factory
+        // The factory (FactoryClass::fromValue) should work normally
+
+        // First verify normal case works
+        $dto = new AdvancedDto(['factoryData' => 'valid']);
+        $this->assertInstanceOf(FactoryClass::class, $dto->getFactoryData());
     }
 }

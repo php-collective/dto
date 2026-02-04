@@ -404,4 +404,88 @@ class ImporterTest extends TestCase
         $this->assertArrayHasKey('Test', $result);
         $this->assertArrayNotHasKey('Object', $result);
     }
+
+    /**
+     * Tests that external $ref references gracefully skip when cannot be resolved.
+     *
+     * When an external $ref (like https://example.com/schema.json) cannot be resolved
+     * (e.g., network failure, file not found), the field should be skipped without error.
+     *
+     * @return void
+     */
+    public function testExternalRefGracefullySkipsWhenUnresolved(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'User',
+            'properties' => [
+                'name' => ['type' => 'string'],
+                // External $ref that cannot be resolved
+                'address' => ['$ref' => 'https://example.com/nonexistent-schema.json'],
+                'age' => ['type' => 'integer'],
+            ],
+        ];
+
+        $result = $this->importer->parseArray($schema);
+
+        $this->assertArrayHasKey('User', $result);
+        // Valid fields should be parsed
+        $this->assertArrayHasKey('name', $result['User']);
+        $this->assertArrayHasKey('age', $result['User']);
+        // Unresolvable external $ref should be skipped (not cause an error)
+        $this->assertArrayNotHasKey('address', $result['User']);
+    }
+
+    /**
+     * Tests that external $ref in array items gracefully handles unresolvable refs.
+     *
+     * @return void
+     */
+    public function testExternalRefInArrayItemsGracefullySkips(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Order',
+            'properties' => [
+                'id' => ['type' => 'integer'],
+                'items' => [
+                    'type' => 'array',
+                    'items' => ['$ref' => 'https://example.com/nonexistent-line-item.json'],
+                ],
+            ],
+        ];
+
+        $result = $this->importer->parseArray($schema);
+
+        $this->assertArrayHasKey('Order', $result);
+        $this->assertArrayHasKey('id', $result['Order']);
+        // Array with unresolvable items ref should still exist but with generic array type
+        $this->assertArrayHasKey('items', $result['Order']);
+        $this->assertSame('array', $result['Order']['items']['type']);
+    }
+
+    /**
+     * Tests that missing local $ref (within same file) is handled gracefully.
+     *
+     * @return void
+     */
+    public function testMissingLocalRefGracefullySkips(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'title' => 'Profile',
+            'properties' => [
+                'username' => ['type' => 'string'],
+                // Reference to a definition that doesn't exist
+                'settings' => ['$ref' => '#/components/schemas/NonExistentSettings'],
+            ],
+        ];
+
+        $result = $this->importer->parseArray($schema);
+
+        $this->assertArrayHasKey('Profile', $result);
+        $this->assertArrayHasKey('username', $result['Profile']);
+        // Missing local $ref should be skipped
+        $this->assertArrayNotHasKey('settings', $result['Profile']);
+    }
 }
