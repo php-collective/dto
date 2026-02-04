@@ -121,6 +121,14 @@ class SchemaParser implements ParserInterface
                 continue;
             }
 
+            if (!empty($details['x-enum-class']) && is_string($details['x-enum-class'])) {
+                $enumClass = $details['x-enum-class'];
+                if (!str_starts_with($enumClass, '\\')) {
+                    $enumClass = '\\' . $enumClass;
+                }
+                $details['type'] = $enumClass;
+            }
+
             // Resolve $ref to actual schema
             if (!empty($details['$ref'])) {
                 $resolved = $this->resolveRef($details['$ref'], $options);

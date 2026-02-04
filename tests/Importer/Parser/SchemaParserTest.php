@@ -223,6 +223,27 @@ class SchemaParserTest extends TestCase
     /**
      * @return void
      */
+    public function testParseEnumWithClassExtension(): void
+    {
+        $schema = [
+            'type' => 'object',
+            'properties' => [
+                'status' => [
+                    'type' => 'string',
+                    'enum' => ['active', 'inactive', 'pending'],
+                    'x-enum-class' => 'App\\Enum\\Status',
+                ],
+            ],
+        ];
+
+        $result = $this->parser->parse($schema)->result();
+
+        $this->assertSame('\\App\\Enum\\Status', $result['Object']['status']['type']);
+    }
+
+    /**
+     * @return void
+     */
     public function testParseNumberType(): void
     {
         $schema = [

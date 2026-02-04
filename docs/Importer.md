@@ -353,11 +353,30 @@ $schema = $importer->importArray($data, ['format' => 'php']);
 
 Note: Only `date-time` and `date` formats are mapped to class types. Other formats like `email`, `uri`, `uuid` remain as `string` since they are validation hints rather than type indicators.
 
+### Enums with `x-enum-class`
+
+The importer can map JSON Schema enums to PHP enums if you provide an explicit class hint via a vendor extension.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pending", "confirmed"],
+      "x-enum-class": "App\\Enum\\OrderStatus"
+    }
+  }
+}
+```
+
+The importer will set the field type to `\App\Enum\OrderStatus` in the generated config.
+
 ## Limitations
 
 The importer is a scaffolding tool. Generated configs typically need manual refinement:
 
-1. **No enum detection** - Enums are imported as `string`
+1. **Enum detection needs a hint** - Use `x-enum-class` or update the field manually
 2. **No custom types** - DateTime, custom classes need manual configuration
 3. **Limited validation** - Only `required` from JSON Schema is used
 4. **Type inference from data** - Single example may not represent all cases
