@@ -117,6 +117,35 @@ Field::union('id', 'int', 'string')->required()
 
 Both backed enums and unit enums are supported.
 
+### Quick Examples
+
+Backed enum from string (recommended):
+
+```php
+enum OrderStatus: string
+{
+    case Pending = 'pending';
+    case Confirmed = 'confirmed';
+}
+
+$dto = new OrderDto(['status' => 'confirmed']);
+$dto->getStatus(); // OrderStatus::Confirmed
+$dto->toArray();   // ['status' => 'confirmed']
+```
+
+Unit enum from case name:
+
+```php
+enum Priority
+{
+    case High;
+    case Low;
+}
+
+$dto = new TaskDto(['priority' => 'High']);
+$dto->getPriority(); // Priority::High
+```
+
 ### Backed Enums (Recommended)
 
 Backed enums have scalar values and are the most common:

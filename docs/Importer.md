@@ -363,6 +363,21 @@ The importer is a scaffolding tool. Generated configs typically need manual refi
 4. **Type inference from data** - Single example may not represent all cases
 5. **Remote `$ref` not supported** - URL references (http/https) require a custom resolver
 
+Example:
+```json
+{
+  "type": "object",
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["pending", "confirmed"]
+    }
+  }
+}
+```
+
+The importer will generate a `string` field for `status`. You must update it to `Field::enum(...)` (or set `type` to your enum class) in the DTO config.
+
 ## Example: API Response
 
 ```php
