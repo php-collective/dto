@@ -1371,4 +1371,36 @@ class DtoTest extends TestCase
 
         $this->assertContains('items', $updated->touchedFields());
     }
+
+    public function testImmutableWithArrayDoesDefensiveCopy(): void
+    {
+        $dto = new ImmutableCollectionDto();
+        $originalArray = [
+            SimpleDto::create(['name' => 'Item 1']),
+            SimpleDto::create(['name' => 'Item 2']),
+        ];
+
+        $updated = $dto->withArrayItems($originalArray);
+
+        // Modify original array after passing to withArrayItems
+        $originalArray[0] = SimpleDto::create(['name' => 'Modified']);
+
+        // Updated DTO should NOT be affected by changes to original array
+        $items = $updated->getArrayItems();
+        $this->assertSame('Item 1', $items[0]->getName());
+    }
+
+    public function testCollectionKeyFieldMissingThrowsException(): void
+    {
+        // Try to create associative collection where key field is missing
+        // associativeItems uses 'name' as key field
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Key field `name` not found in collection element');
+
+        new AdvancedDto([
+            'associativeItems' => [
+                ['count' => 5], // Missing 'name' field which is configured as key
+            ],
+        ]);
+    }
 }

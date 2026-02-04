@@ -19,7 +19,11 @@
 		}
 {% endif %}
 		$new = clone $this;
+{% if isArray or typeHint == 'array' %}
+		$new->{{ name }} = $new->cloneArray(${{ name }});
+{% else %}
 		$new->{{ name }} = ${{ name }};
+{% endif %}
 		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;

@@ -164,7 +164,8 @@ class ImmutableCollectionDto extends AbstractImmutableDto
     public function withArrayItems(array $arrayItems): static
     {
         $new = clone $this;
-        $new->arrayItems = $arrayItems;
+        // Defensive copy to prevent external modification breaking immutability
+        $new->arrayItems = $new->cloneArray($arrayItems);
         $new->_touchedFields['arrayItems'] = true;
 
         return $new;
