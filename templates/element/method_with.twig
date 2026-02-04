@@ -10,7 +10,11 @@
 	public function with{{ name|stripLeadingUnderscore|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable %} = null{% endif %})
 	{
 		$new = clone $this;
+{% if isArray or typeHint == 'array' %}
+		$new->{{ name }} = ${{ name }} !== null ? $new->cloneArray(${{ name }}) : null;
+{% else %}
 		$new->{{ name }} = ${{ name }};
+{% endif %}
 		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;

@@ -776,6 +776,8 @@ abstract class Dto implements Serializable, JsonSerializable
      * @param string|int $index
      * @param string|bool $key
      *
+     * @throws \RuntimeException If key field is specified but not present in element.
+     *
      * @return array
      */
     protected function addValueToArrayCollection(array $collection, $element, $arrayElement, $index, $key): array
@@ -791,8 +793,15 @@ abstract class Dto implements Serializable, JsonSerializable
             return $collection;
         }
 
-        if (is_array($arrayElement) && isset($arrayElement[$key])) {
+        if (is_array($arrayElement) && array_key_exists($key, $arrayElement)) {
             $index = $arrayElement[$key];
+        } elseif (is_array($arrayElement)) {
+            throw new RuntimeException(sprintf(
+                'Key field `%s` not found in collection element at index `%s`. '
+                . 'Either ensure all elements have this field or remove the key configuration.',
+                $key,
+                $index,
+            ));
         }
 
         $collection[(string)$index] = $element;
