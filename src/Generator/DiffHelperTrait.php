@@ -20,7 +20,7 @@ trait DiffHelperTrait
      *
      * @return void
      */
-    protected function _displayDiff(string $oldContent, string $newContent): void
+    protected function displayDiff(string $oldContent, string $newContent): void
     {
         $differ = new Differ(new DiffOnlyOutputBuilder());
         $array = $differ->diffToArray($oldContent, $newContent);

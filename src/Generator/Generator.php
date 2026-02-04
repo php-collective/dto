@@ -114,7 +114,7 @@ class Generator
             if ($isModified) {
                 $this->io->out('Changes in ' . $name . ' DTO:', 1, IoInterface::VERBOSE);
                 $oldContent = file_get_contents($foundDtos[$name]) ?: '';
-                $this->_displayDiff($oldContent, $content);
+                $this->displayDiff($oldContent, $content);
             }
             if (!$options['dryRun']) {
                 file_put_contents($target, $content);
@@ -188,7 +188,7 @@ class Generator
             if ($isModified) {
                 $this->io->out('Changes in ' . $name . ' Mapper:', 1, IoInterface::VERBOSE);
                 $oldContent = file_get_contents($foundMappers[$name]) ?: '';
-                $this->_displayDiff($oldContent, $content);
+                $this->displayDiff($oldContent, $content);
             }
             if (!$options['dryRun']) {
                 file_put_contents($target, $content);
