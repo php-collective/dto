@@ -11,12 +11,11 @@ use InvalidArgumentException;
 use JsonSerializable;
 use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
-use Serializable;
 use Throwable;
 use Traversable;
 use UnitEnum;
 
-abstract class Dto implements Serializable, JsonSerializable
+abstract class Dto implements JsonSerializable
 {
     /**
      * Convert DTO to array. Implemented by generated DTOs with shaped array return types.
@@ -129,28 +128,6 @@ abstract class Dto implements Serializable, JsonSerializable
         $jsonUtil = new Json();
 
         return new static($jsonUtil->decode($data, true), $ignoreMissing);
-    }
-
-    /**
-     * Constructs the object
-     *
-     * @link https://php.net/manual/en/serializable.unserialize.php
-     *
-     * @deprecated Use __unserialize() instead. The Serializable interface is deprecated in PHP 8.1+.
-     *
-     * @param string $data
-     * @param bool $ignoreMissing
-     *
-     * @return static
-     */
-    public function unserialize(string $data, bool $ignoreMissing = false)
-    {
-        $jsonUtil = new Json();
-
-        $new = clone($this);
-        $new->setFromArray($jsonUtil->decode($data, true) ?: [], $ignoreMissing, static::TYPE_DEFAULT)->setDefaults()->validate();
-
-        return $new;
     }
 
     /**
@@ -891,7 +868,9 @@ abstract class Dto implements Serializable, JsonSerializable
      */
     public function __toString(): string
     {
-        return $this->serialize();
+        $jsonUtil = new Json();
+
+        return $jsonUtil->encode($this->touchedToArray());
     }
 
     /**
@@ -908,22 +887,6 @@ abstract class Dto implements Serializable, JsonSerializable
             'extends' => get_parent_class($this),
             'immutable' => $this instanceof AbstractImmutableDto,
         ];
-    }
-
-    /**
-     * String representation of object
-     *
-     * @link https://php.net/manual/en/serializable.serialize.php
-     *
-     * @deprecated Use __serialize() instead. The Serializable interface is deprecated in PHP 8.1+.
-     *
-     * @return string the string representation of the object or null
-     */
-    public function serialize(): string
-    {
-        $jsonUtil = new Json();
-
-        return $jsonUtil->encode($this->touchedToArray());
     }
 
     /**

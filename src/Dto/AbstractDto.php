@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Dto;
 
-use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
 
 abstract class AbstractDto extends Dto
@@ -19,26 +18,6 @@ abstract class AbstractDto extends Dto
     public function fromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
         return $this->setFromArray($data, $ignoreMissing, $type);
-    }
-
-    /**
-     * Constructs the object
-     *
-     * @link https://php.net/manual/en/serializable.unserialize.php
-     *
-     * @deprecated Use __unserialize() instead. The Serializable interface is deprecated in PHP 8.1+.
-     *
-     * @param string $serialized
-     * @param bool $ignoreMissing
-     *
-     * @return $this
-     */
-    public function unserialize($serialized, $ignoreMissing = false)
-    {
-        $jsonUtil = new Json();
-        $this->fromArray($jsonUtil->decode($serialized, true) ?: [], $ignoreMissing);
-
-        return $this;
     }
 
     /**

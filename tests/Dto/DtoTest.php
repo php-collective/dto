@@ -152,10 +152,10 @@ class DtoTest extends TestCase
         $this->assertFalse(isset($dto->count));
     }
 
-    public function testSerialize(): void
+    public function testJsonStringOutput(): void
     {
         $dto = new SimpleDto(['name' => 'Test', 'count' => 5]);
-        $serialized = $dto->serialize();
+        $serialized = (string)$dto;
         $this->assertJson($serialized);
         $decoded = json_decode($serialized, true);
         $this->assertSame('Test', $decoded['name']);
@@ -578,7 +578,7 @@ class DtoTest extends TestCase
     public function testFromUnserialized(): void
     {
         $dto = new SimpleDto(['name' => 'Test', 'count' => 5]);
-        $serialized = $dto->serialize();
+        $serialized = (string)$dto;
 
         $unserialized = SimpleDto::fromUnserialized($serialized);
 
@@ -855,18 +855,6 @@ class DtoTest extends TestCase
         $this->assertSame('original', $clone->getFactoryData()->value);
     }
 
-    public function testUnserializeMethodOnAbstractDto(): void
-    {
-        $dto = new SimpleDto(['name' => 'Original', 'count' => 1]);
-        $serialized = $dto->serialize();
-
-        $newDto = new SimpleDto();
-        $result = $newDto->unserialize($serialized);
-
-        $this->assertSame('Original', $result->getName());
-        $this->assertSame(1, $result->getCount());
-    }
-
     public function testFromArrayWithUnderscoredType(): void
     {
         $dto = new CollectionDto();
@@ -940,34 +928,6 @@ class DtoTest extends TestCase
         // Factory NOT called because CollectionDto uses ArrayObject collectionType
         $this->assertFalse($factoryCalled);
         $this->assertInstanceOf(ArrayObject::class, $dto->getItems());
-    }
-
-    public function testAbstractDtoUnserializeModifiesSelf(): void
-    {
-        // AbstractDto::unserialize() modifies $this and returns $this
-        // (unlike Dto::unserialize() which returns a clone)
-        $dto = new SimpleDto(['name' => 'Original']);
-        $json = '{"name":"FromJson","count":42}';
-
-        $result = $dto->unserialize($json);
-
-        // Result is the same instance (AbstractDto behavior)
-        $this->assertSame($dto, $result);
-
-        // DTO was modified in place
-        $this->assertSame('FromJson', $dto->getName());
-        $this->assertSame(42, $dto->getCount());
-    }
-
-    public function testAbstractDtoUnserializeWithIgnoreMissing(): void
-    {
-        $dto = new SimpleDto();
-        $json = '{"name":"Test","unknownField":"ignored"}';
-
-        // Should not throw with ignoreMissing
-        $result = $dto->unserialize($json, true);
-
-        $this->assertSame('Test', $result->getName());
     }
 
     public function testCloneWithScalarCollectionValues(): void
