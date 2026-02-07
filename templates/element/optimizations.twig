@@ -36,8 +36,9 @@
 			$this->_touchedFields['{{ field.name }}'] = true;
 		}
 {% elseif field.collection and field.collectionType != 'array' %}
+{% set adapter = getCollectionAdapter(field.collectionType) %}
 		if (isset($data['{{ field.name }}'])) {
-			$collection = new {{ field.collectionType }}();
+			$collection = {{ adapter.getCreateEmptyCode(field.collectionType) }};
 			/** @var array $items */
 			$items = $data['{{ field.name }}'];
 			foreach ($items as $key => $item) {
@@ -54,8 +55,10 @@
 					$key = $data['{{ field.name }}'][$key]['{{ field.key }}'];
 				}
 				$collection[$key] = $item;
+{% elseif field.associative %}
+				$collection[$key] = $item;
 {% else %}
-				$collection->append($item);
+				{{ adapter.getAppendCode('$collection', '$item') }}
 {% endif %}
 			}
 			$this->{{ field.name }} = $collection;
