@@ -40,7 +40,7 @@
 			$collection = new {{ field.collectionType }}();
 			/** @var array $items */
 			$items = $data['{{ field.name }}'];
-			foreach ($items as $item) {
+			foreach ($items as $key => $item) {
 {% if field.transformFrom %}
 				$item = $this->transformValue('{{ field.transformFrom }}', $item);
 {% endif %}
@@ -49,7 +49,14 @@
 					$item = new {{ field.singularClass }}($item);
 				}
 {% endif %}
+{% if field.associative and field.key %}
+				if (is_array($data['{{ field.name }}'][$key]) && isset($data['{{ field.name }}'][$key]['{{ field.key }}'])) {
+					$key = $data['{{ field.name }}'][$key]['{{ field.key }}'];
+				}
+				$collection[$key] = $item;
+{% else %}
 				$collection->append($item);
+{% endif %}
 			}
 			$this->{{ field.name }} = $collection;
 			$this->_touchedFields['{{ field.name }}'] = true;
