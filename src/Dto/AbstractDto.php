@@ -18,6 +18,15 @@ abstract class AbstractDto extends Dto
      */
     public function fromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
+        if ($type === null && static::HAS_FAST_PATH) {
+            if (!$ignoreMissing) {
+                $this->validateFieldNames($data);
+            }
+            $this->setFromArrayFast($data);
+
+            return $this;
+        }
+
         return $this->setFromArray($data, $ignoreMissing, $type);
     }
 

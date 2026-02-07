@@ -492,11 +492,15 @@ abstract class Dto implements JsonSerializable
                 if (!$elementType) {
                     throw new RuntimeException('Missing singularType for collection ' . $collectionType);
                 }
+                $key = $fieldMeta['associative'];
+                if ($fieldMeta['associative'] && $fieldMeta['key']) {
+                    $key = $fieldMeta['key'];
+                }
                 // Check if using custom collection factory
                 if (static::$collectionFactory !== null && $this->isCustomCollectionType($collectionType)) {
                     $value = $this->createCustomCollection($elementType, $value, $ignoreMissing, $type);
                 } else {
-                    $value = $this->createCollection($collectionType, $elementType, $value, $ignoreMissing, $type);
+                    $value = $this->createCollection($collectionType, $elementType, $value, $ignoreMissing, $type, $key);
                 }
             } elseif ($fieldMeta['collectionType']) {
                 $elementType = $fieldMeta['singularType'];
@@ -692,16 +696,23 @@ abstract class Dto implements JsonSerializable
      * @param \ArrayObject|array $arrayObject
      * @param bool $ignoreMissing
      * @param string|null $type
+     * @param string|bool $key
      *
      * @return \ArrayObject
      */
-    protected function createCollection(string $collectionType, string $elementType, $arrayObject, bool $ignoreMissing, ?string $type = null): ArrayObject
-    {
+    protected function createCollection(
+        string $collectionType,
+        string $elementType,
+        $arrayObject,
+        bool $ignoreMissing,
+        ?string $type = null,
+        $key = false,
+    ): ArrayObject {
         /** @var \ArrayObject $collection */
         $collection = new $collectionType();
-        foreach ($arrayObject as $arrayElement) {
+        foreach ($arrayObject as $index => $arrayElement) {
             if (!is_array($arrayElement)) {
-                $collection->append(new $elementType());
+                $this->addValueToCollection($collection, new $elementType(), $arrayElement, $index, $key);
 
                 continue;
             }
@@ -709,19 +720,52 @@ abstract class Dto implements JsonSerializable
             if (!array_is_list($arrayElement)) {
                 /** @var \PhpCollective\Dto\Dto\Dto $dto */
                 $dto = new $elementType($arrayElement, $ignoreMissing, $type);
-                $collection->append($dto);
+                $this->addValueToCollection($collection, $dto, $arrayElement, $index, $key);
 
                 continue;
             }
 
-            foreach ($arrayElement as $arrayElementItem) {
+            foreach ($arrayElement as $i => $arrayElementItem) {
                 /** @var \PhpCollective\Dto\Dto\Dto $dto */
                 $dto = new $elementType($arrayElementItem, $ignoreMissing, $type);
-                $collection->append($dto);
+                $this->addValueToCollection($collection, $dto, $arrayElementItem, $i, $key);
             }
         }
 
         return $collection;
+    }
+
+    /**
+     * @param \ArrayObject $collection
+     * @param mixed $value
+     * @param mixed $arrayElement
+     * @param string|int $index
+     * @param string|bool $key
+     *
+     * @return void
+     */
+    protected function addValueToCollection(ArrayObject $collection, $value, $arrayElement, $index, $key): void
+    {
+        if ($key === false) {
+            $collection->append($value);
+
+            return;
+        }
+
+        if ($key === true) {
+            $collection[$index] = $value;
+
+            return;
+        }
+
+        // Use the specified key field from the array element
+        if (is_array($arrayElement) && isset($arrayElement[$key])) {
+            $collection[$arrayElement[$key]] = $value;
+
+            return;
+        }
+
+        $collection[$index] = $value;
     }
 
     /**

@@ -16,6 +16,7 @@ use PhpCollective\Dto\Test\Generator\Fixtures\StringableClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\ToArrayClass;
 use PhpCollective\Dto\Test\Generator\Fixtures\UnitEnum;
 use PhpCollective\Dto\Test\TestDto\AdvancedDto;
+use PhpCollective\Dto\Test\TestDto\AssociativeCollectionDto;
 use PhpCollective\Dto\Test\TestDto\CollectionDto;
 use PhpCollective\Dto\Test\TestDto\CustomCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableCollectionDto;
@@ -1459,5 +1460,175 @@ class DtoTest extends TestCase
         // First verify normal case works
         $dto = new AdvancedDto(['factoryData' => 'valid']);
         $this->assertInstanceOf(FactoryClass::class, $dto->getFactoryData());
+    }
+
+    /**
+     * Test ArrayObject collection with associative=true but no key field.
+     * Should preserve original keys from input data.
+     */
+    public function testAssociativeCollectionByIndex(): void
+    {
+        $data = [
+            'itemsByIndex' => [
+                'first' => ['name' => 'Item 1', 'count' => 1],
+                'second' => ['name' => 'Item 2', 'count' => 2],
+            ],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getItemsByIndex();
+
+        $this->assertInstanceOf(ArrayObject::class, $items);
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('first', (array)$items);
+        $this->assertArrayHasKey('second', (array)$items);
+        $this->assertSame('Item 1', $items['first']->getName());
+        $this->assertSame('Item 2', $items['second']->getName());
+    }
+
+    /**
+     * Test ArrayObject collection with associative=true and key='name'.
+     * Should use the 'name' field value as the collection key.
+     */
+    public function testAssociativeCollectionByKeyField(): void
+    {
+        $data = [
+            'itemsByName' => [
+                ['name' => 'alpha', 'count' => 1],
+                ['name' => 'beta', 'count' => 2],
+                ['name' => 'gamma', 'count' => 3],
+            ],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getItemsByName();
+
+        $this->assertInstanceOf(ArrayObject::class, $items);
+        $this->assertCount(3, $items);
+        $this->assertArrayHasKey('alpha', (array)$items);
+        $this->assertArrayHasKey('beta', (array)$items);
+        $this->assertArrayHasKey('gamma', (array)$items);
+        $this->assertSame(1, $items['alpha']->getCount());
+        $this->assertSame(2, $items['beta']->getCount());
+        $this->assertSame(3, $items['gamma']->getCount());
+    }
+
+    /**
+     * Test array collection with associative=true and key='name'.
+     */
+    public function testAssociativeArrayCollectionByKeyField(): void
+    {
+        $data = [
+            'arrayItemsByName' => [
+                ['name' => 'one', 'count' => 10],
+                ['name' => 'two', 'count' => 20],
+            ],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getArrayItemsByName();
+
+        $this->assertIsArray($items);
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('one', $items);
+        $this->assertArrayHasKey('two', $items);
+        $this->assertSame(10, $items['one']->getCount());
+        $this->assertSame(20, $items['two']->getCount());
+    }
+
+    /**
+     * Test associative collection with TYPE_UNDERSCORED.
+     * This tests the setFromArray() path (non-fast-path).
+     */
+    public function testAssociativeCollectionWithTypeMapping(): void
+    {
+        $data = [
+            'items_by_name' => [
+                ['name' => 'foo', 'count' => 100],
+                ['name' => 'bar', 'count' => 200],
+            ],
+        ];
+
+        $dto = AssociativeCollectionDto::create($data, false, Dto::TYPE_UNDERSCORED);
+        $items = $dto->getItemsByName();
+
+        $this->assertInstanceOf(ArrayObject::class, $items);
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('foo', (array)$items);
+        $this->assertArrayHasKey('bar', (array)$items);
+        $this->assertSame(100, $items['foo']->getCount());
+        $this->assertSame(200, $items['bar']->getCount());
+    }
+
+    /**
+     * Test associative collection keys preserved during serialization round-trip.
+     */
+    public function testAssociativeCollectionSerializationRoundTrip(): void
+    {
+        $data = [
+            'itemsByName' => [
+                ['name' => 'x', 'count' => 1],
+                ['name' => 'y', 'count' => 2],
+            ],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $serialized = $dto->serialize();
+
+        $restored = new AssociativeCollectionDto();
+        $restored->unserialize($serialized);
+
+        $items = $restored->getItemsByName();
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('x', (array)$items);
+        $this->assertArrayHasKey('y', (array)$items);
+        $this->assertSame(1, $items['x']->getCount());
+        $this->assertSame(2, $items['y']->getCount());
+    }
+
+    /**
+     * Test associative collection with already-keyed input data preserves keys.
+     */
+    public function testAssociativeCollectionWithPreKeyedData(): void
+    {
+        $data = [
+            'itemsByName' => [
+                'custom_key_1' => ['name' => 'a', 'count' => 5],
+                'custom_key_2' => ['name' => 'b', 'count' => 6],
+            ],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getItemsByName();
+
+        // With key='name', the key should be extracted from the 'name' field
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('a', (array)$items);
+        $this->assertArrayHasKey('b', (array)$items);
+        $this->assertSame(5, $items['a']->getCount());
+        $this->assertSame(6, $items['b']->getCount());
+    }
+
+    /**
+     * Test associative ArrayObject collection with TYPE_UNDERSCORED preserves keys.
+     */
+    public function testAssociativeArrayObjectCollectionWithTypeUnderscoredPreservesKeys(): void
+    {
+        $data = [
+            'items_by_index' => [
+                'key_one' => ['name' => 'First', 'count' => 1],
+                'key_two' => ['name' => 'Second', 'count' => 2],
+            ],
+        ];
+
+        $dto = AssociativeCollectionDto::create($data, false, Dto::TYPE_UNDERSCORED);
+        $items = $dto->getItemsByIndex();
+
+        $this->assertInstanceOf(ArrayObject::class, $items);
+        $this->assertCount(2, $items);
+        $this->assertArrayHasKey('key_one', (array)$items);
+        $this->assertArrayHasKey('key_two', (array)$items);
+        $this->assertSame('First', $items['key_one']->getName());
+        $this->assertSame('Second', $items['key_two']->getName());
     }
 }
