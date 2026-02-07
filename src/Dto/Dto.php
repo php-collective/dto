@@ -432,6 +432,21 @@ abstract class Dto implements JsonSerializable
     }
 
     /**
+     * Convenience method to serialize the DTO to a JSON string.
+     *
+     * This is a shorthand for json_encode($dto->touchedToArray()).
+     * For PHP's native serialize(), use the __serialize() magic method.
+     *
+     * @return string JSON encoded string of touched fields
+     */
+    public function serialize(): string
+    {
+        $jsonUtil = new Json();
+
+        return $jsonUtil->encode($this->touchedToArray());
+    }
+
+    /**
      * @param array<string, mixed> $data
      * @param bool $ignoreMissing
      * @param string|null $type

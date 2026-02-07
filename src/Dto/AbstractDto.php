@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Dto;
 
+use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
 
 abstract class AbstractDto extends Dto
@@ -18,6 +19,26 @@ abstract class AbstractDto extends Dto
     public function fromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
         return $this->setFromArray($data, $ignoreMissing, $type);
+    }
+
+    /**
+     * Convenience method to populate this DTO from a JSON string.
+     *
+     * This is a shorthand for $dto->fromArray(json_decode($json, true)).
+     * Note: This modifies the current instance, unlike static::fromUnserialized()
+     * which creates a new instance.
+     *
+     * @param string $serialized JSON encoded string
+     * @param bool $ignoreMissing Whether to ignore unknown fields
+     *
+     * @return $this
+     */
+    public function unserialize(string $serialized, bool $ignoreMissing = false)
+    {
+        $jsonUtil = new Json();
+        $this->fromArray($jsonUtil->decode($serialized, true) ?: [], $ignoreMissing);
+
+        return $this;
     }
 
     /**
