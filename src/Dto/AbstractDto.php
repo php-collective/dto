@@ -33,7 +33,7 @@ abstract class AbstractDto extends Dto
      *
      * @return $this
      */
-    public function unserialize(string $serialized, bool $ignoreMissing = false): static
+    public function unserialize(string $serialized, bool $ignoreMissing = false)
     {
         $jsonUtil = new Json();
         $this->fromArray($jsonUtil->decode($serialized, true) ?: [], $ignoreMissing);
