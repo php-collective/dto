@@ -26,6 +26,12 @@
 										<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
 										<xsd:attribute type="xsd:boolean" name="required"/>
 										<xsd:attribute type="xsd:string" name="defaultValue"/>
+										<xsd:attribute type="xsd:integer" name="minLength"/>
+										<xsd:attribute type="xsd:integer" name="maxLength"/>
+										<xsd:attribute type="xsd:decimal" name="min"/>
+										<xsd:attribute type="xsd:decimal" name="max"/>
+										<xsd:attribute type="xsd:string" name="pattern"/>
+										<xsd:attribute type="xsd:boolean" name="lazy"/>
 									</xsd:complexType>
 								</xsd:element>
 							</xsd:choice>
@@ -34,6 +40,7 @@
 						<xsd:attribute type="xsd:string" name="extends"/>
 						<xsd:attribute type="xsd:string" name="deprecated" default="Deprecated"/>
 						<xsd:attribute type="xsd:boolean" name="immutable"/>
+						<xsd:attribute type="xsd:boolean" name="readonlyProperties"/>
 						<xsd:attribute type="xsd:string" name="traits"/>
 					</xsd:complexType>
 				</xsd:element>

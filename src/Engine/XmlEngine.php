@@ -107,7 +107,7 @@ class XmlEngine implements EngineInterface
      */
     protected function castBoolValue(string|float|int|bool $value, ?string $key = null): string|float|int|bool
     {
-        if ($key && !in_array($key, ['required', 'immutable', 'collection', 'associative'], true)) {
+        if ($key && !in_array($key, ['required', 'immutable', 'readonlyProperties', 'collection', 'associative', 'lazy'], true)) {
             return $value;
         }
 
@@ -130,6 +130,14 @@ class XmlEngine implements EngineInterface
      */
     protected function castDefaultValue($value, string $key, array $fieldDefinition)
     {
+        if (in_array($key, ['minLength', 'maxLength'], true)) {
+            return (int)$value;
+        }
+
+        if (in_array($key, ['min', 'max'], true)) {
+            return str_contains((string)$value, '.') ? (float)$value : (int)$value;
+        }
+
         if (!in_array($key, ['defaultValue'], true) || empty($fieldDefinition['@type'])) {
             return $value;
         }
