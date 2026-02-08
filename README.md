@@ -126,6 +126,9 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 - **Collections**: `'type' => 'Item[]', 'collection' => true` with add/remove/get/has methods
 - **Associative collections**: keyed access with `'associative' => true`
 - **Immutable DTOs**: `'immutable' => true` with `with*()` methods
+- **Readonly properties**: `public readonly` with direct property access
+- **Validation rules**: built-in `minLength`, `maxLength`, `min`, `max`, `pattern` constraints
+- **Lazy properties**: deferred DTO/collection hydration with `asLazy()`
 - **Default values**: `'defaultValue' => 0`
 - **Required fields**: `'required' => true`
 - **Deprecations**: `'deprecated' => 'Use newField instead'`

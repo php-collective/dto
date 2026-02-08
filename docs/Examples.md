@@ -591,3 +591,216 @@ echo json_encode($dto->toArray(), JSON_PRETTY_PRINT);
 // Or use __toString which returns JSON
 echo $dto;  // Calls serialize() internally
 ```
+
+## Validation Rules
+
+Built-in validation rules provide field-level constraints checked during construction.
+
+### Basic Validation
+
+```php
+// Configuration
+Dto::create('User')->fields(
+    Field::string('username')->required()->minLength(3)->maxLength(20),
+    Field::string('email')->required()->pattern('/^[^@]+@[^@]+\.[^@]+$/'),
+    Field::int('age')->min(0)->max(150),
+)
+```
+
+```php
+// Valid - passes all rules
+$user = new UserDto([
+    'username' => 'johndoe',
+    'email' => 'john@example.com',
+    'age' => 25,
+]);
+
+// Invalid - throws InvalidArgumentException
+$user = new UserDto([
+    'username' => 'jo',  // Too short (minLength: 3)
+    'email' => 'john@example.com',
+]);
+// Exception: Field 'username' must be at least 3 characters
+
+// Invalid email pattern
+$user = new UserDto([
+    'username' => 'johndoe',
+    'email' => 'not-an-email',
+]);
+// Exception: Field 'email' does not match required pattern
+```
+
+### Nullable Fields Skip Validation
+
+```php
+Dto::create('Profile')->fields(
+    Field::string('bio')->maxLength(500),  // Optional field
+    Field::int('followers')->min(0),
+)
+```
+
+```php
+// Null values skip validation
+$profile = new ProfileDto(['bio' => null, 'followers' => null]);  // OK
+
+// Non-null values are validated
+$profile = new ProfileDto(['bio' => str_repeat('x', 501)]);
+// Exception: Field 'bio' must be at most 500 characters
+```
+
+### Extracting Validation Rules
+
+Use `validationRules()` to get framework-agnostic rules for integration with validators:
+
+```php
+$dto = new UserDto(['username' => 'test', 'email' => 'test@example.com']);
+$rules = $dto->validationRules();
+
+// Returns:
+// [
+//     'username' => ['required' => true, 'minLength' => 3, 'maxLength' => 20],
+//     'email' => ['required' => true, 'pattern' => '/^[^@]+@[^@]+\.[^@]+$/'],
+//     'age' => ['min' => 0, 'max' => 150],
+// ]
+
+// Use with framework validators
+$validator = new FrameworkValidator($rules);
+```
+
+## Lazy Loading
+
+Defer nested DTO/collection hydration for performance optimization.
+
+### Basic Lazy Loading
+
+```php
+// Configuration
+Dto::create('Order')->fields(
+    Field::int('id')->required(),
+    Field::string('status'),
+    Field::dto('customer', 'Customer')->asLazy(),
+    Field::collection('items', 'OrderItem')->singular('item')->asLazy(),
+)
+```
+
+```php
+// Create order from API response
+$order = new OrderDto([
+    'id' => 123,
+    'status' => 'pending',
+    'customer' => ['name' => 'John', 'email' => 'john@example.com'],
+    'items' => [
+        ['product' => 'Widget', 'quantity' => 2, 'price' => 29.99],
+        ['product' => 'Gadget', 'quantity' => 1, 'price' => 49.99],
+    ],
+]);
+
+// At this point: no CustomerDto or OrderItemDto objects exist yet
+
+// Access triggers hydration
+$customer = $order->getCustomer();  // CustomerDto created now
+echo $customer->getName();  // "John"
+```
+
+### Pass-Through Optimization
+
+When data is validated and forwarded without deep inspection:
+
+```php
+// API gateway scenario
+$orderData = $this->fetchFromUpstreamApi();
+$order = new OrderDto($orderData);  // Validates structure
+
+// Forward to downstream service - no nested objects created
+$this->downstreamApi->send($order->toArray());
+```
+
+### Checking Lazy State
+
+```php
+// Access triggers hydration - subsequent calls return cached instance
+$items1 = $order->getItems();  // Hydrated
+$items2 = $order->getItems();  // Same instance returned
+assert($items1 === $items2);
+```
+
+## Readonly Properties
+
+Use PHP 8.1+ `readonly` for language-level immutability with direct property access.
+
+### Basic Readonly DTO
+
+```php
+// Configuration
+Dto::create('DatabaseConfig')->readonlyProperties()->fields(
+    Field::string('host')->required(),
+    Field::int('port')->default(3306),
+    Field::string('database')->required(),
+    Field::string('username')->required(),
+    Field::string('password'),
+)
+```
+
+```php
+$config = new DatabaseConfigDto([
+    'host' => 'localhost',
+    'database' => 'myapp',
+    'username' => 'root',
+]);
+
+// Direct property access
+echo $config->host;      // "localhost"
+echo $config->port;      // 3306 (default)
+echo $config->database;  // "myapp"
+
+// Getters also work
+echo $config->getHost();  // "localhost"
+
+// Modification throws Error
+$config->host = 'other';  // Error: Cannot modify readonly property
+```
+
+### Creating Modified Copies
+
+```php
+$devConfig = new DatabaseConfigDto([
+    'host' => 'localhost',
+    'database' => 'myapp_dev',
+    'username' => 'dev',
+]);
+
+// Create production config based on dev
+$prodConfig = $devConfig
+    ->withHost('prod-db.example.com')
+    ->withDatabase('myapp_prod')
+    ->withUsername('app_user')
+    ->withPassword('secret');
+
+// Original unchanged
+echo $devConfig->host;   // "localhost"
+echo $prodConfig->host;  // "prod-db.example.com"
+```
+
+### Readonly vs Immutable Comparison
+
+```php
+// Immutable DTO (PHP 8.0+)
+Dto::immutable('Event')->fields(
+    Field::string('name')->required(),
+    Field::string('payload'),
+)
+
+$event = new EventDto(['name' => 'user.created', 'payload' => '{}']);
+echo $event->getName();     // Access via getter
+// $event->name;            // Error - property is protected
+
+// Readonly DTO (PHP 8.1+)
+Dto::create('Event')->readonlyProperties()->fields(
+    Field::string('name')->required(),
+    Field::string('payload'),
+)
+
+$event = new EventDto(['name' => 'user.created', 'payload' => '{}']);
+echo $event->name;          // Direct access
+echo $event->getName();     // Getter also works
+```
