@@ -1,6 +1,6 @@
 {% set blank = "\n" -%}
 {% for field in fields -%}
-{% set fieldVars = field|merge({'scalarAndReturnTypes': scalarAndReturnTypes}) -%}
+{% set fieldVars = field|merge({'scalarAndReturnTypes': scalarAndReturnTypes, 'readonlyProperties': readonlyProperties|default(false)}) -%}
 {% if immutable %}{% include 'element/method_with.twig' with fieldVars only %}{% else %}{% include 'element/method_set.twig' with fieldVars only %}{% endif -%}
 {% if field.nullable and immutable %}{{ blank }}{% include 'element/method_with_or_fail.twig' with fieldVars only %}{% elseif field.nullable %}{{ blank }}{% include 'element/method_set_or_fail.twig' with fieldVars only %}{% endif -%}
 {{ blank }}{% include 'element/method_get.twig' with fieldVars only -%}

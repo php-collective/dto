@@ -22,7 +22,16 @@
 	protected function setFromArrayFast(array $data): void
 	{
 {% for field in fields %}
-{% if field.dto %}
+{% if field.lazy|default(false) %}
+		if (isset($data['{{ field.name }}'])) {
+{% if field.transformFrom %}
+			$this->_lazyData['{{ field.name }}'] = $this->transformValue('{{ field.transformFrom }}', $data['{{ field.name }}']);
+{% else %}
+			$this->_lazyData['{{ field.name }}'] = $data['{{ field.name }}'];
+{% endif %}
+			$this->_touchedFields['{{ field.name }}'] = true;
+		}
+{% elseif field.dto %}
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
@@ -150,7 +159,13 @@
 		return [
 {% for field in fields %}
 {% set key = field.mapTo is not null ? field.mapTo : field.name %}
-{% if field.dto %}
+{% if field.lazy|default(false) %}
+{% if field.transformTo %}
+			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->_lazyData['{{ field.name }}'] ?? ($this->{{ field.name }} !== null ? {% if field.dto %}$this->{{ field.name }}->toArray(){% elseif field.collection and field.collectionType != 'array' %}(static function (\Traversable $c): array { $r = []; foreach ($c as $k => $v) { $r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v; } return $r; })($this->{{ field.name }}){% else %}$this->{{ field.name }}{% endif %} : null)),
+{% else %}
+			'{{ key }}' => $this->_lazyData['{{ field.name }}'] ?? ($this->{{ field.name }} !== null ? {% if field.dto %}$this->{{ field.name }}->toArray(){% elseif field.collection and field.collectionType != 'array' %}(static function (\Traversable $c): array { $r = []; foreach ($c as $k => $v) { $r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v; } return $r; })($this->{{ field.name }}){% else %}$this->{{ field.name }}{% endif %} : null),
+{% endif %}
+{% elseif field.dto %}
 {% if field.nullable %}
 {% if field.transformTo %}
 			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null),
@@ -309,9 +324,13 @@
 		];
 	}
 {% set fieldsWithDefaults = [] %}
+{% set uninitializedNullableFields = [] %}
 {% for field in fields %}
 {% if field.defaultValue is not null %}
 {% set fieldsWithDefaults = fieldsWithDefaults | merge([field]) %}
+{% endif %}
+{% if readonlyProperties|default(false) and field.nullable and field.defaultValue is null %}
+{% set uninitializedNullableFields = uninitializedNullableFields | merge([field]) %}
 {% endif %}
 {% endfor %}
 
@@ -322,6 +341,13 @@
 	 */
 	protected function setDefaults()
 	{
+{% if readonlyProperties|default(false) and uninitializedNullableFields | length > 0 %}
+{% for field in uninitializedNullableFields %}
+		if (!isset($this->{{ field.name }})) {
+			$this->{{ field.name }} = null;
+		}
+{% endfor %}
+{% endif %}
 {% if fieldsWithDefaults | length > 0 %}
 {% for field in fieldsWithDefaults %}
 {% if field.nullable %}
@@ -337,14 +363,18 @@
 		return $this;
 	}
 {% set requiredFields = [] %}
+{% set validatedFields = [] %}
 {% for field in fields %}
 {% if field.required %}
 {% set requiredFields = requiredFields | merge([field]) %}
 {% endif %}
+{% if field.minLength is not null or field.maxLength is not null or field.min is not null or field.max is not null or field.pattern is not null %}
+{% set validatedFields = validatedFields | merge([field]) %}
+{% endif %}
 {% endfor %}
 
 	/**
-	 * Optimized validate - only checks required fields.
+	 * Optimized validate - checks required fields and validation rules.
 	 *
 	 * @throws \InvalidArgumentException
 	 *
@@ -375,6 +405,42 @@
 			if ($errors) {
 				throw new InvalidArgumentException('Required fields missing: ' . implode(', ', $errors));
 			}
+		}
+{% endif %}
+{% if validatedFields | length > 0 %}
+
+		$errors = [];
+{% for field in validatedFields %}
+		if ($this->{{ field.name }} !== null) {
+{% if field.minLength is not null %}
+			if (is_string($this->{{ field.name }}) && mb_strlen($this->{{ field.name }}) < {{ field.minLength }}) {
+				$errors[] = '{{ field.name }} must be at least {{ field.minLength }} characters';
+			}
+{% endif %}
+{% if field.maxLength is not null %}
+			if (is_string($this->{{ field.name }}) && mb_strlen($this->{{ field.name }}) > {{ field.maxLength }}) {
+				$errors[] = '{{ field.name }} must be at most {{ field.maxLength }} characters';
+			}
+{% endif %}
+{% if field.min is not null %}
+			if (is_numeric($this->{{ field.name }}) && $this->{{ field.name }} < {{ field.min }}) {
+				$errors[] = '{{ field.name }} must be at least {{ field.min }}';
+			}
+{% endif %}
+{% if field.max is not null %}
+			if (is_numeric($this->{{ field.name }}) && $this->{{ field.name }} > {{ field.max }}) {
+				$errors[] = '{{ field.name }} must be at most {{ field.max }}';
+			}
+{% endif %}
+{% if field.pattern is not null %}
+			if (is_string($this->{{ field.name }}) && !preg_match('{{ field.pattern | e('html') }}', $this->{{ field.name }})) {
+				$errors[] = '{{ field.name }} must match pattern {{ field.pattern | e('html') }}';
+			}
+{% endif %}
+		}
+{% endfor %}
+		if ($errors) {
+			throw new InvalidArgumentException('Validation failed: ' . implode(', ', $errors));
 		}
 {% endif %}
 	}

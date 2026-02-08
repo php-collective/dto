@@ -87,6 +87,12 @@ class Builder
         'mapTo',
         'transformFrom',
         'transformTo',
+        'minLength',
+        'maxLength',
+        'min',
+        'max',
+        'pattern',
+        'lazy',
     ];
 
     /**
@@ -204,6 +210,7 @@ class Builder
 
             $dto += [
                 'immutable' => $this->config['immutable'],
+                'readonlyProperties' => false,
                 'namespace' => $namespace . '\Dto',
                 'className' => $name . $this->getConfigOrFail('suffix'),
                 'extends' => '\\PhpCollective\\Dto\\Dto\\AbstractDto',
@@ -211,6 +218,10 @@ class Builder
             ];
 
             $dto['traits'] = $this->normalizeTraits($dto['traits']);
+
+            if (!empty($dto['readonlyProperties'])) {
+                $dto['immutable'] = true;
+            }
 
             if (!empty($dto['immutable']) && $dto['extends'] === '\\PhpCollective\\Dto\\Dto\\AbstractDto') {
                 $dto['extends'] = '\\PhpCollective\\Dto\\Dto\\AbstractImmutableDto';

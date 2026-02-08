@@ -231,6 +231,13 @@ abstract class Dto implements JsonSerializable
     protected array $_touchedFields = [];
 
     /**
+     * Holds raw data for lazy-loaded fields. Hydrated on first access.
+     *
+     * @var array<string, mixed>
+     */
+    protected array $_lazyData = [];
+
+    /**
      * @param array|null $data
      * @param bool $ignoreMissing
      * @param string|null $type
@@ -1037,6 +1044,31 @@ abstract class Dto implements JsonSerializable
         }
         if ($errors) {
             throw new InvalidArgumentException('Required fields missing: ' . implode(', ', $errors));
+        }
+
+        $validationErrors = [];
+        foreach ($this->_metadata as $name => $field) {
+            if ($this->$name === null) {
+                continue;
+            }
+            if (!empty($field['minLength']) && is_string($this->$name) && mb_strlen($this->$name) < $field['minLength']) {
+                $validationErrors[] = $name . ' must be at least ' . $field['minLength'] . ' characters';
+            }
+            if (!empty($field['maxLength']) && is_string($this->$name) && mb_strlen($this->$name) > $field['maxLength']) {
+                $validationErrors[] = $name . ' must be at most ' . $field['maxLength'] . ' characters';
+            }
+            if (isset($field['min']) && is_numeric($this->$name) && $this->$name < $field['min']) {
+                $validationErrors[] = $name . ' must be at least ' . $field['min'];
+            }
+            if (isset($field['max']) && is_numeric($this->$name) && $this->$name > $field['max']) {
+                $validationErrors[] = $name . ' must be at most ' . $field['max'];
+            }
+            if (!empty($field['pattern']) && is_string($this->$name) && !preg_match($field['pattern'], $this->$name)) {
+                $validationErrors[] = $name . ' must match pattern ' . $field['pattern'];
+            }
+        }
+        if ($validationErrors) {
+            throw new InvalidArgumentException('Validation failed: ' . implode(', ', $validationErrors));
         }
     }
 

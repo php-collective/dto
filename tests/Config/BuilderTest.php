@@ -496,4 +496,51 @@ class BuilderTest extends TestCase
 
         $this->assertSame($expected, $schema->toArray());
     }
+
+    public function testFieldValidationRules(): void
+    {
+        $schema = Schema::create()
+            ->dto(Dto::create('Validated')->fields(
+                Field::string('name')->required()->minLength(2)->maxLength(50),
+                Field::string('email')->pattern('/^[^@]+@[^@]+$/'),
+                Field::int('age')->min(0)->max(150),
+                Field::float('score')->min(0.0)->max(100.0),
+            ));
+
+        $result = $schema->toArray();
+        $fields = $result['Validated']['fields'];
+
+        $this->assertSame(2, $fields['name']['minLength']);
+        $this->assertSame(50, $fields['name']['maxLength']);
+        $this->assertSame('/^[^@]+@[^@]+$/', $fields['email']['pattern']);
+        $this->assertSame(0, $fields['age']['min']);
+        $this->assertSame(150, $fields['age']['max']);
+        $this->assertSame(0.0, $fields['score']['min']);
+        $this->assertSame(100.0, $fields['score']['max']);
+    }
+
+    public function testFieldLazy(): void
+    {
+        $schema = Schema::create()
+            ->dto(Dto::create('WithLazy')->fields(
+                Field::string('title'),
+                Field::dto('nested', 'Other')->asLazy(),
+            ));
+
+        $result = $schema->toArray();
+        $this->assertTrue($result['WithLazy']['fields']['nested']['lazy']);
+    }
+
+    public function testDtoReadonlyProperties(): void
+    {
+        $schema = Schema::create()
+            ->dto(Dto::create('ReadonlyUser')->readonlyProperties()->fields(
+                Field::string('name')->required(),
+                Field::int('age'),
+            ));
+
+        $result = $schema->toArray();
+        $this->assertTrue($result['ReadonlyUser']['readonlyProperties']);
+        $this->assertTrue($result['ReadonlyUser']['immutable']);
+    }
 }

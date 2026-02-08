@@ -1,4 +1,4 @@
 	/**
 	 * @var {{ docBlockType ?? type }}{% if nullable %}|null{% endif ~%}
 	 */
-	protected {% if returnTypeHint %}{% if collection and collectionType != 'array' %}?{{ typeHint }}{% else %}{{ nullableTypeHint ?? typeHint }}{% endif %} {% endif %}${{ name }}{% if nullable %} = null{% elseif defaultValue is defined and defaultValue is not null %} = {{ defaultValue | phpExport | raw }}{% elseif collection and collectionType != 'array' %} = null{% endif %};
+	{% if readonlyProperties|default(false) %}public readonly{% else %}protected{% endif %} {% if returnTypeHint %}{% if collection and collectionType != 'array' %}?{{ typeHint }}{% else %}{{ nullableTypeHint ?? typeHint }}{% endif %} {% endif %}${{ name }}{% if not readonlyProperties|default(false) %}{% if nullable %} = null{% elseif defaultValue is defined and defaultValue is not null %} = {{ defaultValue | phpExport | raw }}{% elseif collection and collectionType != 'array' %} = null{% endif %}{% endif %};

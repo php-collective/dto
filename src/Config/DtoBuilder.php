@@ -19,6 +19,8 @@ class DtoBuilder
 
     protected bool $immutable = false;
 
+    protected bool $readonlyProperties = false;
+
     protected ?string $extends = null;
 
     protected ?string $deprecated = null;
@@ -98,6 +100,21 @@ class DtoBuilder
     }
 
     /**
+     * Generate readonly properties for this DTO.
+     *
+     * When enabled, properties are declared with the `readonly` keyword
+     * and `with*()` methods use Reflection to set values on cloned instances.
+     * Implies immutable.
+     */
+    public function readonlyProperties(): static
+    {
+        $this->readonlyProperties = true;
+        $this->immutable = true;
+
+        return $this;
+    }
+
+    /**
      * Mark this DTO as deprecated.
      */
     public function deprecated(string $message = ''): static
@@ -138,6 +155,10 @@ class DtoBuilder
 
         if ($this->immutable) {
             $config['immutable'] = true;
+        }
+
+        if ($this->readonlyProperties) {
+            $config['readonlyProperties'] = true;
         }
 
         if ($this->extends !== null) {

@@ -9,6 +9,18 @@
 	 */
 	public function with{{ name|stripLeadingUnderscore|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if typeHint and nullable %} = null{% endif %})
 	{
+{% if readonlyProperties|default(false) %}
+		$data = $this->toArray();
+{% if isArray or typeHint == 'array' %}
+		$data['{{ name }}'] = ${{ name }} !== null ? $this->cloneArray(${{ name }}) : null;
+{% elseif isDto %}
+		$data['{{ name }}'] = ${{ name }} !== null ? ${{ name }}->toArray() : null;
+{% else %}
+		$data['{{ name }}'] = ${{ name }};
+{% endif %}
+
+		return new static($data);
+{% else %}
 		$new = clone $this;
 {% if isArray or typeHint == 'array' %}
 		$new->{{ name }} = ${{ name }} !== null ? $new->cloneArray(${{ name }}) : null;
@@ -18,4 +30,5 @@
 		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;
+{% endif %}
 	}

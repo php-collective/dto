@@ -13,6 +13,19 @@
 	 */
 	public function withAdded{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
 	{
+{% if readonlyProperties|default(false) %}
+		$data = $this->toArray();
+		if (!isset($data['{{ name }}'])) {
+			$data['{{ name }}'] = [];
+		}
+{% if associative %}
+		$data['{{ name }}'][$key] = ${{ singular }};
+{% else %}
+		$data['{{ name }}'][] = ${{ singular }};
+{% endif %}
+
+		return new static($data);
+{% else %}
 		$new = clone $this;
 
 		if ($new->{{ name }} === null) {
@@ -29,5 +42,6 @@
 		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;
+{% endif %}
 	}
 {% endif -%}
