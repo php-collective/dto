@@ -964,6 +964,43 @@ abstract class Dto implements JsonSerializable
     }
 
     /**
+     * Returns validation rules extracted from field metadata.
+     *
+     * Returns a framework-agnostic array keyed by field name, with only
+     * non-null rule values. Fields without any rules are omitted.
+     *
+     * Example return:
+     * ```
+     * [
+     *     'name' => ['required' => true, 'minLength' => 2, 'maxLength' => 50],
+     *     'email' => ['required' => true, 'pattern' => '/^[^@]+@[^@]+$/'],
+     *     'age' => ['min' => 0, 'max' => 150],
+     * ]
+     * ```
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    public function validationRules(): array
+    {
+        $ruleKeys = ['required', 'minLength', 'maxLength', 'min', 'max', 'pattern'];
+        $rules = [];
+
+        foreach ($this->_metadata as $name => $field) {
+            $fieldRules = [];
+            foreach ($ruleKeys as $key) {
+                if (isset($field[$key]) && $field[$key] !== false) {
+                    $fieldRules[$key] = $field[$key];
+                }
+            }
+            if ($fieldRules) {
+                $rules[$name] = $fieldRules;
+            }
+        }
+
+        return $rules;
+    }
+
+    /**
      * @return array<string>
      */
     public function touchedFields(): array
