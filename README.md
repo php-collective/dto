@@ -67,7 +67,7 @@ A more realistic example using immutable DTOs for a blog system:
 ```php
 // config/dto.php
 return Schema::create()
-    ->dto(Dto::create('Article')->immutable()->fields(
+    ->dto(Dto::immutable('Article')->fields(
         Field::int('id')->required(),
         Field::string('title')->required(),
         Field::string('slug')->required(),
@@ -77,12 +77,12 @@ return Schema::create()
         Field::bool('published')->defaultValue(false),
         Field::string('publishedAt'),
     ))
-    ->dto(Dto::create('Author')->immutable()->fields(
+    ->dto(Dto::immutable('Author')->fields(
         Field::string('name')->required(),
         Field::string('email'),
         Field::string('avatarUrl'),
     ))
-    ->dto(Dto::create('Tag')->immutable()->fields(
+    ->dto(Dto::immutable('Tag')->fields(
         Field::string('name')->required(),
         Field::string('slug')->required(),
     ))
