@@ -236,3 +236,25 @@ This is PHP's native type system at work, not library validation.
 | Error messages | Basic | Rich |
 
 **Recommendation:** Use the built-in validation rules for simple structural constraints. For complex business logic validation (conditional rules, cross-field dependencies, custom messages), use a dedicated validation library alongside your DTOs.
+
+## Extracting Rules for Framework Validation
+
+The `validationRules()` method returns a framework-agnostic array of validation rules from the DTO metadata. This is useful for bridging DTO rules to framework-native validators:
+
+```php
+$dto = new UserDto();
+$rules = $dto->validationRules();
+// [
+//     'name' => ['required' => true, 'minLength' => 2, 'maxLength' => 50],
+//     'email' => ['pattern' => '/^[^@]+@[^@]+\.[^@]+$/'],
+//     'age' => ['min' => 0, 'max' => 150],
+// ]
+```
+
+Only fields with at least one active rule are included. The returned keys match the config rule names: `required`, `minLength`, `maxLength`, `min`, `max`, `pattern`.
+
+The framework integration plugins provide ready-made bridges:
+
+- **CakePHP:** `DtoValidator::fromDto($dto)` → `Cake\Validation\Validator`
+- **Laravel:** `DtoValidationRules::fromDto($dto)` → Laravel rule arrays
+- **Symfony:** `DtoConstraintBuilder::fromDto($dto)` → `Symfony\Component\Validator\Constraints\Collection`
