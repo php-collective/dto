@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Dto;
 
 use InvalidArgumentException;
+use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PhpCollective\Dto\Test\TestDto\ValidatedDto;
 use PHPUnit\Framework\TestCase;
 
@@ -137,5 +138,26 @@ class ValidationTest extends TestCase
         $this->assertSame(25, $result['age']);
         $this->assertNull($result['email']);
         $this->assertNull($result['score']);
+    }
+
+    public function testValidationRules(): void
+    {
+        $dto = new ValidatedDto(['name' => 'Test']);
+        $rules = $dto->validationRules();
+
+        $this->assertSame([
+            'name' => ['required' => true, 'minLength' => 2, 'maxLength' => 50],
+            'email' => ['pattern' => '/^[^@]+@[^@]+$/'],
+            'age' => ['min' => 0, 'max' => 150],
+            'score' => ['min' => 0.0, 'max' => 100.0],
+        ], $rules);
+    }
+
+    public function testValidationRulesEmpty(): void
+    {
+        $dto = new SimpleDto(['name' => 'Test']);
+        $rules = $dto->validationRules();
+
+        $this->assertSame([], $rules);
     }
 }
