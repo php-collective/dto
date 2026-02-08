@@ -587,18 +587,15 @@ echo $newConfig->port;  // 5432
 | Feature | `immutable()` | `readonlyProperties()` |
 |---------|---------------|------------------------|
 | Property visibility | `protected` | `public readonly` |
-| Property access | Getters only | Direct access + getters |
+| Property access | `$dto->getName()` | `$dto->name` or `$dto->getName()` |
 | Modification protection | Convention (no setters) | Language-enforced |
-| PHP version | 8.0+ | 8.1+ |
 | `with*()` implementation | Clone + set property | Reconstruct from array |
-| Use case | API contracts, value objects | Configuration, simple data |
+| API consistency | Same as mutable DTOs | Different from mutable DTOs |
 
 **Choose `immutable()`** when:
-- You need PHP 8.0 compatibility
-- You want encapsulation (private properties, future flexibility)
-- You're building domain objects with behavior
+- You want consistent getter-based API across all DTOs (mutable and immutable)
+- You're migrating between mutable and immutable and want minimal code changes
 
 **Choose `readonlyProperties()`** when:
-- You're on PHP 8.1+ and want language-level guarantees
-- You prefer direct property access for simplicity
-- You want IDE/static analysis to catch mutation attempts
+- You prefer shorter syntax with direct property access
+- You want IDE/static analysis to catch accidental mutation attempts

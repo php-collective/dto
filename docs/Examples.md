@@ -784,7 +784,7 @@ echo $prodConfig->host;  // "prod-db.example.com"
 ### Readonly vs Immutable Comparison
 
 ```php
-// Immutable DTO (PHP 8.0+)
+// Immutable DTO - getter-based access (consistent with mutable DTOs)
 Dto::immutable('Event')->fields(
     Field::string('name')->required(),
     Field::string('payload'),
@@ -794,13 +794,13 @@ $event = new EventDto(['name' => 'user.created', 'payload' => '{}']);
 echo $event->getName();     // Access via getter
 // $event->name;            // Error - property is protected
 
-// Readonly DTO (PHP 8.1+)
+// Readonly DTO - direct property access
 Dto::create('Event')->readonlyProperties()->fields(
     Field::string('name')->required(),
     Field::string('payload'),
 )
 
 $event = new EventDto(['name' => 'user.created', 'payload' => '{}']);
-echo $event->name;          // Direct access
+echo $event->name;          // Direct access - shorter syntax
 echo $event->getName();     // Getter also works
 ```
