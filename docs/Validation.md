@@ -4,7 +4,9 @@ This document explains what validation php-collective/dto provides and how to in
 
 ## Built-in Validation
 
-The library provides **required field validation** only. When a field is marked as `required`, the DTO will throw an exception if that field is missing or null during instantiation.
+### Required Fields
+
+When a field is marked as `required`, the DTO will throw an exception if that field is missing or null during instantiation.
 
 ```xml
 <dto name="User">
@@ -15,25 +17,66 @@ The library provides **required field validation** only. When a field is marked 
 ```
 
 ```php
-// This throws RuntimeException: Required field 'email' is missing
+// This throws InvalidArgumentException: Required fields missing: email
 $user = new UserDto(['id' => 1]);
 
 // This works - nickname is optional
 $user = new UserDto(['id' => 1, 'email' => 'test@example.com']);
 ```
 
-## What's NOT Included
+### Validation Rules
 
-The library intentionally does **not** include:
+Fields support built-in validation rules for common constraints:
 
-- Min/max length validation
-- Numeric range validation (min, max)
-- Pattern/regex validation
-- Email/URL format validation
-- Custom validation rules
-- Validation error messages
+```php
+use PhpCollective\Dto\Config\Dto;
+use PhpCollective\Dto\Config\Field;
+use PhpCollective\Dto\Config\Schema;
 
-**Why?** The library focuses on **data structure and transfer**, not business logic validation. This keeps the generated code lean and allows you to choose your preferred validation approach.
+return Schema::create()
+    ->dto(Dto::create('User')->fields(
+        Field::string('name')->required()->minLength(2)->maxLength(100),
+        Field::string('email')->required()->pattern('/^[^@]+@[^@]+\.[^@]+$/'),
+        Field::int('age')->min(0)->max(150),
+        Field::float('score')->min(0.0)->max(100.0),
+    ))
+    ->toArray();
+```
+
+Or in XML:
+
+```xml
+<dto name="User">
+    <field name="name" type="string" required="true" minLength="2" maxLength="100"/>
+    <field name="email" type="string" required="true" pattern="/^[^@]+@[^@]+\.[^@]+$/"/>
+    <field name="age" type="int" min="0" max="150"/>
+    <field name="score" type="float" min="0" max="100"/>
+</dto>
+```
+
+#### Available Rules
+
+| Rule | Applies To | Description |
+|------|-----------|-------------|
+| `minLength` | string | Minimum string length (via `mb_strlen`) |
+| `maxLength` | string | Maximum string length (via `mb_strlen`) |
+| `min` | int, float | Minimum numeric value (inclusive) |
+| `max` | int, float | Maximum numeric value (inclusive) |
+| `pattern` | string | Regex pattern that must match (via `preg_match`) |
+
+#### Behavior
+
+- Null fields skip validation — rules are only checked when a value is present
+- Required check runs before validation rules
+- On failure, an `InvalidArgumentException` is thrown with a descriptive message:
+
+```php
+// InvalidArgumentException: Validation failed: name must be at least 2 characters
+$user = new UserDto(['name' => 'A', 'email' => 'a@b.com']);
+
+// InvalidArgumentException: Validation failed: email must match pattern /^[^@]+@[^@]+\.[^@]+$/
+$user = new UserDto(['name' => 'Test', 'email' => 'invalid']);
+```
 
 ## Integrating with Validation Libraries
 
@@ -185,11 +228,11 @@ This is PHP's native type system at work, not library validation.
 |---------|:------------------:|:------------------:|
 | Required fields | ✅ | ✅ |
 | Type checking | ✅ (PHP native) | ✅ |
-| Min/max length | ❌ | ✅ |
-| Numeric ranges | ❌ | ✅ |
-| Regex patterns | ❌ | ✅ |
-| Email/URL format | ❌ | ✅ |
+| Min/max length | ✅ | ✅ |
+| Numeric ranges | ✅ | ✅ |
+| Regex patterns | ✅ | ✅ |
+| Email/URL format | ✅ (via pattern) | ✅ |
 | Custom rules | ❌ | ✅ |
 | Error messages | Basic | Rich |
 
-**Recommendation:** Use php-collective/dto for structure and a validation library for business rules. This separation of concerns keeps each tool focused on what it does best.
+**Recommendation:** Use the built-in validation rules for simple structural constraints. For complex business logic validation (conditional rules, cross-field dependencies, custom messages), use a dedicated validation library alongside your DTOs.

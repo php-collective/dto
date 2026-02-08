@@ -447,3 +447,68 @@ Simple fields without modifiers are optimized to just the type string:
 ```php
 Field::string('name')  // Produces: 'string' (not ['type' => 'string'])
 ```
+
+## Validation Rules
+
+Fields support built-in validation rules that are checked when the DTO is constructed:
+
+```php
+Dto::create('User')->fields(
+    Field::string('name')->required()->minLength(2)->maxLength(100),
+    Field::string('email')->pattern('/^[^@]+@[^@]+\.[^@]+$/'),
+    Field::int('age')->min(0)->max(150),
+    Field::float('score')->min(0.0)->max(100.0),
+)
+```
+
+### Available Validation Methods
+
+| Method | Applies To | Description |
+|--------|-----------|-------------|
+| `minLength(int)` | string | Minimum string length (via `mb_strlen`) |
+| `maxLength(int)` | string | Maximum string length (via `mb_strlen`) |
+| `min(int\|float)` | int, float | Minimum numeric value |
+| `max(int\|float)` | int, float | Maximum numeric value |
+| `pattern(string)` | string | Regex pattern (must match via `preg_match`) |
+
+Null fields skip validation — rules are only checked when a value is present.
+
+On failure, an `InvalidArgumentException` is thrown with a descriptive message.
+
+## Lazy Properties
+
+DTO and collection fields can be marked as lazy, deferring hydration until first access:
+
+```php
+Dto::create('Order')->fields(
+    Field::int('id')->required(),
+    Field::dto('customer', 'Customer')->asLazy(),
+    Field::collection('items', 'OrderItem')->singular('item')->asLazy(),
+)
+```
+
+Lazy fields store raw array data during construction. When the getter is called for the first time,
+the raw data is hydrated into the DTO/collection. If `toArray()` is called before the getter,
+the raw data is returned directly — avoiding unnecessary object creation.
+
+This is useful for large nested structures where not all fields are always accessed.
+
+## Readonly Properties
+
+DTOs can use PHP's `readonly` modifier for true immutability at the language level:
+
+```php
+Dto::create('Config')->readonlyProperties()->fields(
+    Field::string('host')->required(),
+    Field::int('port')->default(8080),
+)
+```
+
+This generates `public readonly` properties instead of `protected` ones, providing:
+
+- Direct public property access (`$dto->host` instead of `$dto->getHost()`)
+- Compile-time immutability enforcement (assignment after construction throws `\Error`)
+- Getters are still generated for consistency
+
+Note: `readonlyProperties()` implies `immutable` — the DTO will extend `AbstractImmutableDto`
+and use `with*()` methods (which reconstruct from array) instead of setters.

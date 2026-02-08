@@ -9,6 +9,40 @@
 	public function get{{ name|stripLeadingUnderscore|camelize }}(){% if returnTypeHint %}: {{ nullableReturnTypeHint ?? returnTypeHint }}{% endif %}
 
 	{
+{% if lazy|default(false) %}
+		if (isset($this->_lazyData['{{ name }}'])) {
+			$raw = $this->_lazyData['{{ name }}'];
+			unset($this->_lazyData['{{ name }}']);
+{% if dto %}
+			if (is_array($raw)) {
+				$this->{{ name }} = new {{ typeHint }}($raw);
+			} else {
+				$this->{{ name }} = $raw;
+			}
+{% elseif collection and collectionType != 'array' and singularClass is defined and singularClass %}
+{% set adapter = getCollectionAdapter(collectionType) %}
+			$collection = {{ adapter.getCreateEmptyCode(collectionType) }};
+			foreach ($raw as $key => $item) {
+				if (is_array($item)) {
+					$item = new {{ singularClass }}($item);
+				}
+				{{ adapter.getAppendCode('$collection', '$item') }}
+			}
+			$this->{{ name }} = $collection;
+{% elseif collection and collectionType == 'array' and singularClass is defined and singularClass %}
+			$collection = [];
+			foreach ($raw as $key => $item) {
+				if (is_array($item)) {
+					$item = new {{ singularClass }}($item);
+				}
+				$collection[$key] = $item;
+			}
+			$this->{{ name }} = $collection;
+{% else %}
+			$this->{{ name }} = $raw;
+{% endif %}
+		}
+{% endif %}
 {% if collection %}
 		if ($this->{{ name }} === null) {
 			return {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};

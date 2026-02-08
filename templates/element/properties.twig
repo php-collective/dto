@@ -1,4 +1,4 @@
 {% for field in fields %}
-{% include 'element/property.twig' with field only %}
+{% include 'element/property.twig' with field|merge({'readonlyProperties': readonlyProperties|default(false)}) only %}
 
 {% endfor -%}

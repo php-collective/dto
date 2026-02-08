@@ -51,6 +51,18 @@ class FieldBuilder
 
     protected ?string $transformTo = null;
 
+    protected ?int $minLength = null;
+
+    protected ?int $maxLength = null;
+
+    protected int|float|null $min = null;
+
+    protected int|float|null $max = null;
+
+    protected ?string $pattern = null;
+
+    protected bool $lazy = false;
+
     public function __construct(string $name, string $type)
     {
         $this->name = $name;
@@ -324,6 +336,68 @@ class FieldBuilder
     }
 
     /**
+     * Set minimum string length validation.
+     */
+    public function minLength(int $length): static
+    {
+        $this->minLength = $length;
+
+        return $this;
+    }
+
+    /**
+     * Set maximum string length validation.
+     */
+    public function maxLength(int $length): static
+    {
+        $this->maxLength = $length;
+
+        return $this;
+    }
+
+    /**
+     * Set minimum numeric value validation.
+     */
+    public function min(int|float $value): static
+    {
+        $this->min = $value;
+
+        return $this;
+    }
+
+    /**
+     * Set maximum numeric value validation.
+     */
+    public function max(int|float $value): static
+    {
+        $this->max = $value;
+
+        return $this;
+    }
+
+    /**
+     * Set regex pattern validation.
+     *
+     * @example Field::string('email')->pattern('/^[^@]+@[^@]+$/')
+     */
+    public function pattern(string $regex): static
+    {
+        $this->pattern = $regex;
+
+        return $this;
+    }
+
+    /**
+     * Mark field as lazy-loaded. Nested DTO/collection fields will be hydrated on first access.
+     */
+    public function asLazy(): static
+    {
+        $this->lazy = true;
+
+        return $this;
+    }
+
+    /**
      * Build the field configuration array.
      *
      * @return array<string, mixed>|string
@@ -343,7 +417,13 @@ class FieldBuilder
             $this->mapFrom === null &&
             $this->mapTo === null &&
             $this->transformFrom === null &&
-            $this->transformTo === null
+            $this->transformTo === null &&
+            $this->minLength === null &&
+            $this->maxLength === null &&
+            $this->min === null &&
+            $this->max === null &&
+            $this->pattern === null &&
+            !$this->lazy
         ) {
             return $this->type;
         }
@@ -404,6 +484,30 @@ class FieldBuilder
 
         if ($this->transformTo !== null) {
             $config['transformTo'] = $this->transformTo;
+        }
+
+        if ($this->minLength !== null) {
+            $config['minLength'] = $this->minLength;
+        }
+
+        if ($this->maxLength !== null) {
+            $config['maxLength'] = $this->maxLength;
+        }
+
+        if ($this->min !== null) {
+            $config['min'] = $this->min;
+        }
+
+        if ($this->max !== null) {
+            $config['max'] = $this->max;
+        }
+
+        if ($this->pattern !== null) {
+            $config['pattern'] = $this->pattern;
+        }
+
+        if ($this->lazy) {
+            $config['lazy'] = true;
         }
 
         return $config;

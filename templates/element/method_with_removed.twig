@@ -10,6 +10,14 @@
 	 */
 	public function withRemoved{{ singular|stripLeadingUnderscore|camelize }}($key)
 	{
+{% if readonlyProperties|default(false) %}
+		$data = $this->toArray();
+		if (isset($data['{{ name }}'])) {
+			unset($data['{{ name }}'][$key]);
+		}
+
+		return new static($data);
+{% else %}
 		$new = clone $this;
 
 		if ($new->{{ name }} === null) {
@@ -27,5 +35,6 @@
 		$new->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
 		return $new;
+{% endif %}
 	}
 {% endif -%}
