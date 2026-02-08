@@ -1,5 +1,17 @@
 # Quick Start Guide
 
+## Overview
+
+💪 Unique Strengths (Competitive Moats)
+
+   1. Only code-gen approach in PHP — 25-63x faster than runtime libraries
+   2. TypeScript generation — no other DTO library seems to offers this
+   3. JSON Schema bidirectional — both import and export
+   4. Reviewable generated code — shows up in PRs, unlike runtime magic
+   5. 4 config formats — PHP, XML, YAML, NEON
+   6. Framework integrations with syntatic sugar — CakePHP, Laravel, Symfony adapters
+
+
 **Documentation:**
 [Configuration Builder](ConfigBuilder.md) |
 [Examples](Examples.md) |
