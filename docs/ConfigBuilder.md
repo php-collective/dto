@@ -555,7 +555,7 @@ Dto::create('Config')->readonlyProperties()->fields(
 This generates `public readonly` properties instead of `protected` ones, providing:
 
 - Direct public property access (`$dto->host` instead of `$dto->getHost()`)
-- Compile-time immutability enforcement (assignment after construction throws `\Error`)
+- Immutability enforcement (assignment after construction throws `\Error`)
 - Getters are still generated for consistency
 
 Note: `readonlyProperties()` implies `immutable` — the DTO will extend `AbstractImmutableDto`

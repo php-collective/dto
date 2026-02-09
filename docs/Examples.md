@@ -704,12 +704,12 @@ echo $customer->getName();  // "John"
 
 ### Pass-Through Optimization
 
-When data is validated and forwarded without deep inspection:
+When data is forwarded without deep inspection, lazy fields avoid unnecessary object creation:
 
 ```php
 // API gateway scenario
 $orderData = $this->fetchFromUpstreamApi();
-$order = new OrderDto($orderData);  // Validates structure
+$order = new OrderDto($orderData);
 
 // Forward to downstream service - no nested objects created
 $this->downstreamApi->send($order->toArray());
@@ -792,7 +792,6 @@ Dto::immutable('Event')->fields(
 
 $event = new EventDto(['name' => 'user.created', 'payload' => '{}']);
 echo $event->getName();     // Access via getter
-// $event->name;            // Error - property is protected
 
 // Readonly DTO - direct property access
 Dto::create('Event')->readonlyProperties()->fields(
