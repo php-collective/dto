@@ -726,7 +726,7 @@ assert($items1 === $items2);
 
 ## Readonly Properties
 
-Use PHP 8.1+ `readonly` for language-level immutability with direct property access.
+Use `readonly` properties for language-level immutability with direct property access.
 
 ### Basic Readonly DTO
 
