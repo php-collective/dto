@@ -487,11 +487,59 @@ Dto::create('Order')->fields(
 )
 ```
 
-Lazy fields store raw array data during construction. When the getter is called for the first time,
-the raw data is hydrated into the DTO/collection. If `toArray()` is called before the getter,
-the raw data is returned directly — avoiding unnecessary object creation.
+### How It Works
 
-This is useful for large nested structures where not all fields are always accessed.
+Lazy fields store raw array data during construction in an internal `$_lazyData` property.
+When the getter is called for the first time, the raw data is hydrated into the DTO/collection
+and cached. Subsequent getter calls return the cached instance.
+
+```php
+$order = new OrderDto([
+    'id' => 1,
+    'customer' => ['name' => 'John', 'email' => 'john@example.com'],
+    'items' => [
+        ['product' => 'Widget', 'quantity' => 2],
+        ['product' => 'Gadget', 'quantity' => 1],
+    ],
+]);
+
+// No CustomerDto or OrderItemDto objects created yet
+
+$customer = $order->getCustomer();  // Now CustomerDto is hydrated
+$items = $order->getItems();        // Now OrderItemDto[] is hydrated
+```
+
+### toArray() Behavior
+
+If `toArray()` is called before the getter, the raw data is returned directly — no object
+creation occurs. This is useful for pass-through scenarios where DTOs are used for validation
+and transport without accessing nested fields:
+
+```php
+$order = new OrderDto($apiResponse);
+$json = json_encode($order->toArray());  // No nested DTOs created
+```
+
+### When to Use Lazy Properties
+
+- **Large nested structures** where not all fields are always accessed
+- **API pass-through** where data is validated and forwarded without deep inspection
+- **Performance-critical paths** where avoiding unnecessary object creation matters
+- **Deep object graphs** where eager hydration would create many unused objects
+
+### Mixing Lazy and Eager Fields
+
+You can mix lazy and eager fields in the same DTO:
+
+```php
+Dto::create('Order')->fields(
+    Field::int('id')->required(),
+    Field::string('status')->required(),           // Eager - always hydrated
+    Field::dto('customer', 'Customer')->asLazy(),  // Lazy - on-demand
+    Field::dto('summary', 'OrderSummary'),         // Eager - always hydrated
+    Field::collection('items', 'OrderItem')->singular('item')->asLazy(),  // Lazy
+)
+```
 
 ## Readonly Properties
 
@@ -507,8 +555,47 @@ Dto::create('Config')->readonlyProperties()->fields(
 This generates `public readonly` properties instead of `protected` ones, providing:
 
 - Direct public property access (`$dto->host` instead of `$dto->getHost()`)
-- Compile-time immutability enforcement (assignment after construction throws `\Error`)
+- Immutability enforcement (assignment after construction throws `\Error`)
 - Getters are still generated for consistency
 
 Note: `readonlyProperties()` implies `immutable` — the DTO will extend `AbstractImmutableDto`
 and use `with*()` methods (which reconstruct from array) instead of setters.
+
+### Usage Example
+
+```php
+$config = new ConfigDto(['host' => 'localhost', 'port' => 3306]);
+
+// Direct property access
+echo $config->host;  // "localhost"
+echo $config->port;  // 3306
+
+// Getters also work
+echo $config->getHost();  // "localhost"
+
+// Attempting to modify throws \Error at runtime
+$config->host = 'other';  // Error: Cannot modify readonly property
+
+// Use with*() methods to create modified copies
+$newConfig = $config->withPort(5432);
+echo $config->port;     // 3306 (original unchanged)
+echo $newConfig->port;  // 5432
+```
+
+### Readonly vs Immutable: When to Use Which
+
+| Feature | `immutable()` | `readonlyProperties()` |
+|---------|---------------|------------------------|
+| Property visibility | `protected` | `public readonly` |
+| Property access | `$dto->getName()` | `$dto->name` or `$dto->getName()` |
+| Modification protection | Convention (no setters) | Language-enforced |
+| `with*()` implementation | Clone + set property | Reconstruct from array |
+| API consistency | Same as mutable DTOs | Different from mutable DTOs |
+
+**Choose `immutable()`** when:
+- You want consistent getter-based API across all DTOs (mutable and immutable)
+- You're migrating between mutable and immutable and want minimal code changes
+
+**Choose `readonlyProperties()`** when:
+- You prefer shorter syntax with direct property access
+- You want IDE/static analysis to catch accidental mutation attempts

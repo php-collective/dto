@@ -122,10 +122,13 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 ## Features
 
 - **Types**: `int`, `float`, `string`, `bool`, `array`, `mixed`, DTOs, classes, enums
-- **Union types**: `int|string`, `int|float|string` (PHP 8.0+)
+- **Union types**: `int|string`, `int|float|string`
 - **Collections**: `'type' => 'Item[]', 'collection' => true` with add/remove/get/has methods
 - **Associative collections**: keyed access with `'associative' => true`
 - **Immutable DTOs**: `'immutable' => true` with `with*()` methods
+- **Readonly properties**: `public readonly` with direct property access
+- **Validation rules**: built-in `minLength`, `maxLength`, `min`, `max`, `pattern` constraints
+- **Lazy properties**: deferred DTO/collection hydration with `asLazy()`
 - **Default values**: `'defaultValue' => 0`
 - **Required fields**: `'required' => true`
 - **Deprecations**: `'deprecated' => 'Use newField instead'`
