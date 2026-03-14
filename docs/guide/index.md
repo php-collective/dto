@@ -5,119 +5,255 @@ description: Quick start guide for PHP DTO with code generation
 
 # Getting Started
 
-## Overview
+This guide will have you generating type-safe DTOs in under 5 minutes.
 
-**Unique Strengths:**
+## What is php-collective/dto?
 
-1. Only code-gen approach in PHP — 25-63x faster than runtime libraries
-2. TypeScript generation — no other DTO library offers this
-3. JSON Schema bidirectional — both import and export
-4. Reviewable generated code — shows up in PRs, unlike runtime magic
-5. 4 config formats — PHP, XML, YAML, NEON
-6. Framework integrations — CakePHP, Laravel, Symfony adapters
+A **code generator** that creates Data Transfer Object classes from simple configuration files. Unlike runtime libraries that use reflection, this library generates plain PHP classes at build time—giving you:
 
-## 1. Define DTOs
+- **Zero runtime overhead** — no reflection, no magic methods
+- **Perfect IDE support** — real methods with full autocomplete
+- **Reviewable code** — generated classes appear in your pull requests
 
-Create a `dto.xml` configuration file in your `config/` directory:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<dtos xmlns="https://github.com/php-collective/dto">
-    <dto name="Car">
-        <field name="color" type="string"/>
-        <field name="isNew" type="bool"/>
-        <field name="distanceTravelled" type="int"/>
-        <field name="value" type="float"/>
-        <field name="owner" type="Owner"/>
-    </dto>
-
-    <dto name="Owner">
-        <field name="name" type="string"/>
-        <field name="birthYear" type="int"/>
-    </dto>
-
-    <dto name="FlyingCar" extends="Car">
-        <field name="maxAltitude" type="int"/>
-    </dto>
-</dtos>
-```
-
-## 2. Generate DTOs
-
-Using the CLI (recommended):
-
-```bash
-# Place dto.xml in config/ directory, then run:
-vendor/bin/dto generate
-
-# Or specify custom paths:
-vendor/bin/dto generate --config-path=dto/ --src-path=app/ --namespace=MyApp
-
-# Preview changes without writing:
-vendor/bin/dto generate --dry-run --verbose
-```
-
-Or programmatically:
-
-```php
-use PhpCollective\Dto\Engine\XmlEngine;
-use PhpCollective\Dto\Generator\ArrayConfig;
-use PhpCollective\Dto\Generator\Builder;
-use PhpCollective\Dto\Generator\ConsoleIo;
-use PhpCollective\Dto\Generator\Generator;
-use PhpCollective\Dto\Generator\TwigRenderer;
-
-$config = new ArrayConfig(['namespace' => 'App']);
-$engine = new XmlEngine();
-$builder = new Builder($engine, $config);
-$renderer = new TwigRenderer(null, $config);
-$io = new ConsoleIo();
-
-$generator = new Generator($builder, $renderer, $io, $config);
-$generator->generate('config/', 'src/');
-```
-
-## Deployment Strategies
-
-There are two approaches to deploying generated DTOs:
-
-### Commit DTOs to Version Control (Recommended)
-
-Generate DTOs locally, commit them to your repository, and deploy like any other code:
-
-```bash
-composer require --dev php-collective/dto
-```
-
-**Benefits:**
-- DTOs are reviewed in pull requests
-- No generation step needed on production servers
-- Faster deployments
-- Works with read-only filesystems
-
-**Workflow:**
-1. Modify DTO configuration
-2. Run `vendor/bin/dto generate`
-3. Commit generated files
-4. Deploy as usual
-
-### Runtime Generation on Server
-
-Generate DTOs as part of your deployment process:
+## Installation
 
 ```bash
 composer require php-collective/dto
 ```
 
-**When to use:**
-- Dynamic DTO definitions
-- Environments where committing generated code isn't desired
+## Quick Start
 
-**Note:** This requires the library in production and write access to the source directory during deployment.
+### 1. Create a Configuration File
 
-### Exclude Generated DTOs from Static Analysis
+Create `config/dto.xml`:
 
-Generated DTOs should be excluded from phpcs, phpstan, and similar tools:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="https://github.com/php-collective/dto">
+    <dto name="User">
+        <field name="id" type="int" required="true"/>
+        <field name="name" type="string" required="true"/>
+        <field name="email" type="string"/>
+    </dto>
+</dtos>
+```
+
+### 2. Generate the DTO
+
+```bash
+vendor/bin/dto generate
+```
+
+This creates `src/Dto/UserDto.php` with getters, setters, and array conversion methods.
+
+### 3. Use It
+
+```php
+use App\Dto\UserDto;
+
+// Create from array (e.g., API response, form data)
+$user = UserDto::createFromArray([
+    'id' => 1,
+    'name' => 'John Doe',
+    'email' => 'john@example.com',
+]);
+
+// Use typed getters
+echo $user->getName();        // "John Doe"
+echo $user->getEmail();       // "john@example.com"
+
+// Convert back to array
+$data = $user->toArray();
+```
+
+That's it! You now have a fully typed DTO with IDE autocomplete.
+
+---
+
+## Why Code Generation?
+
+| Aspect | Code Generation | Runtime Reflection |
+|--------|----------------|-------------------|
+| **Performance** | Native PHP speed | 5-60x slower |
+| **IDE Support** | Perfect (real methods) | Limited (magic) |
+| **Static Analysis** | Works out of the box | Requires plugins |
+| **Code Review** | See exactly what runs | Hidden behavior |
+
+## Configuration Formats
+
+Choose your preferred format—all generate identical DTOs:
+
+::: code-group
+
+```xml [XML]
+<?xml version="1.0" encoding="UTF-8"?>
+<dtos xmlns="https://github.com/php-collective/dto">
+    <dto name="User">
+        <field name="name" type="string" required="true"/>
+        <field name="email" type="string"/>
+    </dto>
+</dtos>
+```
+
+```php [PHP Builder]
+use PhpCollective\Dto\Config\{Dto, Field, Schema};
+
+return Schema::create()
+    ->dto(Dto::create('User')->fields(
+        Field::string('name')->required(),
+        Field::string('email'),
+    ))
+    ->toArray();
+```
+
+```php [PHP Array]
+return [
+    'User' => [
+        'fields' => [
+            'name' => ['type' => 'string', 'required' => true],
+            'email' => 'string',
+        ],
+    ],
+];
+```
+
+```yaml [YAML]
+User:
+  fields:
+    name:
+      type: string
+      required: true
+    email: string
+```
+
+```ini [NEON]
+User:
+    fields:
+        name:
+            type: string
+            required: true
+        email: string
+```
+
+:::
+
+> [!TIP]
+> **XML** offers XSD validation and IDE autocomplete. **PHP Builder** provides the best type safety. Choose what fits your workflow.
+
+## Common Patterns
+
+### Nested DTOs
+
+```xml
+<dto name="Order">
+    <field name="id" type="int" required="true"/>
+    <field name="customer" type="Customer" required="true"/>
+    <field name="items" type="OrderItem[]" collection="true" singular="item"/>
+</dto>
+
+<dto name="Customer">
+    <field name="name" type="string"/>
+    <field name="email" type="string"/>
+</dto>
+
+<dto name="OrderItem">
+    <field name="product" type="string"/>
+    <field name="quantity" type="int"/>
+</dto>
+```
+
+```php
+$order = OrderDto::createFromArray($apiResponse);
+
+// Navigate nested objects with full type safety
+echo $order->getCustomer()->getName();
+
+// Iterate collections
+foreach ($order->getItems() as $item) {
+    echo $item->getProduct();
+}
+```
+
+### Immutable DTOs
+
+```xml
+<dto name="Config" immutable="true">
+    <field name="apiKey" type="string" required="true"/>
+    <field name="timeout" type="int" defaultValue="30"/>
+</dto>
+```
+
+```php
+$config = ConfigDto::createFromArray(['apiKey' => 'secret']);
+
+// Immutable: returns a new instance
+$updated = $config->withTimeout(60);
+```
+
+### Enums
+
+```xml
+<dto name="Task">
+    <field name="status" type="\App\Enum\TaskStatus" required="true"/>
+</dto>
+```
+
+```php
+enum TaskStatus: string {
+    case Pending = 'pending';
+    case Done = 'done';
+}
+
+$task = TaskDto::createFromArray(['status' => 'pending']);
+$task->getStatus(); // TaskStatus::Pending
+```
+
+## CLI Commands
+
+```bash
+# Generate DTOs (default command)
+vendor/bin/dto generate
+
+# Preview without writing
+vendor/bin/dto generate --dry-run
+
+# Custom paths
+vendor/bin/dto generate --config-path=dto/ --src-path=app/
+
+# Generate TypeScript interfaces
+vendor/bin/dto typescript --output=frontend/types/
+
+# Generate JSON Schema
+vendor/bin/dto jsonschema --output=schemas/
+```
+
+## Deployment
+
+### Recommended: Commit Generated Code
+
+```bash
+# Install as dev dependency
+composer require --dev php-collective/dto
+```
+
+1. Edit configuration
+2. Run `vendor/bin/dto generate`
+3. Commit generated files
+4. Deploy normally
+
+**Benefits:** No generation on production, faster deploys, code review for DTOs.
+
+### Alternative: Generate on Deploy
+
+```bash
+composer require php-collective/dto
+```
+
+Run generation as part of your deployment script. Useful when DTO definitions are dynamic.
+
+## Exclude from Static Analysis
+
+Generated code should be excluded from linters:
 
 **phpcs.xml:**
 ```xml
@@ -125,152 +261,15 @@ Generated DTOs should be excluded from phpcs, phpstan, and similar tools:
 ```
 
 **phpstan.neon:**
-```neon
+```ini
 parameters:
     excludePaths:
         - src/Dto/*
 ```
 
-## 3. Use Generated DTOs
+## Next Steps
 
-```php
-use App\Dto\CarDto;
-use App\Dto\OwnerDto;
-
-// Create with setters
-$carDto = new CarDto();
-$carDto->setColor('black');
-$carDto->setIsNew(true);
-
-// Or create from array
-$carDto = CarDto::createFromArray([
-    'color' => 'red',
-    'isNew' => false,
-    'distanceTravelled' => 50000,
-]);
-
-// Access with getters
-$color = $carDto->getColor();           // string|null
-$isNew = $carDto->getIsNewOrFail();     // bool (throws if not set)
-
-// Check existence
-if ($carDto->hasOwner()) {
-    $owner = $carDto->getOwner();
-}
-
-// Convert back to array
-$array = $carDto->toArray();
-$touched = $carDto->touchedToArray();   // Only fields that were set
-```
-
-## Configuration Formats
-
-The library supports multiple configuration formats:
-
-- **XML** (default) - with XSD validation and IDE autocomplete
-- **YAML** - requires PHP YAML extension (`pecl install yaml`)
-- **NEON** - requires `nette/neon`
-- **PHP** - native PHP arrays, best IDE support for complex configs
-
-### YAML Example
-
-```yaml
-# config/dto.yml
-Car:
-    fields:
-        color: string
-        isNew: bool
-        distanceTravelled:
-            type: int
-            defaultValue: 0
-        owner:
-            type: Owner
-            required: true
-        parts:
-            type: Part[]
-            collection: true
-            singular: part
-
-Owner:
-    fields:
-        name: string
-        birthYear: int
-
-ImmutableConfig:
-    immutable: true
-    fields:
-        apiKey: string
-        timeout:
-            type: int
-            defaultValue: 30
-```
-
-### NEON Example
-
-```neon
-# config/dto.neon
-Car:
-    fields:
-        color: string
-        isNew: bool
-        distanceTravelled:
-            type: int
-            defaultValue: 0
-        owner:
-            type: Owner
-            required: true
-
-Owner:
-    fields:
-        name: string
-        birthYear: int
-```
-
-### PHP Example
-
-```php
-<?php
-// config/dto.php
-return [
-    'Car' => [
-        'fields' => [
-            'color' => 'string',
-            'isNew' => 'bool',
-            'owner' => [
-                'type' => 'Owner',
-                'required' => true,
-            ],
-        ],
-    ],
-    'Owner' => [
-        'fields' => [
-            'name' => 'string',
-        ],
-    ],
-];
-```
-
-### PHP Fluent Builder
-
-For better IDE autocomplete and type safety, use the fluent builder API:
-
-```php
-<?php
-// config/dto.php
-use PhpCollective\Dto\Config\Dto;
-use PhpCollective\Dto\Config\Field;
-use PhpCollective\Dto\Config\Schema;
-
-return Schema::create()
-    ->dto(Dto::create('Car')->fields(
-        Field::string('color'),
-        Field::bool('isNew'),
-        Field::dto('owner', 'Owner')->required(),
-    ))
-    ->dto(Dto::create('Owner')->fields(
-        Field::string('name'),
-    ))
-    ->toArray();
-```
-
-See [Configuration Builder](./config-builder) for full documentation.
+- [Examples](./examples) — Real-world usage patterns
+- [Config Builder](./config-builder) — Fluent PHP API reference
+- [Validation](./validation) — Field constraints and rules
+- [TypeScript Generation](../reference/typescript) — Frontend type sync

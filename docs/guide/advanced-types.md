@@ -74,7 +74,7 @@ value:
 
 #### NEON
 
-```neon
+```ini
 id:
     type: int|string
 value:
