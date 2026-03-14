@@ -32,6 +32,7 @@ export default defineConfig({
       {
         text: 'Links',
         items: [
+          { text: 'Sandbox', link: 'https://sandbox.dereuromark.de/sandbox/dto-examples' },
           { text: 'Changelog', link: 'https://github.com/php-collective/dto/releases' },
           { text: 'Packagist', link: 'https://packagist.org/packages/php-collective/dto' },
           { text: 'Issues', link: 'https://github.com/php-collective/dto/issues' },
