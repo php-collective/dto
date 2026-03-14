@@ -118,7 +118,7 @@ Order:
 
 #### NEON
 
-```neon
+```ini
 Order:
     fields:
         money:
@@ -254,7 +254,7 @@ Product:
 
 #### NEON
 
-```neon
+```ini
 Product:
     fields:
         dimensions:
