@@ -17,7 +17,7 @@ Unlike runtime reflection libraries, this library generates optimized DTO classe
 - **JSON Schema generation** for API documentation
 - **Schema importer** to bootstrap DTOs from JSON data or OpenAPI specs
 
-See [Motivation](docs/Motivation.md) for why code generation beats runtime reflection.
+See [Motivation](https://php-collective.github.io/dto/guide/motivation) for why code generation beats runtime reflection.
 
 ## Installation
 
@@ -58,7 +58,7 @@ $car->setOwner(OwnerDto::create(['name' => 'John']));
 $array = $car->toArray();
 ```
 
-See [Quick Start Guide](docs/README.md) for detailed examples.
+See the [documentation](https://php-collective.github.io/dto/) for detailed examples.
 
 ## Immutable DTOs
 
@@ -141,7 +141,7 @@ Reading in a template (e.g., Twig, Blade, or plain PHP):
 
 ## Configuration Formats
 
-- **PHP** - native arrays or [fluent builder](docs/ConfigBuilder.md)
+- **PHP** - native arrays or [fluent builder](https://php-collective.github.io/dto/guide/config-builder)
 - **XML** - XSD validation, IDE autocomplete
 - **YAML** - requires `pecl install yaml`
 - **NEON** - requires `nette/neon`
@@ -171,7 +171,7 @@ export interface UserDto {
 
 Options: `--readonly`, `--strict-nulls`, `--file-case=pascal|dashed|snake`
 
-See [TypeScript Generation](docs/TypeScriptGeneration.md) for full documentation.
+See [TypeScript Generation](https://php-collective.github.io/dto/reference/typescript) for full documentation.
 
 ## Schema Importer
 
@@ -193,17 +193,18 @@ $config = $importer->import($schema, ['format' => 'xml']);
 
 Outputs to PHP, XML, YAML, or NEON format. Perfect for integrating with external APIs.
 
-See [Schema Importer](docs/Importer.md) for full documentation.
+See [Schema Importer](https://php-collective.github.io/dto/reference/importer) for full documentation.
 
 ## Documentation
 
-- [Quick Start Guide](docs/README.md) - Getting started with examples
-- [Configuration Builder](docs/ConfigBuilder.md) - Fluent API for defining DTOs
-- [Examples](docs/Examples.md) - Practical usage patterns
-- [TypeScript Generation](docs/TypeScriptGeneration.md) - Generate TypeScript interfaces
-- [Schema Importer](docs/Importer.md) - Bootstrap DTOs from JSON data/schema
-- [Performance](docs/Performance.md) - Benchmarks and optimization tips
-- [Motivation](docs/Motivation.md) - Why code generation beats runtime reflection
+Full documentation available at **[php-collective.github.io/dto](https://php-collective.github.io/dto/)**
+
+- [Getting Started](https://php-collective.github.io/dto/guide/) - Quick start guide with examples
+- [Configuration Builder](https://php-collective.github.io/dto/guide/config-builder) - Fluent API for defining DTOs
+- [Examples](https://php-collective.github.io/dto/guide/examples) - Practical usage patterns
+- [TypeScript Generation](https://php-collective.github.io/dto/reference/typescript) - Generate TypeScript interfaces
+- [Schema Importer](https://php-collective.github.io/dto/reference/importer) - Bootstrap DTOs from JSON data/schema
+- [Performance](https://php-collective.github.io/dto/guide/performance) - Benchmarks and optimization tips
 
 ## Integrations
 

@@ -113,8 +113,47 @@ tests/
 ├── Importer/      # Importer tests
 └── Utility/       # Utility tests
 
-docs/              # Documentation files
+docs/              # VitePress documentation site
+├── .vitepress/    # VitePress config and theme
+├── guide/         # Tutorial and guide pages
+├── reference/     # API/CLI reference pages
+└── public/        # Static assets (logo, images)
 ```
+
+## Documentation
+
+The documentation site is built with [VitePress](https://vitepress.dev/) and deployed to GitHub Pages.
+
+### Local Development
+
+```bash
+cd docs
+npm install    # First time only
+npm run docs:dev
+```
+
+This starts a dev server at `http://localhost:5173/dto/` with hot reload.
+
+### Building
+
+```bash
+cd docs
+npm run docs:build
+```
+
+### Structure
+
+- `docs/guide/` - Tutorials, configuration, patterns (kebab-case filenames)
+- `docs/reference/` - CLI, TypeScript, Importer reference
+- `docs/.vitepress/config.ts` - Navigation and sidebar config
+- `docs/index.md` - Homepage
+
+### Adding/Editing Pages
+
+1. Add or edit markdown files in `docs/guide/` or `docs/reference/`
+2. Add frontmatter with title: `---\ntitle: Page Title\n---`
+3. Update sidebar in `docs/.vitepress/config.ts` if adding new pages
+4. Preview locally with `npm run docs:dev`
 
 ## Reporting Issues
 
