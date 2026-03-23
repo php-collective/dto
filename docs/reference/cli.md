@@ -6,6 +6,8 @@ title: CLI Reference
 
 Complete reference for the DTO Generator command-line interface.
 
+The generators fail with a descriptive error when the output directory cannot be created or a generated file cannot be written.
+
 ## Installation
 
 After installing via Composer, the CLI is available at:
