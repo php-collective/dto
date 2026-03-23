@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Engine;
 
+use InvalidArgumentException;
 use PhpCollective\Dto\Utility\XmlParser;
 
 class XmlEngine implements EngineInterface
@@ -40,6 +41,8 @@ class XmlEngine implements EngineInterface
      * if validate() cannot be used.
      *
      * @param string $content
+     *
+     * @throws \InvalidArgumentException If a field definition is missing required "name" attribute.
      *
      * @return array
      */
@@ -79,9 +82,13 @@ class XmlEngine implements EngineInterface
             }
 
             $fields = [];
-            foreach ($dto['field'] as $fieldDefinition) {
+            foreach ($dto['field'] as $index => $fieldDefinition) {
                 if (!isset($fieldDefinition['@name'])) {
-                    continue; // Skip malformed field definitions
+                    throw new InvalidArgumentException(sprintf(
+                        'Field definition #%d in DTO `%s` is missing required "name" attribute.',
+                        $index + 1,
+                        $name,
+                    ));
                 }
                 $fieldName = $fieldDefinition['@name'];
                 foreach ($fieldDefinition as $k => $v) {
