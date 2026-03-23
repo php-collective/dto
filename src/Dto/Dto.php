@@ -1505,9 +1505,11 @@ abstract class Dto implements JsonSerializable
             ));
         }
 
-        $result = $class::tryFrom($value);
+        /** @var class-string<\BackedEnum> $backedEnumClass */
+        $backedEnumClass = $class;
+        $result = $backedEnumClass::tryFrom($value);
         if ($result === null) {
-            $cases = $class::cases();
+            $cases = $backedEnumClass::cases();
 
             throw new InvalidArgumentException(sprintf(
                 'Invalid value `%s` for backed enum field `%s`. Valid values: %s.',
