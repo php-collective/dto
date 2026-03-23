@@ -235,6 +235,8 @@ if ($validator->fails()) {
 
 `validationRules()` returns framework-agnostic metadata such as `minLength` and `pattern`. Laravel does not consume that structure directly, so map it into Laravel rule strings or objects first.
 
+If you want to centralize that mapping, extract it into a small helper such as `laravelRulesFromDto(UserDto $dto): array` and keep request-specific rules on top of the DTO-derived baseline.
+
 ### Symfony
 
 ```php
@@ -262,6 +264,8 @@ class UserController extends AbstractController
     }
 }
 ```
+
+The same pattern works well in Symfony with a helper that converts `validationRules()` output into an `Assert\Collection`.
 
 See [Validation](./validation) for more validation patterns.
 
