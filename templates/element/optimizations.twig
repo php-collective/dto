@@ -441,8 +441,8 @@
 			}
 {% endif %}
 {% if field.pattern is not null %}
-			if (is_string($this->{{ field.name }}) && !preg_match('{{ field.pattern | e('html') }}', $this->{{ field.name }})) {
-				$errors[] = '{{ field.name }} must match pattern {{ field.pattern | e('html') }}';
+			if (is_string($this->{{ field.name }}) && !preg_match({{ field.pattern | phpExport | raw }}, $this->{{ field.name }})) {
+				$errors[] = '{{ field.name }} must match pattern ' . {{ field.pattern | phpExport | raw }};
 			}
 {% endif %}
 		}
