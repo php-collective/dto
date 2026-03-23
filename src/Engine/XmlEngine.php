@@ -41,6 +41,8 @@ class XmlEngine implements EngineInterface
      *
      * @param string $content
      *
+     * @throws \InvalidArgumentException If a field definition is missing required "name" attribute.
+     *
      * @return array
      */
     public function parse(string $content): array
@@ -79,9 +81,13 @@ class XmlEngine implements EngineInterface
             }
 
             $fields = [];
-            foreach ($dto['field'] as $fieldDefinition) {
+            foreach ($dto['field'] as $index => $fieldDefinition) {
                 if (!isset($fieldDefinition['@name'])) {
-                    continue; // Skip malformed field definitions
+                    throw new InvalidArgumentException(sprintf(
+                        'Field definition #%d in DTO `%s` is missing required "name" attribute.',
+                        $index + 1,
+                        $name,
+                    ));
                 }
                 $fieldName = $fieldDefinition['@name'];
                 foreach ($fieldDefinition as $k => $v) {

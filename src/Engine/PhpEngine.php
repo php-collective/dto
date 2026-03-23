@@ -134,10 +134,17 @@ class PhpEngine implements FileBasedEngineInterface
 
             foreach ($fields as $key => $field) {
                 // Support shorthand: 'fieldName' => 'type'
-                if (!is_array($field)) {
+                if (is_string($field)) {
                     $field = [
                         'type' => $field,
                     ];
+                } elseif (!is_array($field)) {
+                    throw new InvalidArgumentException(sprintf(
+                        'Field `%s` in DTO `%s` must be a string (type shorthand) or array, got %s.',
+                        $key,
+                        $name,
+                        get_debug_type($field),
+                    ));
                 }
                 $field['name'] = $key;
                 $fields[$key] = $field;
