@@ -8,6 +8,7 @@ use PhpCollective\Dto\Generator\ConsoleIo;
 use PhpCollective\Dto\Generator\IoInterface;
 use PhpCollective\Dto\Generator\TypeScriptGenerator;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class TypeScriptGeneratorTest extends TestCase
 {
@@ -385,5 +386,63 @@ class TypeScriptGeneratorTest extends TestCase
 
         $this->assertDirectoryExists($nestedDir);
         $this->assertFileExists($nestedDir . '/dto.ts');
+    }
+
+    public function testMultiFileUnionTypesAddImports(): void
+    {
+        $definitions = [
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'id' => ['name' => 'id', 'type' => 'int', 'required' => true],
+                ],
+            ],
+            'Address' => [
+                'name' => 'Address',
+                'fields' => [
+                    'street' => ['name' => 'street', 'type' => 'string', 'required' => true],
+                ],
+            ],
+            'SearchResult' => [
+                'name' => 'SearchResult',
+                'fields' => [
+                    'result' => [
+                        'name' => 'result',
+                        'type' => 'User|Address',
+                        'required' => true,
+                    ],
+                ],
+            ],
+        ];
+
+        $generator = new TypeScriptGenerator($this->createIo(), ['singleFile' => false]);
+        $generator->generate($definitions, $this->tempDir);
+
+        $content = file_get_contents($this->tempDir . '/SearchResultDto.ts');
+        $this->assertStringContainsString("import type { UserDto } from './UserDto';", $content);
+        $this->assertStringContainsString("import type { AddressDto } from './AddressDto';", $content);
+        $this->assertStringContainsString('result: UserDto | AddressDto;', $content);
+    }
+
+    public function testGenerateThrowsWhenOutputPathCannotBeCreated(): void
+    {
+        $definitions = [
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'id' => ['name' => 'id', 'type' => 'int', 'required' => true],
+                ],
+            ],
+        ];
+
+        $outputPath = $this->tempDir . '/blocked';
+        file_put_contents($outputPath, 'not a directory');
+
+        $generator = new TypeScriptGenerator($this->createIo());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to create directory');
+
+        $generator->generate($definitions, $outputPath . '/child');
     }
 }

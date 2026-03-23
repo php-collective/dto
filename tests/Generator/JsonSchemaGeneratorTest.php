@@ -8,6 +8,7 @@ use PhpCollective\Dto\Generator\ConsoleIo;
 use PhpCollective\Dto\Generator\IoInterface;
 use PhpCollective\Dto\Generator\JsonSchemaGenerator;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 class JsonSchemaGeneratorTest extends TestCase
 {
@@ -604,5 +605,27 @@ class JsonSchemaGeneratorTest extends TestCase
         $this->assertArrayHasKey('SettingsTransfer', $schema['$defs']);
         $this->assertArrayHasKey('UserTransfer', $schema['$defs']);
         $this->assertSame('#/$defs/SettingsTransfer', $schema['$defs']['UserTransfer']['properties']['settings']['$ref']);
+    }
+
+    public function testGenerateThrowsWhenOutputPathCannotBeCreated(): void
+    {
+        $definitions = [
+            'User' => [
+                'name' => 'User',
+                'fields' => [
+                    'id' => ['name' => 'id', 'type' => 'int', 'required' => true],
+                ],
+            ],
+        ];
+
+        $outputPath = $this->tempDir . '/blocked';
+        file_put_contents($outputPath, 'not a directory');
+
+        $generator = new JsonSchemaGenerator($this->createIo());
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Failed to create directory');
+
+        $generator->generate($definitions, $outputPath . '/child');
     }
 }

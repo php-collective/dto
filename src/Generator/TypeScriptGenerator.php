@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Generator;
 
+use RuntimeException;
+
 /**
  * Generates TypeScript interfaces from DTO definitions.
  */
@@ -77,9 +79,7 @@ class TypeScriptGenerator
      */
     public function generate(array $definitions, string $outputPath): int
     {
-        if (!is_dir($outputPath)) {
-            mkdir($outputPath, 0777, true);
-        }
+        $this->ensureDirectoryExists($outputPath);
 
         $outputPath = rtrim($outputPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
@@ -114,7 +114,7 @@ class TypeScriptGenerator
         $fileName = 'dto.ts';
         $filePath = $outputPath . $fileName;
 
-        file_put_contents($filePath, $content);
+        $this->writeFile($filePath, $content);
         $this->io->success("Generated: {$fileName}");
 
         return 1;
@@ -147,14 +147,14 @@ class TypeScriptGenerator
             $fileName = $this->getFileName($name);
             $filePath = $outputPath . $fileName;
 
-            file_put_contents($filePath, $content);
+            $this->writeFile($filePath, $content);
             $this->io->success("Generated: {$fileName}");
             $count++;
         }
 
         // Generate index file
         $indexContent = $this->generateIndexFile($definitions);
-        file_put_contents($outputPath . 'index.ts', $indexContent);
+        $this->writeFile($outputPath . 'index.ts', $indexContent);
         $this->io->success('Generated: index.ts');
 
         return $count + 1;
@@ -413,15 +413,16 @@ class TypeScriptGenerator
             // Check if this field references another DTO
             $dtoRef = $field[FieldKey::DTO] ?? null;
             if ($dtoRef && isset($allDefinitions[$dtoRef])) {
-                $interfaceName = $this->getInterfaceName($dtoRef);
-                $fileName = $this->getFileName($dtoRef);
-                $fileNameWithoutExt = substr($fileName, 0, -3);
-                $imports[$interfaceName] = "import type { {$interfaceName} } from './{$fileNameWithoutExt}';";
+                $this->addImport($imports, $dtoRef);
 
                 continue;
             }
 
             $type = $field[FieldKey::TYPE] ?? 'mixed';
+
+            foreach ($this->extractReferencedDtos((string)$type, $allDefinitions) as $dtoName) {
+                $this->addImport($imports, $dtoName);
+            }
 
             // Remove array notation
             if (str_ends_with($type, '[]')) {
@@ -440,10 +441,7 @@ class TypeScriptGenerator
 
             // Check if it's a reference to another DTO by name
             if (isset($allDefinitions[$type])) {
-                $interfaceName = $this->getInterfaceName($type);
-                $fileName = $this->getFileName($type);
-                $fileNameWithoutExt = substr($fileName, 0, -3);
-                $imports[$interfaceName] = "import type { {$interfaceName} } from './{$fileNameWithoutExt}';";
+                $this->addImport($imports, (string)$type);
 
                 continue;
             }
@@ -455,10 +453,7 @@ class TypeScriptGenerator
             // Check without Dto suffix
             $baseName = str_ends_with($className, 'Dto') ? substr($className, 0, -3) : $className;
             if (isset($allDefinitions[$baseName])) {
-                $interfaceName = $this->getInterfaceName($baseName);
-                $fileName = $this->getFileName($baseName);
-                $fileNameWithoutExt = substr($fileName, 0, -3);
-                $imports[$interfaceName] = "import type { {$interfaceName} } from './{$fileNameWithoutExt}';";
+                $this->addImport($imports, $baseName);
 
                 continue;
             }
@@ -469,15 +464,108 @@ class TypeScriptGenerator
                 $singularClassName = $this->extractClassName($singularClass);
                 $singularBaseName = str_ends_with($singularClassName, 'Dto') ? substr($singularClassName, 0, -3) : $singularClassName;
                 if (isset($allDefinitions[$singularBaseName])) {
-                    $interfaceName = $this->getInterfaceName($singularBaseName);
-                    $fileName = $this->getFileName($singularBaseName);
-                    $fileNameWithoutExt = substr($fileName, 0, -3);
-                    $imports[$interfaceName] = "import type { {$interfaceName} } from './{$fileNameWithoutExt}';";
+                    $this->addImport($imports, $singularBaseName);
                 }
             }
         }
 
         return implode("\n", array_values($imports));
+    }
+
+    /**
+     * @param array<string, string> $imports
+     * @param string $dtoName
+     *
+     * @return void
+     */
+    protected function addImport(array &$imports, string $dtoName): void
+    {
+        $interfaceName = $this->getInterfaceName($dtoName);
+        $fileName = $this->getFileName($dtoName);
+        $fileNameWithoutExt = substr($fileName, 0, -3);
+        $imports[$interfaceName] = "import type { {$interfaceName} } from './{$fileNameWithoutExt}';";
+    }
+
+    /**
+     * @param string $type
+     * @param array<string, array<string, mixed>> $allDefinitions
+     *
+     * @return array<string>
+     */
+    protected function extractReferencedDtos(string $type, array $allDefinitions): array
+    {
+        $references = [];
+
+        foreach (explode('|', $type) as $part) {
+            $part = trim($part);
+            if ($part === '') {
+                continue;
+            }
+
+            if (str_ends_with($part, '[]')) {
+                $part = substr($part, 0, -2);
+            }
+
+            if (isset(self::TYPE_MAP[strtolower($part)]) || isset(self::DATE_TYPES[$part])) {
+                continue;
+            }
+
+            if (isset($allDefinitions[$part])) {
+                $references[] = $part;
+
+                continue;
+            }
+
+            $className = $this->extractClassName($part);
+            $baseName = str_ends_with($className, 'Dto') ? substr($className, 0, -3) : $className;
+            if (isset($allDefinitions[$baseName])) {
+                $references[] = $baseName;
+            }
+        }
+
+        return array_values(array_unique($references));
+    }
+
+    /**
+     * @param string $path
+     *
+     * @throws \RuntimeException
+     *
+     * @return void
+     */
+    protected function ensureDirectoryExists(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (!@mkdir($path, 0777, true) && !is_dir($path)) {
+            throw new RuntimeException(sprintf(
+                "Failed to create directory '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
+    }
+
+    /**
+     * @param string $path
+     * @param string $content
+     *
+     * @throws \RuntimeException
+     *
+     * @return void
+     */
+    protected function writeFile(string $path, string $content): void
+    {
+        $result = @file_put_contents($path, $content);
+        if ($result === false) {
+            throw new RuntimeException(sprintf(
+                "Failed to write file '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
     }
 
     /**

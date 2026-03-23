@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Generator;
 
+use RuntimeException;
+
 /**
  * Generates JSON Schema from DTO definitions.
  */
@@ -74,9 +76,7 @@ class JsonSchemaGenerator
      */
     public function generate(array $definitions, string $outputPath): int
     {
-        if (!is_dir($outputPath)) {
-            mkdir($outputPath, 0777, true);
-        }
+        $this->ensureDirectoryExists($outputPath);
 
         $outputPath = rtrim($outputPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
 
@@ -111,7 +111,7 @@ class JsonSchemaGenerator
         }
 
         $filePath = $outputPath . 'dto-schemas.json';
-        file_put_contents($filePath, json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+        $this->writeFile($filePath, json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         $this->io->success('Generated: dto-schemas.json');
 
         return 1;
@@ -141,12 +141,54 @@ class JsonSchemaGenerator
             $fileName = $schemaName . '.json';
             $filePath = $outputPath . $fileName;
 
-            file_put_contents($filePath, json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
+            $this->writeFile($filePath, json_encode($schema, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
             $this->io->success('Generated: ' . $fileName);
             $count++;
         }
 
         return $count;
+    }
+
+    /**
+     * @param string $path
+     *
+     * @throws \RuntimeException
+     *
+     * @return void
+     */
+    protected function ensureDirectoryExists(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        if (!@mkdir($path, 0777, true) && !is_dir($path)) {
+            throw new RuntimeException(sprintf(
+                "Failed to create directory '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
+    }
+
+    /**
+     * @param string $path
+     * @param string $content
+     *
+     * @throws \RuntimeException
+     *
+     * @return void
+     */
+    protected function writeFile(string $path, string $content): void
+    {
+        $result = @file_put_contents($path, $content);
+        if ($result === false) {
+            throw new RuntimeException(sprintf(
+                "Failed to write file '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
     }
 
     /**
