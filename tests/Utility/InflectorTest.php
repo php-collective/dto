@@ -82,6 +82,7 @@ class InflectorTest extends TestCase
     public static function singularizeDataProvider(): array
     {
         return [
+            // Basic plurals
             ['users', 'user'],
             ['statuses', 'status'],
             ['quizzes', 'quiz'],
@@ -102,6 +103,54 @@ class InflectorTest extends TestCase
             ['feet', 'foot'],
             ['geese', 'goose'],
             ['employees', 'employee'],
+            // Words ending in -sses, -xes, -ches, -shes
+            ['classes', 'class'],
+            ['addresses', 'address'],
+            ['processes', 'process'],
+            ['taxes', 'tax'],
+            ['boxes', 'box'],
+            ['buses', 'bus'],
+            ['wishes', 'wish'],
+            ['watches', 'watch'],
+            // Words ending in -ves where singular is -f (not -fe)
+            ['leaves', 'leaf'],
+            ['sheaves', 'sheaf'],
+            ['loaves', 'loaf'],
+            ['thieves', 'thief'],
+            // Words ending in -ves where singular is -fe
+            ['knives', 'knife'],
+            ['wives', 'wife'],
+            ['lives', 'life'],
+            ['wolves', 'wolf'],
+            ['halves', 'half'],
+            ['selves', 'self'],
+            ['calves', 'calf'],
+            ['elves', 'elf'],
+            ['dwarves', 'dwarf'],
+            ['scarves', 'scarf'],
+            // Latin/Greek plurals
+            ['phenomena', 'phenomenon'],
+            ['criteria', 'criterion'],
+            ['bacteria', 'bacterium'],
+            ['curricula', 'curriculum'],
+            ['memoranda', 'memorandum'],
+            ['strata', 'stratum'],
+            ['appendices', 'appendix'],
+            // Words ending in -ies
+            ['categories', 'category'],
+            ['factories', 'factory'],
+            ['countries', 'country'],
+            ['babies', 'baby'],
+            ['cities', 'city'],
+            ['parties', 'party'],
+            // Words ending in -es after vowel
+            ['potatoes', 'potato'],
+            ['heroes', 'hero'],
+            ['echoes', 'echo'],
+            // Case preservation
+            ['Leaves', 'Leaf'],
+            ['Categories', 'Category'],
+            // Empty string
             ['', ''],
         ];
     }

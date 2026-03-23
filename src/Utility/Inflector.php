@@ -72,6 +72,13 @@ class Inflector
      * @var array<string, string>
      */
     protected static array $irregular = [
+        // Plurals ending in -ves where singular ends in -f (not -fe)
+        'leaves' => 'leaf',
+        'sheaves' => 'sheaf',
+        'loaves' => 'loaf',
+        'thieves' => 'thief',
+        'beeves' => 'beef',
+        // Common irregular plurals
         'foes' => 'foe',
         'waves' => 'wave',
         'curves' => 'curve',
@@ -82,6 +89,28 @@ class Inflector
         'geese' => 'goose',
         'teeth' => 'tooth',
         'criteria' => 'criterion',
+        // Additional common irregulars
+        'appendices' => 'appendix',
+        'indices' => 'index',
+        'octopi' => 'octopus',
+        'cacti' => 'cactus',
+        'fungi' => 'fungus',
+        'nuclei' => 'nucleus',
+        'radii' => 'radius',
+        'stimuli' => 'stimulus',
+        'syllabi' => 'syllabus',
+        'alumni' => 'alumnus',
+        'phenomena' => 'phenomenon',
+        'automata' => 'automaton',
+        'strata' => 'stratum',
+        'errata' => 'erratum',
+        'memoranda' => 'memorandum',
+        'curricula' => 'curriculum',
+        'millennia' => 'millennium',
+        'addenda' => 'addendum',
+        'bacteria' => 'bacterium',
+        'corpora' => 'corpus',
+        'genera' => 'genus',
     ];
 
     /**

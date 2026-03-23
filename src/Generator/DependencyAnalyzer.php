@@ -69,47 +69,47 @@ class DependencyAnalyzer
     protected function extractDependencies(array $dto, array $knownDtos): array
     {
         $dependencies = [];
-        $fields = $dto['fields'] ?? [];
+        $fields = $dto[FieldKey::FIELDS] ?? [];
 
         foreach ($fields as $field) {
             // Skip lazy fields - they don't create circular dependencies at runtime
             // because they defer instantiation until first access
-            if (!empty($field['lazy'])) {
+            if (!empty($field[FieldKey::LAZY])) {
                 continue;
             }
 
-            $type = $field['type'] ?? '';
+            $type = $field[FieldKey::TYPE] ?? '';
 
             // Extract DTO names from type (handles Foo, Foo[], ?Foo[], and union types like Foo|Bar)
             foreach ($this->extractDtoNamesFromType($type) as $dtoName) {
-                if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
+                if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto[FieldKey::NAME]) {
                     $dependencies[] = $dtoName;
                 }
             }
 
             // Check singular type for collections (also handles union types)
-            $singularType = $field['singularType'] ?? null;
+            $singularType = $field[FieldKey::SINGULAR_TYPE] ?? null;
             if ($singularType) {
                 foreach ($this->extractDtoNamesFromType($singularType) as $dtoName) {
-                    if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
+                    if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto[FieldKey::NAME]) {
                         $dependencies[] = $dtoName;
                     }
                 }
             }
 
             // Check dto field
-            $dtoField = $field['dto'] ?? null;
-            if ($dtoField && in_array($dtoField, $knownDtos, true) && $dtoField !== $dto['name']) {
+            $dtoField = $field[FieldKey::DTO] ?? null;
+            if ($dtoField && in_array($dtoField, $knownDtos, true) && $dtoField !== $dto[FieldKey::NAME]) {
                 $dependencies[] = $dtoField;
             }
         }
 
         // Check extends
-        if (!empty($dto['extends'])) {
-            $extends = $dto['extends'];
+        if (!empty($dto[FieldKey::EXTENDS])) {
+            $extends = $dto[FieldKey::EXTENDS];
             // Extract name from class path like \App\Dto\ParentDto or ParentDto
             $parentName = $this->extractDtoNameFromClassName($extends);
-            if ($parentName && in_array($parentName, $knownDtos, true) && $parentName !== $dto['name']) {
+            if ($parentName && in_array($parentName, $knownDtos, true) && $parentName !== $dto[FieldKey::NAME]) {
                 $dependencies[] = $parentName;
             }
         }
