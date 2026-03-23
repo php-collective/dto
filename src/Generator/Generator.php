@@ -108,7 +108,7 @@ class Generator
             $target = $srcPath . 'Dto' . DIRECTORY_SEPARATOR . $name . $suffix . '.php';
             $targetPath = dirname($target);
             if (!is_dir($targetPath)) {
-                mkdir($targetPath, 0755, true);
+                mkdir($targetPath, 0777, true);
             }
 
             if ($isModified) {
@@ -182,7 +182,7 @@ class Generator
             $target = $srcPath . 'Dto' . DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR . $name . $suffix . 'Mapper.php';
             $targetPath = dirname($target);
             if (!is_dir($targetPath)) {
-                mkdir($targetPath, 0755, true);
+                mkdir($targetPath, 0777, true);
             }
 
             if ($isModified) {
@@ -221,7 +221,7 @@ class Generator
     protected function findExistingDtos(string $path): array
     {
         if (!is_dir($path)) {
-            mkdir($path, 0755, true);
+            mkdir($path, 0777, true);
         }
 
         $files = [];
