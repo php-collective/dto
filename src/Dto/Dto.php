@@ -1465,6 +1465,7 @@ abstract class Dto implements JsonSerializable
             }
         }
         $clone->_touchedFields = $this->_touchedFields;
+        $clone->_lazyData = $this->_lazyData;
 
         return $clone;
     }
