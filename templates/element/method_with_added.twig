@@ -28,7 +28,8 @@
 {% else %}
 		$new = clone $this;
 {% if lazy|default(false) %}
-		unset($new->_lazyData['{{ name }}']);
+		// Hydrate collection first (this also clears _lazyData)
+		$new->get{{ name|stripLeadingUnderscore|camelize }}();
 {% endif %}
 
 		if ($new->{{ name }} === null) {

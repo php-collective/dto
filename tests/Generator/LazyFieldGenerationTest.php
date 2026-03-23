@@ -156,6 +156,96 @@ XML;
         $this->assertStringContainsString("array_key_exists('nested', \$this->_lazyData)", $code);
     }
 
+    public function testAddMethodHydratesLazyCollectionFirst(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="LazyAdd">
+        <field name="items" type="ItemDto[]" lazy="true" singular="item"/>
+    </dto>
+    <dto name="ItemDto">
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+
+        $code = $this->generateDtoCode($xml, 'LazyAdd');
+
+        // addItem should call getter first to hydrate the collection
+        $this->assertStringContainsString('function addItem', $code);
+        $this->assertStringContainsString('$this->getItems()', $code);
+
+        // Extract addItem method to verify it doesn't directly unset _lazyData
+        preg_match('/function addItem\([^)]*\)\s*\{([^}]+)\}/s', $code, $matches);
+        $this->assertNotEmpty($matches, 'addItem method should exist');
+        $addItemBody = $matches[1];
+        $this->assertStringNotContainsString("unset(\$this->_lazyData", $addItemBody);
+    }
+
+    public function testRemoveMethodHydratesLazyCollectionFirst(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="LazyRemove">
+        <field name="items" type="ItemDto[]" lazy="true" singular="item"/>
+    </dto>
+    <dto name="ItemDto">
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+
+        $code = $this->generateDtoCode($xml, 'LazyRemove');
+
+        // removeItem should call getter first to hydrate the collection
+        $this->assertStringContainsString('function removeItem', $code);
+        $this->assertStringContainsString('$this->getItems()', $code);
+    }
+
+    public function testWithAddedMethodHydratesLazyCollectionFirst(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="LazyWithAdded" immutable="true">
+        <field name="items" type="ItemDto[]" lazy="true" singular="item"/>
+    </dto>
+    <dto name="ItemDto">
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+
+        $code = $this->generateDtoCode($xml, 'LazyWithAdded');
+
+        // withAddedItem should call getter first to hydrate the collection on clone
+        $this->assertStringContainsString('function withAddedItem', $code);
+        $this->assertStringContainsString('$new->getItems()', $code);
+    }
+
+    public function testWithRemovedMethodHydratesLazyCollectionFirst(): void
+    {
+        $xml = <<<'XML'
+<?xml version="1.0"?>
+<dtos xmlns="php-collective-dto">
+    <dto name="LazyWithRemoved" immutable="true">
+        <field name="items" type="ItemDto[]" lazy="true" singular="item"/>
+    </dto>
+    <dto name="ItemDto">
+        <field name="name" type="string"/>
+    </dto>
+</dtos>
+XML;
+
+        $code = $this->generateDtoCode($xml, 'LazyWithRemoved');
+
+        // withRemovedItem should call getter first to hydrate the collection on clone
+        $this->assertStringContainsString('function withRemovedItem', $code);
+        $this->assertStringContainsString('$new->getItems()', $code);
+    }
+
     private function generateDtoCode(string $xml, string $dtoName): string
     {
         $engine = new XmlEngine();
