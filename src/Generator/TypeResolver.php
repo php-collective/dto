@@ -114,10 +114,10 @@ class TypeResolver
      */
     public function collectionType(array $field, string $defaultCollectionType): string
     {
-        if ($field['collectionType']) {
-            return $field['collectionType'];
+        if ($field[FieldKey::COLLECTION_TYPE]) {
+            return $field[FieldKey::COLLECTION_TYPE];
         }
-        if ($field['collection']) {
+        if ($field[FieldKey::COLLECTION]) {
             return $defaultCollectionType;
         }
 
@@ -161,23 +161,25 @@ class TypeResolver
     /**
      * Detect the serialize method to use for a class type.
      *
-     * @param array<string, mixed> $config
+     * @param array<string, mixed> $field
      *
      * @return string|null
      */
-    public function detectSerialize(array $config): ?string
+    public function detectSerialize(array $field): ?string
     {
-        $serializable = is_subclass_of($config['type'], FromArrayToArrayInterface::class);
+        $type = $field[FieldKey::TYPE];
+
+        $serializable = is_subclass_of($type, FromArrayToArrayInterface::class);
         if ($serializable) {
             return 'FromArrayToArray';
         }
 
-        $jsonSafeToString = is_subclass_of($config['type'], JsonSerializable::class);
+        $jsonSafeToString = is_subclass_of($type, JsonSerializable::class);
         if ($jsonSafeToString) {
             return null;
         }
 
-        if (method_exists($config['type'], 'toArray')) {
+        if (method_exists($type, 'toArray')) {
             return 'array';
         }
 

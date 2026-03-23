@@ -53,13 +53,13 @@ class ExtendsResolver
      */
     protected function resolveExtends(array $dto, array $allDtos): array
     {
-        $extends = $dto['extends'];
+        $extends = $dto[FieldKey::EXTENDS];
 
         if (in_array($extends, ['\\PhpCollective\\Dto\\Dto\\AbstractDto', '\\PhpCollective\\Dto\\Dto\\AbstractImmutableDto'], true)) {
             return $dto;
         }
 
-        $isImmutable = !empty($dto['immutable']);
+        $isImmutable = !empty($dto[FieldKey::IMMUTABLE]);
 
         if (isset($allDtos[$extends])) {
             $dto = $this->resolveInternalExtends($dto, $extends, $allDtos, $isImmutable);
@@ -84,25 +84,25 @@ class ExtendsResolver
      */
     protected function resolveInternalExtends(array $dto, string $extends, array $allDtos, bool $isImmutable): array
     {
-        $dto['extends'] = $extends . $this->suffix;
+        $dto[FieldKey::EXTENDS] = $extends . $this->suffix;
 
-        if (!$isImmutable && !empty($allDtos[$extends]['immutable'])) {
+        if (!$isImmutable && !empty($allDtos[$extends][FieldKey::IMMUTABLE])) {
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: cannot extend immutable DTO `%s`.\n"
                 . 'Hint: Either make `%s` immutable, or extend a mutable DTO instead.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
-                $dto['name'],
+                $dto[FieldKey::NAME],
             ));
         }
 
-        if ($isImmutable && empty($allDtos[$extends]['immutable'])) {
+        if ($isImmutable && empty($allDtos[$extends][FieldKey::IMMUTABLE])) {
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: immutable DTO cannot extend mutable DTO `%s`.\n"
                 . 'Hint: Either make `%s` mutable, or make `%s` immutable.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
             ));
         }
@@ -127,7 +127,7 @@ class ExtendsResolver
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: class `%s` does not exist.\n"
                 . 'Hint: Check the class name spelling and ensure the class is autoloadable.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
             ));
         }
@@ -138,7 +138,7 @@ class ExtendsResolver
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: `%s` must extend %s.\n"
                 . 'Hint: The parent class should be a DTO class extending the appropriate base.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
                 $isImmutable ? AbstractImmutableDto::class : AbstractDto::class,
             ));
@@ -148,7 +148,7 @@ class ExtendsResolver
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: `%s` is not immutable.\n"
                 . 'Hint: Immutable DTOs must extend other immutable DTOs or AbstractImmutableDto.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
             ));
         }
@@ -157,9 +157,9 @@ class ExtendsResolver
             throw new InvalidArgumentException(sprintf(
                 "Invalid `extends` attribute for `%s` DTO: `%s` is immutable.\n"
                 . 'Hint: Mutable DTOs cannot extend immutable DTOs. Either make `%s` immutable or change the parent.',
-                $dto['name'],
+                $dto[FieldKey::NAME],
                 $extends,
-                $dto['name'],
+                $dto[FieldKey::NAME],
             ));
         }
 
@@ -183,9 +183,9 @@ class ExtendsResolver
                 $dto['namespace'] .= '\\' . implode('\\', $pieces);
             }
 
-            if (!empty($dto['extends']) && strpos($dto['extends'], '/') !== false) {
-                $pieces = explode('/', $dto['extends']);
-                $dto['extends'] = '\\' . $namespace . '\Dto\\' . implode('\\', $pieces);
+            if (!empty($dto[FieldKey::EXTENDS]) && strpos($dto[FieldKey::EXTENDS], '/') !== false) {
+                $pieces = explode('/', $dto[FieldKey::EXTENDS]);
+                $dto[FieldKey::EXTENDS] = '\\' . $namespace . '\Dto\\' . implode('\\', $pieces);
             }
 
             $config[$name] = $dto;

@@ -167,12 +167,12 @@ class JsonSchemaGenerator
 
         $required = [];
         /** @var array<string, array<string, mixed>> $fields */
-        $fields = $definition['fields'] ?? [];
+        $fields = $definition[FieldKey::FIELDS] ?? [];
 
         foreach ($fields as $fieldName => $field) {
             $schema['properties'][$fieldName] = $this->mapFieldToSchema($field, $allDefinitions, $inDefs);
 
-            if (!empty($field['required'])) {
+            if (!empty($field[FieldKey::REQUIRED])) {
                 $required[] = $fieldName;
             }
         }
@@ -199,9 +199,9 @@ class JsonSchemaGenerator
     protected function mapFieldToSchema(array $field, array $allDefinitions, bool $inDefs): array
     {
         /** @var string $type */
-        $type = $field['type'] ?? 'mixed';
-        $nullable = !empty($field['nullable']);
-        $isCollection = !empty($field['collection']) || !empty($field['isArray']);
+        $type = $field[FieldKey::TYPE] ?? 'mixed';
+        $nullable = !empty($field[FieldKey::NULLABLE]);
+        $isCollection = !empty($field[FieldKey::COLLECTION]) || !empty($field[FieldKey::IS_ARRAY]);
 
         // Handle array notation (e.g., "string[]", "int[]")
         if (str_ends_with($type, '[]')) {
@@ -217,9 +217,9 @@ class JsonSchemaGenerator
         // Handle collections
         if ($isCollection) {
             /** @var string|null $singularType */
-            $singularType = $field['singularType'] ?? null;
+            $singularType = $field[FieldKey::SINGULAR_TYPE] ?? null;
             /** @var string|null $singularClass */
-            $singularClass = $field['singularClass'] ?? null;
+            $singularClass = $field[FieldKey::SINGULAR_CLASS] ?? null;
 
             $itemSchema = ['type' => 'any'];
             if ($singularClass) {
@@ -240,9 +240,9 @@ class JsonSchemaGenerator
         }
 
         // Handle nested DTO
-        if (!empty($field['dto'])) {
+        if (!empty($field[FieldKey::DTO])) {
             /** @var string $dtoName */
-            $dtoName = $field['dto'];
+            $dtoName = $field[FieldKey::DTO];
             if (isset($allDefinitions[$dtoName])) {
                 $schema = $this->getRefOrInline($dtoName, $allDefinitions, $inDefs);
 

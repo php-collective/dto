@@ -184,8 +184,8 @@ class TypeScriptGenerator
         $readonly = $this->options['readonly'] ? 'readonly ' : '';
         $exportStyle = $this->options['exportStyle'];
 
-        $fields = $definition['fields'] ?? [];
-        $immutable = $definition['immutable'] ?? false;
+        $fields = $definition[FieldKey::FIELDS] ?? [];
+        $immutable = $definition[FieldKey::IMMUTABLE] ?? false;
 
         // Use readonly for immutable DTOs
         if ($immutable) {
@@ -202,7 +202,7 @@ class TypeScriptGenerator
 
         foreach ($fields as $fieldName => $field) {
             $tsType = $this->mapType($field);
-            $required = $field['required'] ?? false;
+            $required = $field[FieldKey::REQUIRED] ?? false;
             $optional = $required ? '' : '?';
 
             // Add null to type if not required and not using optional syntax
@@ -232,8 +232,8 @@ class TypeScriptGenerator
      */
     protected function mapType(array $field): string
     {
-        $type = $field['type'] ?? 'mixed';
-        $isCollection = $field['collection'] ?? false;
+        $type = $field[FieldKey::TYPE] ?? 'mixed';
+        $isCollection = $field[FieldKey::COLLECTION] ?? false;
 
         // Handle array notation (e.g., "string[]", "int[]")
         if (str_ends_with($type, '[]')) {
@@ -245,8 +245,8 @@ class TypeScriptGenerator
 
         // Handle collections
         if ($isCollection) {
-            $singular = $field['singular'] ?? null;
-            $singularClass = $field['singularClass'] ?? null;
+            $singular = $field[FieldKey::SINGULAR] ?? null;
+            $singularClass = $field[FieldKey::SINGULAR_CLASS] ?? null;
 
             if ($singularClass) {
                 $innerType = $this->getInterfaceName($this->extractClassName($singularClass));
@@ -407,11 +407,11 @@ class TypeScriptGenerator
     protected function getImports(array $definition, array $allDefinitions): string
     {
         $imports = [];
-        $fields = $definition['fields'] ?? [];
+        $fields = $definition[FieldKey::FIELDS] ?? [];
 
         foreach ($fields as $field) {
             // Check if this field references another DTO
-            $dtoRef = $field['dto'] ?? null;
+            $dtoRef = $field[FieldKey::DTO] ?? null;
             if ($dtoRef && isset($allDefinitions[$dtoRef])) {
                 $interfaceName = $this->getInterfaceName($dtoRef);
                 $fileName = $this->getFileName($dtoRef);
@@ -421,7 +421,7 @@ class TypeScriptGenerator
                 continue;
             }
 
-            $type = $field['type'] ?? 'mixed';
+            $type = $field[FieldKey::TYPE] ?? 'mixed';
 
             // Remove array notation
             if (str_ends_with($type, '[]')) {
@@ -464,7 +464,7 @@ class TypeScriptGenerator
             }
 
             // Check singularClass for collections
-            $singularClass = $field['singularClass'] ?? null;
+            $singularClass = $field[FieldKey::SINGULAR_CLASS] ?? null;
             if ($singularClass) {
                 $singularClassName = $this->extractClassName($singularClass);
                 $singularBaseName = str_ends_with($singularClassName, 'Dto') ? substr($singularClassName, 0, -3) : $singularClassName;
@@ -555,10 +555,10 @@ class TypeScriptGenerator
     protected function getDependencies(array $definition, array $allDefinitions): array
     {
         $deps = [];
-        $fields = $definition['fields'] ?? [];
+        $fields = $definition[FieldKey::FIELDS] ?? [];
 
         foreach ($fields as $field) {
-            $type = $field['type'] ?? 'mixed';
+            $type = $field[FieldKey::TYPE] ?? 'mixed';
 
             // Remove array notation
             if (str_ends_with($type, '[]')) {
@@ -576,7 +576,7 @@ class TypeScriptGenerator
             }
 
             // Check singularClass
-            $singularClass = $field['singularClass'] ?? null;
+            $singularClass = $field[FieldKey::SINGULAR_CLASS] ?? null;
             if ($singularClass) {
                 $className = $this->extractClassName($singularClass);
                 if (isset($allDefinitions[$className])) {

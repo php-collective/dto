@@ -20,6 +20,21 @@ final class FieldKey
      */
     public const FIELDS = 'fields';
 
+    /**
+     * @var string
+     */
+    public const EXTENDS = 'extends';
+
+    /**
+     * @var string
+     */
+    public const IMMUTABLE = 'immutable';
+
+    /**
+     * @var string
+     */
+    public const TRAITS = 'traits';
+
     // Core field attributes
     /**
      * @var string

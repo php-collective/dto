@@ -41,8 +41,8 @@ class ArrayShapeBuilder
         $allFields = [];
 
         // If DTO extends another DTO, include parent fields first (for LSP covariance)
-        if ($dto !== null && !empty($dto['extends'])) {
-            $parentDtoName = $this->extractDtoName($dto['extends']);
+        if ($dto !== null && !empty($dto[FieldKey::EXTENDS])) {
+            $parentDtoName = $this->extractDtoName($dto[FieldKey::EXTENDS]);
             if ($parentDtoName && isset($allDtos[$parentDtoName])) {
                 $parentDto = $allDtos[$parentDtoName];
                 // Recursively get parent fields (handles multi-level inheritance)
@@ -76,22 +76,22 @@ class ArrayShapeBuilder
      */
     public function buildGenericArrayType(array $field): string
     {
-        $elementType = $field['singularType'] ?? null;
+        $elementType = $field[FieldKey::SINGULAR_TYPE] ?? null;
 
         // Extract element type from type[] notation if not already set
-        if (!$elementType && isset($field['type'])) {
-            $type = $field['type'];
+        if (!$elementType && isset($field[FieldKey::TYPE])) {
+            $type = $field[FieldKey::TYPE];
             if (str_ends_with($type, '[]')) {
                 $elementType = substr($type, 0, -2);
             }
         }
 
         // Include nullable in element type if singularNullable is set
-        if (!empty($field['singularNullable']) && $elementType) {
+        if (!empty($field[FieldKey::SINGULAR_NULLABLE]) && $elementType) {
             $elementType .= '|null';
         }
 
-        $keyType = ($field['associative'] ?? false) ? 'string' : 'int';
+        $keyType = ($field[FieldKey::ASSOCIATIVE] ?? false) ? 'string' : 'int';
 
         return sprintf('array<%s, %s>', $keyType, $elementType ?: 'mixed');
     }
@@ -107,15 +107,15 @@ class ArrayShapeBuilder
      */
     public function buildGenericCollectionType(array $field): string
     {
-        $collectionType = $field['collectionType'] ?? '\ArrayObject';
-        $elementType = $field['singularType'] ?? 'mixed';
+        $collectionType = $field[FieldKey::COLLECTION_TYPE] ?? '\ArrayObject';
+        $elementType = $field[FieldKey::SINGULAR_TYPE] ?? 'mixed';
 
         // Include nullable in element type if singularNullable is set
-        if (!empty($field['singularNullable']) && $elementType !== 'mixed') {
+        if (!empty($field[FieldKey::SINGULAR_NULLABLE]) && $elementType !== 'mixed') {
             $elementType .= '|null';
         }
 
-        $keyType = $field['associative'] ? 'string' : 'int';
+        $keyType = $field[FieldKey::ASSOCIATIVE] ? 'string' : 'int';
 
         return sprintf('%s<%s, %s>', $collectionType, $keyType, $elementType);
     }
@@ -133,15 +133,15 @@ class ArrayShapeBuilder
         $fields = [];
 
         // First, get grandparent fields if this DTO also extends something
-        if (!empty($dto['extends'])) {
-            $parentDtoName = $this->extractDtoName($dto['extends']);
+        if (!empty($dto[FieldKey::EXTENDS])) {
+            $parentDtoName = $this->extractDtoName($dto[FieldKey::EXTENDS]);
             if ($parentDtoName && isset($allDtos[$parentDtoName])) {
                 $fields = $this->collectInheritedFields($allDtos[$parentDtoName], $allDtos);
             }
         }
 
         // Then add this DTO's fields
-        foreach ($dto['fields'] as $name => $field) {
+        foreach ($dto[FieldKey::FIELDS] as $name => $field) {
             $fields[$name] = $field;
         }
 
@@ -159,33 +159,33 @@ class ArrayShapeBuilder
     protected function buildFieldShapeType(array $field, array $allDtos = []): string
     {
         // For collections, use array<keyType, elementType>
-        if (!empty($field['collection']) || !empty($field['isArray'])) {
-            $elementType = $field['singularType'] ?? 'mixed';
-            $keyType = !empty($field['associative']) ? 'string' : 'int';
+        if (!empty($field[FieldKey::COLLECTION]) || !empty($field[FieldKey::IS_ARRAY])) {
+            $elementType = $field[FieldKey::SINGULAR_TYPE] ?? 'mixed';
+            $keyType = !empty($field[FieldKey::ASSOCIATIVE]) ? 'string' : 'int';
 
             // If element is a DTO, try to resolve its shape
             $dtoName = $this->extractDtoName($elementType);
             if ($dtoName && isset($allDtos[$dtoName])) {
-                $nestedShape = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
+                $nestedShape = $this->buildArrayShape($allDtos[$dtoName][FieldKey::FIELDS], $allDtos);
                 $elementType = $nestedShape;
             }
 
             $type = sprintf('array<%s, %s>', $keyType, $elementType);
-        } elseif (!empty($field['dto'])) {
+        } elseif (!empty($field[FieldKey::DTO])) {
             // For nested DTOs, build nested shape if available
-            $dtoName = $this->extractDtoName($field['type']);
+            $dtoName = $this->extractDtoName($field[FieldKey::TYPE]);
             if ($dtoName && isset($allDtos[$dtoName])) {
-                $type = $this->buildArrayShape($allDtos[$dtoName]['fields'], $allDtos);
+                $type = $this->buildArrayShape($allDtos[$dtoName][FieldKey::FIELDS], $allDtos);
             } else {
                 $type = 'array<string, mixed>';
             }
         } else {
             // Simple type
-            $type = $field['typeHint'] ?? $field['type'] ?? 'mixed';
+            $type = $field[FieldKey::TYPE_HINT] ?? $field[FieldKey::TYPE] ?? 'mixed';
         }
 
         // Add null if nullable
-        if (!empty($field['nullable'])) {
+        if (!empty($field[FieldKey::NULLABLE])) {
             $type .= '|null';
         }
 
