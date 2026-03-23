@@ -19,6 +19,9 @@
 		return new static($data);
 {% else %}
 		$new = clone $this;
+{% if lazy|default(false) %}
+		unset($new->_lazyData['{{ name }}']);
+{% endif %}
 
 		if ($new->{{ name }} === null) {
 			return $new;

@@ -9,6 +9,9 @@
 	 */
 	public function set{{ name|stripLeadingUnderscore|camelize }}({% if typeHint %}{{ nullableTypeHint ?? typeHint }} {% endif %}${{ name }}{% if nullable %} = null{% endif %})
 	{
+{% if lazy|default(false) %}
+		unset($this->_lazyData['{{ name }}']);
+{% endif %}
 		$this->{{ name }} = ${{ name }};
 		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 
