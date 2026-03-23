@@ -22,6 +22,9 @@
 		return new static($data);
 {% else %}
 		$new = clone $this;
+{% if lazy|default(false) %}
+		unset($new->_lazyData['{{ name }}']);
+{% endif %}
 {% if isArray or typeHint == 'array' %}
 		$new->{{ name }} = ${{ name }} !== null ? $new->cloneArray(${{ name }}) : null;
 {% else %}

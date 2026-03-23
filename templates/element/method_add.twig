@@ -13,6 +13,9 @@
 	 */
 	public function add{{ singular|stripLeadingUnderscore|camelize }}({% if associative %}$key, {% endif %}{% if singularTypeHint %}{% if singularNullable %}?{% endif %}{{ singularTypeHint }} {% endif %}${{ singular }})
 	{
+{% if lazy|default(false) %}
+		unset($this->_lazyData['{{ name }}']);
+{% endif %}
 		if ($this->{{ name }} === null) {
 			$this->{{ name }} = {% if collectionType == 'array' %}[]{% else %}new {{ typeHint }}([]){% endif %};
 		}
