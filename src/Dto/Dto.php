@@ -315,7 +315,12 @@ abstract class Dto implements JsonSerializable
 
         $values = [];
         foreach ($fields as $field) {
-            $value = $this->$field;
+            // For lazy fields, check _lazyData first before accessing the property
+            if (!empty($this->_metadata[$field]['lazy']) && array_key_exists($field, $this->_lazyData)) {
+                $value = $this->_lazyData[$field];
+            } else {
+                $value = $this->$field;
+            }
             $transformTo = $this->_metadata[$field]['transformTo'] ?? null;
 
             $key = $field;

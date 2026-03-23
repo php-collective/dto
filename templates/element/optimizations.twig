@@ -23,7 +23,7 @@
 	{
 {% for field in fields %}
 {% if field.lazy|default(false) %}
-		if (isset($data['{{ field.name }}'])) {
+		if (array_key_exists('{{ field.name }}', $data)) {
 {% if field.transformFrom %}
 			$this->_lazyData['{{ field.name }}'] = $this->transformValue('{{ field.transformFrom }}', $data['{{ field.name }}']);
 {% else %}
@@ -385,7 +385,9 @@
 {% if requiredFields | length > 0 %}
 {% set checks = [] %}
 {% for field in requiredFields %}
-{% if field.nullable %}
+{% if field.lazy|default(false) %}
+{% set checks = checks | merge(['($this->' ~ field.name ~ ' === null && !array_key_exists(\'' ~ field.name ~ '\', $this->_lazyData))']) %}
+{% elseif field.nullable %}
 {% set checks = checks | merge(['$this->' ~ field.name ~ ' === null']) %}
 {% else %}
 {% set checks = checks | merge(['!isset($this->' ~ field.name ~ ')']) %}
@@ -394,7 +396,9 @@
 		if ({{ checks | join(' || ') }}) {
 			$errors = [];
 {% for field in requiredFields %}
-{% if field.nullable %}
+{% if field.lazy|default(false) %}
+			if ($this->{{ field.name }} === null && !array_key_exists('{{ field.name }}', $this->_lazyData)) {
+{% elseif field.nullable %}
 			if ($this->{{ field.name }} === null) {
 {% else %}
 			if (!isset($this->{{ field.name }})) {
