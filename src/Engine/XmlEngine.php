@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Engine;
 
+use InvalidArgumentException;
 use PhpCollective\Dto\Utility\XmlParser;
 
 class XmlEngine implements EngineInterface
