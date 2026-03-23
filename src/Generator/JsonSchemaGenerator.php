@@ -75,7 +75,7 @@ class JsonSchemaGenerator
     public function generate(array $definitions, string $outputPath): int
     {
         if (!is_dir($outputPath)) {
-            mkdir($outputPath, 0755, true);
+            mkdir($outputPath, 0777, true);
         }
 
         $outputPath = rtrim($outputPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
