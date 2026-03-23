@@ -124,7 +124,7 @@ class ValidationTest extends TestCase
     public function testRequiredFieldStillWorks(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Required fields missing: name');
+        $this->expectExceptionMessage('Required field missing');
 
         new ValidatedDto([]);
     }

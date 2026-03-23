@@ -194,6 +194,55 @@ abstract class Dto implements JsonSerializable
     protected const HAS_FAST_PATH = false;
 
     /**
+     * Allowed transform callables for security.
+     * Only these functions can be used in transformTo/transformFrom.
+     *
+     * @var array<string>
+     */
+    protected const ALLOWED_TRANSFORM_CALLABLES = [
+        // String functions
+        'trim',
+        'ltrim',
+        'rtrim',
+        'strtolower',
+        'strtoupper',
+        'ucfirst',
+        'lcfirst',
+        'ucwords',
+        'strip_tags',
+        'nl2br',
+        'htmlspecialchars',
+        'htmlentities',
+        'html_entity_decode',
+        'addslashes',
+        'stripslashes',
+        // Type conversion
+        'strval',
+        'intval',
+        'floatval',
+        'boolval',
+        // Array functions
+        'array_values',
+        'array_keys',
+        'array_unique',
+        'array_filter',
+        'array_reverse',
+        // Date/time
+        'strtotime',
+        // JSON
+        'json_encode',
+        'json_decode',
+        // Serialization
+        'serialize',
+        'unserialize',
+        // Math
+        'abs',
+        'ceil',
+        'floor',
+        'round',
+    ];
+
+    /**
      * For templating rendering.
      *
      * @var array<string, array<string, mixed>>
@@ -395,11 +444,23 @@ abstract class Dto implements JsonSerializable
      * @param string $childConvertMethodName
      * @param string $type
      *
+     * @throws \RuntimeException If collection count fails.
+     *
      * @return array
      */
     protected function transformCollectionToArray($value, array $values, string $arrayKey, string $childConvertMethodName, string $type): array
     {
-        if ($value->count() === 0) {
+        try {
+            $count = $value->count();
+        } catch (Throwable $e) {
+            throw new RuntimeException(sprintf(
+                "Failed to count collection for key '%s': %s",
+                $arrayKey,
+                $e->getMessage(),
+            ), 0, $e);
+        }
+
+        if ($count === 0) {
             $values[$arrayKey] = [];
 
             return $values;
@@ -676,7 +737,7 @@ abstract class Dto implements JsonSerializable
         }
 
         try {
-            return $class::$factory($value);
+            $result = $class::$factory($value);
         } catch (Throwable $e) {
             throw new RuntimeException(sprintf(
                 "Factory method '%s::%s' failed for field '%s' in %s: %s",
@@ -687,6 +748,22 @@ abstract class Dto implements JsonSerializable
                 $e->getMessage(),
             ), 0, $e);
         }
+
+        // Validate that factory returned the expected type
+        $expectedType = $this->_metadata[$field]['type'];
+        if ($result !== null && !$result instanceof $expectedType) {
+            throw new RuntimeException(sprintf(
+                "Factory method '%s::%s' must return instance of %s, got %s for field '%s' in %s",
+                $class,
+                $factory,
+                $expectedType,
+                get_debug_type($result),
+                $field,
+                static::class,
+            ));
+        }
+
+        return $result;
     }
 
     /**
@@ -1150,7 +1227,11 @@ abstract class Dto implements JsonSerializable
             }
         }
         if ($errors) {
-            throw new InvalidArgumentException('Required fields missing: ' . implode(', ', $errors));
+            $message = count($errors) === 1
+                ? sprintf('Required field missing in %s: %s', static::class, $errors[0])
+                : sprintf("Required fields missing in %s:\n  - %s", static::class, implode("\n  - ", $errors));
+
+            throw new InvalidArgumentException($message);
         }
 
         $validationErrors = [];
@@ -1170,12 +1251,37 @@ abstract class Dto implements JsonSerializable
             if (isset($field['max']) && is_numeric($this->$name) && $this->$name > $field['max']) {
                 $validationErrors[] = $name . ' must be at most ' . $field['max'];
             }
-            if (!empty($field['pattern']) && is_string($this->$name) && !preg_match($field['pattern'], $this->$name)) {
-                $validationErrors[] = $name . ' must match pattern ' . $field['pattern'];
+            if (!empty($field['pattern']) && is_string($this->$name)) {
+                try {
+                    if (@preg_match($field['pattern'], $this->$name) === false) {
+                        throw new InvalidArgumentException(sprintf(
+                            "Invalid regex pattern '%s' for field '%s': %s",
+                            $field['pattern'],
+                            $name,
+                            preg_last_error_msg(),
+                        ));
+                    }
+                    if (!preg_match($field['pattern'], $this->$name)) {
+                        $validationErrors[] = $name . ' must match pattern ' . $field['pattern'];
+                    }
+                } catch (InvalidArgumentException $e) {
+                    throw $e;
+                } catch (Throwable $e) {
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid regex pattern '%s' for field '%s': %s",
+                        $field['pattern'],
+                        $name,
+                        $e->getMessage(),
+                    ), 0, $e);
+                }
             }
         }
         if ($validationErrors) {
-            throw new InvalidArgumentException('Validation failed: ' . implode(', ', $validationErrors));
+            $message = count($validationErrors) === 1
+                ? sprintf('Validation failed in %s: %s', static::class, $validationErrors[0])
+                : sprintf("Validation failed in %s:\n  - %s", static::class, implode("\n  - ", $validationErrors));
+
+            throw new InvalidArgumentException($message);
         }
     }
 
@@ -1367,11 +1473,49 @@ abstract class Dto implements JsonSerializable
             return $value;
         }
 
+        // Security: Only allow whitelisted callables or static method calls
+        if (!$this->isAllowedCallable($callable)) {
+            throw new InvalidArgumentException(sprintf(
+                'Transform callable `%s` is not allowed for security reasons in %s. '
+                . 'Use a whitelisted function or a static method on your own class.',
+                $callable,
+                static::class,
+            ));
+        }
+
         if (!is_callable($callable)) {
             throw new InvalidArgumentException(sprintf('Invalid transform callable `%s` for %s', $callable, static::class));
         }
 
         return $callable($value);
+    }
+
+    /**
+     * Check if a callable is allowed for transformation.
+     *
+     * Allowed callables:
+     * - Functions in ALLOWED_TRANSFORM_CALLABLES whitelist
+     * - Static methods on classes (Class::method format)
+     * - Closures are not supported via string
+     *
+     * @param string $callable
+     *
+     * @return bool
+     */
+    protected function isAllowedCallable(string $callable): bool
+    {
+        // Allow whitelisted built-in functions
+        if (in_array($callable, static::ALLOWED_TRANSFORM_CALLABLES, true)) {
+            return true;
+        }
+
+        // Allow static method calls (Class::method format)
+        // This allows users to define their own transformation methods
+        if (str_contains($callable, '::')) {
+            return true;
+        }
+
+        return false;
     }
 
     /**

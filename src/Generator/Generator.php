@@ -8,6 +8,7 @@ use Exception;
 use InvalidArgumentException;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
+use RuntimeException;
 
 class Generator
 {
@@ -89,9 +90,10 @@ class Generator
 
         $returnCode = static::CODE_SUCCESS;
         $changes = 0;
+        $baseDtoPath = realpath($srcPath) . DIRECTORY_SEPARATOR . 'Dto';
         foreach ($dtos as $name => $content) {
             // Validate DTO name doesn't contain path traversal sequences
-            if (str_contains($name, '..')) {
+            if (str_contains($name, '..') || str_contains($name, "\0")) {
                 throw new InvalidArgumentException("Invalid DTO name '{$name}': path traversal not allowed");
             }
             $isNew = !isset($foundDtos[$name]);
@@ -107,8 +109,16 @@ class Generator
             $suffix = $this->config->get('suffix', 'Dto');
             $target = $srcPath . 'Dto' . DIRECTORY_SEPARATOR . $name . $suffix . '.php';
             $targetPath = dirname($target);
-            if (!is_dir($targetPath)) {
-                mkdir($targetPath, 0777, true);
+
+            // Validate target path is within the expected base directory
+            $this->ensureDirectoryExists($targetPath);
+            $realTargetPath = realpath($targetPath);
+            if ($realTargetPath === false || !str_starts_with($realTargetPath, $baseDtoPath)) {
+                throw new InvalidArgumentException(sprintf(
+                    "Invalid target path '%s': must be within '%s'",
+                    $targetPath,
+                    $baseDtoPath,
+                ));
             }
 
             if ($isModified) {
@@ -117,7 +127,7 @@ class Generator
                 $this->displayDiff($oldContent, $content);
             }
             if (!$options['dryRun']) {
-                file_put_contents($target, $content);
+                $this->writeFile($target, $content);
                 if ($options['confirm'] && !$this->checkPhpFileSyntax($target)) {
                     $returnCode = static::CODE_ERROR;
                 }
@@ -181,9 +191,7 @@ class Generator
             $suffix = $this->config->get('suffix', 'Dto');
             $target = $srcPath . 'Dto' . DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR . $name . $suffix . 'Mapper.php';
             $targetPath = dirname($target);
-            if (!is_dir($targetPath)) {
-                mkdir($targetPath, 0777, true);
-            }
+            $this->ensureDirectoryExists($targetPath);
 
             if ($isModified) {
                 $this->io->out('Changes in ' . $name . ' Mapper:', 1, IoInterface::VERBOSE);
@@ -191,7 +199,7 @@ class Generator
                 $this->displayDiff($oldContent, $content);
             }
             if (!$options['dryRun']) {
-                file_put_contents($target, $content);
+                $this->writeFile($target, $content);
                 if ($options['confirm'] && !$this->checkPhpFileSyntax($target)) {
                     // Don't fail the whole process for mapper syntax errors
                     $this->io->error('Mapper syntax error in: ' . $name);
@@ -220,9 +228,7 @@ class Generator
      */
     protected function findExistingDtos(string $path): array
     {
-        if (!is_dir($path)) {
-            mkdir($path, 0777, true);
-        }
+        $this->ensureDirectoryExists($path);
 
         $files = [];
 
@@ -344,5 +350,52 @@ class Generator
         }
 
         return true;
+    }
+
+    /**
+     * Ensure a directory exists, creating it if necessary.
+     *
+     * @param string $path
+     *
+     * @throws \RuntimeException If directory cannot be created.
+     *
+     * @return void
+     */
+    protected function ensureDirectoryExists(string $path): void
+    {
+        if (is_dir($path)) {
+            return;
+        }
+
+        // Use @ to suppress warning, then check result
+        if (!@mkdir($path, 0777, true) && !is_dir($path)) {
+            throw new RuntimeException(sprintf(
+                "Failed to create directory '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
+    }
+
+    /**
+     * Write content to a file with proper error handling.
+     *
+     * @param string $path
+     * @param string $content
+     *
+     * @throws \RuntimeException If file cannot be written.
+     *
+     * @return void
+     */
+    protected function writeFile(string $path, string $content): void
+    {
+        $result = @file_put_contents($path, $content);
+        if ($result === false) {
+            throw new RuntimeException(sprintf(
+                "Failed to write file '%s': %s",
+                $path,
+                error_get_last()['message'] ?? 'unknown error',
+            ));
+        }
     }
 }
