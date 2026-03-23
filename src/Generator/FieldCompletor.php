@@ -121,35 +121,16 @@ class FieldCompletor
     protected function addFieldDefaults(array $fields): array
     {
         foreach ($fields as $field => $data) {
-            $data += [
-                'required' => false,
-                'defaultValue' => null,
-                'nullable' => empty($data['required']),
-                'returnTypeHint' => null,
-                'nullableTypeHint' => null,
-                'isArray' => false,
-                'dto' => null,
-                'collection' => !empty($data['singular']),
-                'collectionType' => null,
-                'associative' => false,
-                'key' => null,
-                'deprecated' => null,
-                'serialize' => null,
-                'factory' => null,
-                'mapFrom' => null,
-                'mapTo' => null,
-                'transformFrom' => null,
-                'transformTo' => null,
-                'minLength' => null,
-                'maxLength' => null,
-                'min' => null,
-                'max' => null,
-                'pattern' => null,
-                'lazy' => false,
-            ];
+            $defaults = FieldKey::defaults();
+            // Collection defaults depend on singular being set
+            $defaults[FieldKey::COLLECTION] = !empty($data[FieldKey::SINGULAR]);
+            // Nullable depends on required
+            $defaults[FieldKey::NULLABLE] = empty($data[FieldKey::REQUIRED]);
 
-            if ($data['required']) {
-                $data['nullable'] = false;
+            $data += $defaults;
+
+            if ($data[FieldKey::REQUIRED]) {
+                $data[FieldKey::NULLABLE] = false;
             }
 
             $fields[$field] = $data;
@@ -232,7 +213,7 @@ class FieldCompletor
      */
     public function isCollection(array $field): bool
     {
-        return $field['collection'] || $field['collectionType'] || $field['associative'];
+        return $field[FieldKey::COLLECTION] || $field[FieldKey::COLLECTION_TYPE] || $field[FieldKey::ASSOCIATIVE];
     }
 
     /**

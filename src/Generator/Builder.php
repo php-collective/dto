@@ -65,35 +65,10 @@ class Builder
     /**
      * Needed for Dto to work dynamically.
      *
+     * @see FieldKey::metadataKeys()
      * @var array<string>
      */
-    protected array $metaDataKeys = [
-        'name',
-        'type',
-        'isClass',
-        'enum',
-        'serialize',
-        'factory',
-        'required',
-        'defaultValue',
-        'dto',
-        'collectionType',
-        'singularType',
-        'singularTypeHint',
-        'singularNullable',
-        'associative',
-        'key',
-        'mapFrom',
-        'mapTo',
-        'transformFrom',
-        'transformTo',
-        'minLength',
-        'maxLength',
-        'min',
-        'max',
-        'pattern',
-        'lazy',
-    ];
+    protected array $metaDataKeys;
 
     /**
      * @param \PhpCollective\Dto\Engine\EngineInterface $engine
@@ -102,6 +77,7 @@ class Builder
     public function __construct(EngineInterface $engine, ?ConfigInterface $config = null)
     {
         $this->engine = $engine;
+        $this->metaDataKeys = FieldKey::metadataKeys();
 
         if ($config !== null) {
             $this->config = array_merge($this->config, $config->all());
@@ -253,6 +229,12 @@ class Builder
     /**
      * Merge multiple configuration arrays.
      *
+     * When the same DTO is defined in multiple config files, this method performs
+     * a deep merge at the field level:
+     * - Fields from all files are combined
+     * - If the same field is defined in multiple files, later files override earlier ones
+     * - Field attributes are merged (later attributes override earlier ones)
+     *
      * @param array<string, mixed> $configs
      *
      * @return array<string, mixed>
@@ -262,15 +244,50 @@ class Builder
         $result = [];
 
         foreach ($configs as $config) {
-            $result += $config;
-
             foreach ($config as $name => $dto) {
+                if (!isset($result[$name])) {
+                    $result[$name] = $dto;
+
+                    continue;
+                }
+
                 $this->dtoValidator->validateMerge($result[$name], $dto);
-                $result[$name] += $dto;
+                $result[$name] = $this->mergeDto($result[$name], $dto);
             }
         }
 
         return $result;
+    }
+
+    /**
+     * Merge two DTO definitions, properly handling field-level merging.
+     *
+     * @param array<string, mixed> $existing
+     * @param array<string, mixed> $new
+     *
+     * @return array<string, mixed>
+     */
+    protected function mergeDto(array $existing, array $new): array
+    {
+        $existingFields = $existing[FieldKey::FIELDS] ?? [];
+        $newFields = $new[FieldKey::FIELDS] ?? [];
+
+        // Merge fields: new fields override existing, but preserve fields not in new
+        $mergedFields = $existingFields;
+        foreach ($newFields as $fieldName => $fieldData) {
+            if (isset($mergedFields[$fieldName])) {
+                // Merge field attributes: new attributes override existing
+                $mergedFields[$fieldName] = array_merge($mergedFields[$fieldName], $fieldData);
+            } else {
+                $mergedFields[$fieldName] = $fieldData;
+            }
+        }
+
+        // Merge DTO-level attributes (traits, extends, etc.)
+        $merged = array_merge($existing, $new);
+        $merged[FieldKey::FIELDS] = $mergedFields;
+
+        return $merged;
     }
 
     /**
