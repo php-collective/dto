@@ -111,7 +111,7 @@ XML;
         $code = $this->generateDtoCode($xml, 'LazySetOrFail');
 
         // setOrFail should clear _lazyData for lazy fields
-        $this->assertStringContainsString("function setNestedOrFail", $code);
+        $this->assertStringContainsString('function setNestedOrFail', $code);
         $this->assertStringContainsString("unset(\$this->_lazyData['nested'])", $code);
     }
 
@@ -132,7 +132,7 @@ XML;
         $code = $this->generateDtoCode($xml, 'LazyWithOrFail');
 
         // withOrFail should clear _lazyData for lazy fields
-        $this->assertStringContainsString("function withNestedOrFail", $code);
+        $this->assertStringContainsString('function withNestedOrFail', $code);
         $this->assertStringContainsString("unset(\$new->_lazyData['nested'])", $code);
     }
 
@@ -180,7 +180,7 @@ XML;
         preg_match('/function addItem\([^)]*\)\s*\{([^}]+)\}/s', $code, $matches);
         $this->assertNotEmpty($matches, 'addItem method should exist');
         $addItemBody = $matches[1];
-        $this->assertStringNotContainsString("unset(\$this->_lazyData", $addItemBody);
+        $this->assertStringNotContainsString('unset($this->_lazyData', $addItemBody);
     }
 
     public function testRemoveMethodHydratesLazyCollectionFirst(): void
