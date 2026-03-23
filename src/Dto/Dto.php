@@ -10,6 +10,7 @@ use Countable;
 use InvalidArgumentException;
 use JsonSerializable;
 use PhpCollective\Dto\Utility\Json;
+use ReflectionProperty;
 use RuntimeException;
 use Throwable;
 use Traversable;
@@ -724,7 +725,9 @@ abstract class Dto implements JsonSerializable
         $collection = new $collectionType();
         foreach ($arrayObject as $index => $arrayElement) {
             if (!is_array($arrayElement)) {
-                $this->addValueToCollection($collection, new $elementType(), $arrayElement, $index, $key);
+                // If element is already the correct type, use it directly
+                $element = $arrayElement instanceof $elementType ? $arrayElement : new $elementType();
+                $this->addValueToCollection($collection, $element, $arrayElement, $index, $key);
 
                 continue;
             }
@@ -777,6 +780,11 @@ abstract class Dto implements JsonSerializable
             return;
         }
 
+        // Extract key from object (DTO or other objects with getter/toArray)
+        if (is_object($arrayElement)) {
+            $index = $this->extractKeyFromObject($arrayElement, $key, $index);
+        }
+
         $collection[$index] = $value;
     }
 
@@ -794,7 +802,9 @@ abstract class Dto implements JsonSerializable
         $collection = [];
         foreach ($arrayObject as $index => $arrayElement) {
             if (!is_array($arrayElement)) {
-                $collection = $this->addValueToArrayCollection($collection, new $elementType(), $arrayElement, $index, $key);
+                // If element is already the correct type, use it directly
+                $element = $arrayElement instanceof $elementType ? $arrayElement : new $elementType();
+                $collection = $this->addValueToArrayCollection($collection, $element, $arrayElement, $index, $key);
 
                 continue;
             }
@@ -850,11 +860,61 @@ abstract class Dto implements JsonSerializable
                 $key,
                 $index,
             ));
+        } elseif (is_object($arrayElement)) {
+            $index = $this->extractKeyFromObject($arrayElement, $key, $index);
         }
 
         $collection[(string)$index] = $element;
 
         return $collection;
+    }
+
+    /**
+     * Extracts a key value from an object for associative collection indexing.
+     *
+     * Tries getter method first (e.g., getId() for key 'id'), then falls back
+     * to toArray() if available, and finally checks public properties.
+     *
+     * @param object $object The object to extract the key from
+     * @param string $key The field name to use as key
+     * @param string|int $fallbackIndex The fallback index if key cannot be extracted
+     *
+     * @throws \RuntimeException If key field cannot be extracted from object
+     *
+     * @return string|int
+     */
+    protected function extractKeyFromObject(object $object, string $key, $fallbackIndex)
+    {
+        // Try getter method first (e.g., getId() for key 'id')
+        $getter = 'get' . ucfirst($key);
+        if (method_exists($object, $getter)) {
+            return $object->$getter();
+        }
+
+        // Try toArray() if available (for DTO objects)
+        if (method_exists($object, 'toArray')) {
+            $array = $object->toArray();
+            if (is_array($array) && array_key_exists($key, $array)) {
+                return $array[$key];
+            }
+        }
+
+        // Try public property access using reflection
+        if (property_exists($object, $key)) {
+            $reflection = new ReflectionProperty($object, $key);
+            if ($reflection->isPublic()) {
+                return $object->$key;
+            }
+        }
+
+        throw new RuntimeException(sprintf(
+            'Key field `%s` could not be extracted from object of type `%s` at index `%s`. '
+            . 'Ensure the object has a getter method (get%s), a toArray() method, or a public property.',
+            $key,
+            get_class($object),
+            $fallbackIndex,
+            ucfirst($key),
+        ));
     }
 
     /**
