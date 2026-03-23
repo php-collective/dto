@@ -11,7 +11,8 @@
 	public function remove{{ singular|stripLeadingUnderscore|camelize }}($key)
 	{
 {% if lazy|default(false) %}
-		unset($this->_lazyData['{{ name }}']);
+		// Hydrate collection first (this also clears _lazyData)
+		$this->get{{ name|stripLeadingUnderscore|camelize }}();
 {% endif %}
 		if ($this->{{ name }} === null) {
 			return $this;
