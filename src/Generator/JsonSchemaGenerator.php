@@ -135,7 +135,7 @@ class JsonSchemaGenerator
                 '$schema' => $this->options['schemaVersion'],
                 '$id' => $schemaName . '.json',
                 'title' => $schemaName,
-                'description' => $definition['description'] ?? 'Auto-generated from ' . $name . ' DTO',
+                'description' => $definition[FieldKey::DESCRIPTION] ?? 'Auto-generated from ' . $name . ' DTO',
             ] + $this->generateSchemaObject($definition, $definitions, false);
 
             $fileName = $schemaName . '.json';

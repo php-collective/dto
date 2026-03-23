@@ -177,10 +177,10 @@ class ExtendsResolver
     public function resolveNamespacePaths(array $config, string $namespace): array
     {
         foreach ($config as $name => $dto) {
-            if (strpos($dto['className'], '/') !== false) {
-                $pieces = explode('/', $dto['className']);
-                $dto['className'] = array_pop($pieces);
-                $dto['namespace'] .= '\\' . implode('\\', $pieces);
+            if (strpos($dto[FieldKey::CLASS_NAME], '/') !== false) {
+                $pieces = explode('/', $dto[FieldKey::CLASS_NAME]);
+                $dto[FieldKey::CLASS_NAME] = array_pop($pieces);
+                $dto[FieldKey::NAMESPACE] .= '\\' . implode('\\', $pieces);
             }
 
             if (!empty($dto[FieldKey::EXTENDS]) && strpos($dto[FieldKey::EXTENDS], '/') !== false) {
