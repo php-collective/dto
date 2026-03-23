@@ -963,4 +963,290 @@ class DependencyAnalyzerTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    /**
+     * Test that union types in singularType are correctly parsed.
+     *
+     * @return void
+     */
+    public function testSingularTypeWithUnionParsed(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'items' => [
+                        'name' => 'items',
+                        'type' => 'array',
+                        'singularType' => 'ItemADto|ItemBDto', // Union in singularType
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [],
+            ],
+        ];
+
+        // Container -> ItemA (via singularType union) -> Container is a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that intersection types are correctly parsed for dependencies.
+     *
+     * @return void
+     */
+    public function testIntersectionTypeCircularDependencyDetected(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto&ItemBDto', // Intersection type
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [],
+            ],
+        ];
+
+        // Container -> ItemA (via intersection) -> Container is a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that lazy intersection type fields don't contribute to dependencies.
+     *
+     * @return void
+     */
+    public function testLazyIntersectionTypeBreaksCycle(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto&ItemBDto',
+                        'lazy' => true, // Lazy breaks cycle
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Lazy intersection type breaks both cycles
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that parenthesized DNF types are correctly parsed.
+     *
+     * @return void
+     */
+    public function testParenthesizedDnfTypeCircularDependencyDetected(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => '(ItemADto|ItemBDto)&ItemCDto', // DNF type with parentheses
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [],
+            ],
+            'ItemC' => [
+                'name' => 'ItemC',
+                'fields' => [],
+            ],
+        ];
+
+        // Container -> ItemA (via DNF type) -> Container is a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that mixed union and intersection types are parsed.
+     *
+     * @return void
+     */
+    public function testMixedUnionAndIntersectionTypes(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto|ItemBDto&ItemCDto', // Mixed
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemC' => [
+                'name' => 'ItemC',
+                'fields' => [],
+            ],
+        ];
+
+        // Container -> ItemB (via mixed type) -> Container is a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that lazy singularType with union breaks cycle.
+     *
+     * @return void
+     */
+    public function testLazySingularTypeUnionBreaksCycle(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'items' => [
+                        'name' => 'items',
+                        'type' => 'array',
+                        'singularType' => 'ItemADto|ItemBDto',
+                        'lazy' => true, // Lazy breaks cycle
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Lazy singularType union breaks both cycles
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
 }

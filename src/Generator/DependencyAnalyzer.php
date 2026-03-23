@@ -87,12 +87,13 @@ class DependencyAnalyzer
                 }
             }
 
-            // Check singular type for collections
+            // Check singular type for collections (also handles union types)
             $singularType = $field['singularType'] ?? null;
             if ($singularType) {
-                $dtoName = $this->extractDtoNameFromType($singularType);
-                if ($dtoName && in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
-                    $dependencies[] = $dtoName;
+                foreach ($this->extractDtoNamesFromType($singularType) as $dtoName) {
+                    if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
+                        $dependencies[] = $dtoName;
+                    }
                 }
             }
 
@@ -117,7 +118,13 @@ class DependencyAnalyzer
     }
 
     /**
-     * Extract all DTO names from a type string, handling union types.
+     * Extract all DTO names from a type string, handling union and intersection types.
+     *
+     * Supports:
+     * - Union types: Foo|Bar
+     * - Intersection types: Foo&Bar
+     * - Combined: Foo|Bar&Baz
+     * - Parenthesized: (Foo|Bar)&Baz
      *
      * @param string $type
      *
@@ -127,8 +134,11 @@ class DependencyAnalyzer
     {
         $dtoNames = [];
 
-        // Handle union types by splitting on |
-        $types = str_contains($type, '|') ? explode('|', $type) : [$type];
+        // Remove parentheses for DNF types like (Foo|Bar)&Baz
+        $type = str_replace(['(', ')'], '', $type);
+
+        // Split on both union (|) and intersection (&) operators
+        $types = preg_split('/[|&]/', $type) ?: [$type];
 
         foreach ($types as $singleType) {
             $dtoName = $this->extractDtoNameFromType(trim($singleType));
