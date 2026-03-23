@@ -1631,4 +1631,68 @@ class DtoTest extends TestCase
         $this->assertSame('First', $items['key_one']->getName());
         $this->assertSame('Second', $items['key_two']->getName());
     }
+
+    /**
+     * Test that associative collections correctly extract keys from pre-instantiated DTO objects.
+     */
+    public function testAssociativeCollectionWithDtoObjectsExtractsKeys(): void
+    {
+        // Create DTO objects directly instead of arrays
+        $item1 = new SimpleDto(['name' => 'Alpha', 'count' => 1]);
+        $item2 = new SimpleDto(['name' => 'Beta', 'count' => 2]);
+        $item3 = new SimpleDto(['name' => 'Gamma', 'count' => 3]);
+
+        $data = [
+            'itemsByName' => [$item1, $item2, $item3],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getItemsByName();
+
+        $this->assertInstanceOf(ArrayObject::class, $items);
+        $this->assertCount(3, $items);
+
+        // Keys should be extracted from the name property of each DTO
+        $this->assertArrayHasKey('Alpha', (array)$items);
+        $this->assertArrayHasKey('Beta', (array)$items);
+        $this->assertArrayHasKey('Gamma', (array)$items);
+
+        // Verify the values are the correct DTOs
+        $this->assertSame('Alpha', $items['Alpha']->getName());
+        $this->assertSame(1, $items['Alpha']->getCount());
+        $this->assertSame('Beta', $items['Beta']->getName());
+        $this->assertSame(2, $items['Beta']->getCount());
+        $this->assertSame('Gamma', $items['Gamma']->getName());
+        $this->assertSame(3, $items['Gamma']->getCount());
+    }
+
+    /**
+     * Test that array collections also extract keys from pre-instantiated DTO objects.
+     */
+    public function testAssociativeArrayCollectionWithDtoObjectsExtractsKeys(): void
+    {
+        // Create DTO objects directly instead of arrays
+        $item1 = new SimpleDto(['name' => 'First', 'count' => 10]);
+        $item2 = new SimpleDto(['name' => 'Second', 'count' => 20]);
+
+        $data = [
+            'arrayItemsByName' => [$item1, $item2],
+        ];
+
+        $dto = new AssociativeCollectionDto($data);
+        $items = $dto->getArrayItemsByName();
+
+        $this->assertIsArray($items);
+        $this->assertCount(2, $items);
+
+        // Keys should be extracted from the name property of each DTO
+        $this->assertArrayHasKey('First', $items);
+        $this->assertArrayHasKey('Second', $items);
+
+        // Verify the values
+        $this->assertSame('First', $items['First']->getName());
+        $this->assertSame(10, $items['First']->getCount());
+        $this->assertSame('Second', $items['Second']->getName());
+        $this->assertSame(20, $items['Second']->getCount());
+    }
 }

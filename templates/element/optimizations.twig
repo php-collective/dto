@@ -62,6 +62,8 @@
 {% if field.associative and field.key %}
 				if (is_array($data['{{ field.name }}'][$key]) && isset($data['{{ field.name }}'][$key]['{{ field.key }}'])) {
 					$key = $data['{{ field.name }}'][$key]['{{ field.key }}'];
+				} elseif (is_object($item)) {
+					$key = $this->extractKeyFromObject($item, '{{ field.key }}', $key);
 				}
 				$collection[$key] = $item;
 {% elseif field.associative %}
