@@ -47,7 +47,7 @@ class UserDtoTest extends TestCase
 public function testRequiredFieldsThrowException(): void
 {
     $this->expectException(InvalidArgumentException::class);
-    $this->expectExceptionMessage('Required fields missing');
+    $this->expectExceptionMessage('Required field missing in App\\Dto\\UserDto: email');
 
     new UserDto(['name' => 'John']);  // Missing required 'email'
 }
@@ -506,7 +506,7 @@ public static function invalidUserDataProvider(): array
     return [
         'missing email' => [
             ['name' => 'John'],
-            'Required fields missing',
+            'Required field missing in App\\Dto\\UserDto: email',
         ],
         'unknown field' => [
             ['name' => 'John', 'email' => 'j@e.com', 'unknown' => 'x'],

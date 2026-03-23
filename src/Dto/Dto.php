@@ -395,11 +395,23 @@ abstract class Dto implements JsonSerializable
      * @param string $childConvertMethodName
      * @param string $type
      *
+     * @throws \RuntimeException If collection count fails.
+     *
      * @return array
      */
     protected function transformCollectionToArray($value, array $values, string $arrayKey, string $childConvertMethodName, string $type): array
     {
-        if ($value->count() === 0) {
+        try {
+            $count = $value->count();
+        } catch (Throwable $e) {
+            throw new RuntimeException(sprintf(
+                "Failed to count collection for key '%s': %s",
+                $arrayKey,
+                $e->getMessage(),
+            ), 0, $e);
+        }
+
+        if ($count === 0) {
             $values[$arrayKey] = [];
 
             return $values;
@@ -676,7 +688,7 @@ abstract class Dto implements JsonSerializable
         }
 
         try {
-            return $class::$factory($value);
+            $result = $class::$factory($value);
         } catch (Throwable $e) {
             throw new RuntimeException(sprintf(
                 "Factory method '%s::%s' failed for field '%s' in %s: %s",
@@ -687,6 +699,22 @@ abstract class Dto implements JsonSerializable
                 $e->getMessage(),
             ), 0, $e);
         }
+
+        // Validate that factory returned the expected type
+        $expectedType = $this->_metadata[$field]['type'];
+        if ($result !== null && !$result instanceof $expectedType) {
+            throw new RuntimeException(sprintf(
+                "Factory method '%s::%s' must return instance of %s, got %s for field '%s' in %s",
+                $class,
+                $factory,
+                $expectedType,
+                get_debug_type($result),
+                $field,
+                static::class,
+            ));
+        }
+
+        return $result;
     }
 
     /**
@@ -1150,7 +1178,11 @@ abstract class Dto implements JsonSerializable
             }
         }
         if ($errors) {
-            throw new InvalidArgumentException('Required fields missing: ' . implode(', ', $errors));
+            $message = count($errors) === 1
+                ? sprintf('Required field missing in %s: %s', static::class, $errors[0])
+                : sprintf("Required fields missing in %s:\n  - %s", static::class, implode("\n  - ", $errors));
+
+            throw new InvalidArgumentException($message);
         }
 
         $validationErrors = [];
@@ -1170,12 +1202,37 @@ abstract class Dto implements JsonSerializable
             if (isset($field['max']) && is_numeric($this->$name) && $this->$name > $field['max']) {
                 $validationErrors[] = $name . ' must be at most ' . $field['max'];
             }
-            if (!empty($field['pattern']) && is_string($this->$name) && !preg_match($field['pattern'], $this->$name)) {
-                $validationErrors[] = $name . ' must match pattern ' . $field['pattern'];
+            if (!empty($field['pattern']) && is_string($this->$name)) {
+                try {
+                    if (@preg_match($field['pattern'], $this->$name) === false) {
+                        throw new InvalidArgumentException(sprintf(
+                            "Invalid regex pattern '%s' for field '%s': %s",
+                            $field['pattern'],
+                            $name,
+                            preg_last_error_msg(),
+                        ));
+                    }
+                    if (!preg_match($field['pattern'], $this->$name)) {
+                        $validationErrors[] = $name . ' must match pattern ' . $field['pattern'];
+                    }
+                } catch (InvalidArgumentException $e) {
+                    throw $e;
+                } catch (Throwable $e) {
+                    throw new InvalidArgumentException(sprintf(
+                        "Invalid regex pattern '%s' for field '%s': %s",
+                        $field['pattern'],
+                        $name,
+                        $e->getMessage(),
+                    ), 0, $e);
+                }
             }
         }
         if ($validationErrors) {
-            throw new InvalidArgumentException('Validation failed: ' . implode(', ', $validationErrors));
+            $message = count($validationErrors) === 1
+                ? sprintf('Validation failed in %s: %s', static::class, $validationErrors[0])
+                : sprintf("Validation failed in %s:\n  - %s", static::class, implode("\n  - ", $validationErrors));
+
+            throw new InvalidArgumentException($message);
         }
     }
 

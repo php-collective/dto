@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Importer;
 
+use JsonException;
 use PhpCollective\Dto\Importer\Builder\SchemaBuilder;
 use PhpCollective\Dto\Importer\Parser\DataParser;
 use PhpCollective\Dto\Importer\Parser\SchemaParser;
@@ -41,12 +42,25 @@ class Importer
      *   - basePath: Base path for external $ref file resolution
      *   - refResolver: Custom ref resolver instance
      *
+     * @throws \JsonException If JSON parsing fails
+     *
      * @return array<string, array<string, array<string, mixed>|string>> Parsed DTO definitions
      */
     public function parse(string $json, array $options = []): array
     {
-        $array = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
-        if (!$array) {
+        try {
+            $array = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            $source = $options['sourcePath'] ?? 'input';
+
+            throw new JsonException(
+                sprintf("Failed to parse JSON from '%s': %s", $source, $e->getMessage()),
+                $e->getCode(),
+                $e,
+            );
+        }
+
+        if (!is_array($array) || $array === []) {
             return [];
         }
 

@@ -29,6 +29,8 @@ use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PhpCollective\Dto\Test\TestDto\TestCollection;
 use PhpCollective\Dto\Test\TestDto\TransformDto;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
+use PhpCollective\Dto\Test\TestDto\ValidatedDto;
+use PhpCollective\Dto\Test\TestDto\WrongFactoryReturnDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use TypeError;
@@ -1712,5 +1714,41 @@ class DtoTest extends TestCase
         $this->assertSame(10, $items['First']->getCount());
         $this->assertSame('Second', $items['Second']->getName());
         $this->assertSame(20, $items['Second']->getCount());
+    }
+
+    public function testFactoryReturnsWrongTypeThrowsException(): void
+    {
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            "Factory method 'PhpCollective\\Dto\\Test\\TestDto\\WrongFactoryReturnValue::create' must return instance of PhpCollective\\Dto\\Test\\Generator\\Fixtures\\FactoryClass, got string for field 'factoryData'",
+        );
+
+        new WrongFactoryReturnDto(['factoryData' => 'test']);
+    }
+
+    public function testRequiredFieldErrorMessageIncludesClassName(): void
+    {
+        try {
+            new ValidatedDto([]);
+            $this->fail('Expected InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame(
+                'Required field missing in PhpCollective\\Dto\\Test\\TestDto\\ValidatedDto: name',
+                $e->getMessage(),
+            );
+        }
+    }
+
+    public function testMultipleRequiredFieldsErrorMessageFormat(): void
+    {
+        try {
+            new RequiredDto([]);
+            $this->fail('Expected InvalidArgumentException');
+        } catch (InvalidArgumentException $e) {
+            $this->assertSame(
+                "Required fields missing in PhpCollective\\Dto\\Test\\TestDto\\RequiredDto:\n  - name\n  - email",
+                $e->getMessage(),
+            );
+        }
     }
 }

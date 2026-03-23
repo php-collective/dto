@@ -108,7 +108,12 @@ class FileRefResolver implements RefResolverInterface
             return $this->cache[$path];
         }
 
-        $contents = @file_get_contents($path);
+        // Check file is readable before attempting to read
+        if (!is_file($path) || !is_readable($path)) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
         if ($contents === false) {
             return null;
         }
