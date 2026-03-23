@@ -21,7 +21,8 @@ When a field is marked as `required`, the DTO will throw an exception if that fi
 ```
 
 ```php
-// This throws InvalidArgumentException: Required fields missing: email
+// This throws InvalidArgumentException:
+// Required field missing in App\Dto\UserDto: email
 $user = new UserDto(['id' => 1]);
 
 // This works - nickname is optional
@@ -75,10 +76,12 @@ Or in XML:
 - On failure, an `InvalidArgumentException` is thrown with a descriptive message:
 
 ```php
-// InvalidArgumentException: Validation failed: name must be at least 2 characters
+// InvalidArgumentException:
+// Validation failed in App\Dto\UserDto: name must be at least 2 characters
 $user = new UserDto(['name' => 'A', 'email' => 'a@b.com']);
 
-// InvalidArgumentException: Validation failed: email must match pattern /^[^@]+@[^@]+\.[^@]+$/
+// InvalidArgumentException:
+// Validation failed in App\Dto\UserDto: email must match pattern /^[^@]+@[^@]+\.[^@]+$/
 $user = new UserDto(['name' => 'Test', 'email' => 'invalid']);
 ```
 

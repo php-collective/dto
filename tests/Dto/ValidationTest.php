@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Dto;
 
 use InvalidArgumentException;
+use PhpCollective\Dto\Test\TestDto\InvalidPatternDto;
 use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PhpCollective\Dto\Test\TestDto\ValidatedDto;
 use PHPUnit\Framework\TestCase;
@@ -124,9 +125,17 @@ class ValidationTest extends TestCase
     public function testRequiredFieldStillWorks(): void
     {
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Required field missing');
+        $this->expectExceptionMessage('Required field missing in PhpCollective\Dto\Test\TestDto\ValidatedDto: name');
 
         new ValidatedDto([]);
+    }
+
+    public function testInvalidPatternThrowsClearException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage("Invalid regex pattern '/[/' for field 'value'");
+
+        new InvalidPatternDto(['value' => 'test']);
     }
 
     public function testToArray(): void

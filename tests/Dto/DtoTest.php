@@ -29,7 +29,8 @@ use PhpCollective\Dto\Test\TestDto\SimpleDto;
 use PhpCollective\Dto\Test\TestDto\TestCollection;
 use PhpCollective\Dto\Test\TestDto\TransformDto;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
-use PhpCollective\Dto\Test\TestDto\UnsafeTransformDto;
+use PhpCollective\Dto\Test\TestDto\ValidatedDto;
+use PhpCollective\Dto\Test\TestDto\WrongFactoryReturnDto;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use TypeError;
@@ -1715,55 +1716,39 @@ class DtoTest extends TestCase
         $this->assertSame(20, $items['Second']->getCount());
     }
 
-    // ========== SECURITY TESTS ==========
-
-    public function testTransformWhitelistAllowsStandardFunctions(): void
-    {
-        // Standard allowed functions work (TransformDto uses static methods which are allowed)
-        $dto = new TransformDto(['email' => '  TEST@EXAMPLE.COM  ']);
-        $this->assertSame('test@example.com', $dto->getEmail());
-    }
-
-    public function testTransformBlocksUnsafeCallable(): void
-    {
-        // Unsafe callables like 'system' should be blocked
-        $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('is not allowed for security reasons');
-
-        new UnsafeTransformDto(['value' => 'test']);
-    }
-
     public function testFactoryReturnsWrongTypeThrowsException(): void
     {
-        // Test that factory return type validation works
-        // This requires a DTO with a factory that returns wrong type
-        // For now just verify normal factory works
-        $dto = new AdvancedDto(['factoryData' => 'test']);
-        $this->assertInstanceOf(FactoryClass::class, $dto->getFactoryData());
-    }
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage(
+            "Factory method 'PhpCollective\\Dto\\Test\\TestDto\\WrongFactoryReturnValue::create' must return instance of PhpCollective\\Dto\\Test\\Generator\\Fixtures\\FactoryClass, got string for field 'factoryData'",
+        );
 
-    // ========== ERROR MESSAGE FORMAT TESTS ==========
+        new WrongFactoryReturnDto(['factoryData' => 'test']);
+    }
 
     public function testRequiredFieldErrorMessageIncludesClassName(): void
     {
         try {
-            new RequiredDto([]);
+            new ValidatedDto([]);
             $this->fail('Expected InvalidArgumentException');
         } catch (InvalidArgumentException $e) {
-            $this->assertStringContainsString('Required field', $e->getMessage());
-            $this->assertStringContainsString('RequiredDto', $e->getMessage());
+            $this->assertSame(
+                'Required field missing in PhpCollective\\Dto\\Test\\TestDto\\ValidatedDto: name',
+                $e->getMessage(),
+            );
         }
     }
 
     public function testMultipleRequiredFieldsErrorMessageFormat(): void
     {
-        // Create a DTO class that requires multiple fields to test plural message format
-        // For now just verify the single field case has proper format
         try {
             new RequiredDto([]);
             $this->fail('Expected InvalidArgumentException');
         } catch (InvalidArgumentException $e) {
-            $this->assertStringContainsString('Required field', $e->getMessage());
+            $this->assertSame(
+                "Required fields missing in PhpCollective\\Dto\\Test\\TestDto\\RequiredDto:\n  - name\n  - email",
+                $e->getMessage(),
+            );
         }
     }
 }

@@ -10,7 +10,11 @@ Common issues, error messages, and debugging tips.
 
 ### Runtime Exceptions (Using DTOs)
 
-#### `InvalidArgumentException: Required fields missing: {fields}`
+#### `InvalidArgumentException: Required field missing in {DtoClass}: {field}`
+
+or
+
+#### `InvalidArgumentException: Required fields missing in {DtoClass}:`
 
 **Cause:** Creating a DTO without providing required field values.
 

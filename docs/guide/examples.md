@@ -624,14 +624,14 @@ $user = new UserDto([
     'username' => 'jo',  // Too short (minLength: 3)
     'email' => 'john@example.com',
 ]);
-// Exception: Field 'username' must be at least 3 characters
+// Exception: Validation failed in App\Dto\UserDto: username must be at least 3 characters
 
 // Invalid email pattern
 $user = new UserDto([
     'username' => 'johndoe',
     'email' => 'not-an-email',
 ]);
-// Exception: Field 'email' does not match required pattern
+// Exception: Validation failed in App\Dto\UserDto: email must match pattern /^[^@]+@[^@]+\.[^@]+$/
 ```
 
 ### Nullable Fields Skip Validation

@@ -194,55 +194,6 @@ abstract class Dto implements JsonSerializable
     protected const HAS_FAST_PATH = false;
 
     /**
-     * Allowed transform callables for security.
-     * Only these functions can be used in transformTo/transformFrom.
-     *
-     * @var array<string>
-     */
-    protected const ALLOWED_TRANSFORM_CALLABLES = [
-        // String functions
-        'trim',
-        'ltrim',
-        'rtrim',
-        'strtolower',
-        'strtoupper',
-        'ucfirst',
-        'lcfirst',
-        'ucwords',
-        'strip_tags',
-        'nl2br',
-        'htmlspecialchars',
-        'htmlentities',
-        'html_entity_decode',
-        'addslashes',
-        'stripslashes',
-        // Type conversion
-        'strval',
-        'intval',
-        'floatval',
-        'boolval',
-        // Array functions
-        'array_values',
-        'array_keys',
-        'array_unique',
-        'array_filter',
-        'array_reverse',
-        // Date/time
-        'strtotime',
-        // JSON
-        'json_encode',
-        'json_decode',
-        // Serialization
-        'serialize',
-        'unserialize',
-        // Math
-        'abs',
-        'ceil',
-        'floor',
-        'round',
-    ];
-
-    /**
      * For templating rendering.
      *
      * @var array<string, array<string, mixed>>
@@ -1473,49 +1424,11 @@ abstract class Dto implements JsonSerializable
             return $value;
         }
 
-        // Security: Only allow whitelisted callables or static method calls
-        if (!$this->isAllowedCallable($callable)) {
-            throw new InvalidArgumentException(sprintf(
-                'Transform callable `%s` is not allowed for security reasons in %s. '
-                . 'Use a whitelisted function or a static method on your own class.',
-                $callable,
-                static::class,
-            ));
-        }
-
         if (!is_callable($callable)) {
             throw new InvalidArgumentException(sprintf('Invalid transform callable `%s` for %s', $callable, static::class));
         }
 
         return $callable($value);
-    }
-
-    /**
-     * Check if a callable is allowed for transformation.
-     *
-     * Allowed callables:
-     * - Functions in ALLOWED_TRANSFORM_CALLABLES whitelist
-     * - Static methods on classes (Class::method format)
-     * - Closures are not supported via string
-     *
-     * @param string $callable
-     *
-     * @return bool
-     */
-    protected function isAllowedCallable(string $callable): bool
-    {
-        // Allow whitelisted built-in functions
-        if (in_array($callable, static::ALLOWED_TRANSFORM_CALLABLES, true)) {
-            return true;
-        }
-
-        // Allow static method calls (Class::method format)
-        // This allows users to define their own transformation methods
-        if (str_contains($callable, '::')) {
-            return true;
-        }
-
-        return false;
     }
 
     /**

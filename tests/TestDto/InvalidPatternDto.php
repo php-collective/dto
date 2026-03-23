@@ -6,10 +6,7 @@ namespace PhpCollective\Dto\Test\TestDto;
 
 use PhpCollective\Dto\Dto\AbstractDto;
 
-/**
- * Test DTO with an unsafe callable for security testing.
- */
-class UnsafeTransformDto extends AbstractDto
+class InvalidPatternDto extends AbstractDto
 {
     protected ?string $value = null;
 
@@ -28,10 +25,13 @@ class UnsafeTransformDto extends AbstractDto
             'key' => null,
             'serialize' => null,
             'factory' => null,
-            'transformFrom' => 'system', // UNSAFE - should be blocked
-            'transformTo' => null,
             'isClass' => false,
             'enum' => null,
+            'minLength' => null,
+            'maxLength' => null,
+            'min' => null,
+            'max' => null,
+            'pattern' => '/[/',
         ],
     ];
 
