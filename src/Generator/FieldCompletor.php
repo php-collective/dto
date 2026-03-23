@@ -72,13 +72,13 @@ class FieldCompletor
      */
     public function complete(array $dto, string $namespace): array
     {
-        $dtoName = $dto['name'];
-        $fields = $dto['fields'];
+        $dtoName = $dto[FieldKey::NAME];
+        $fields = $dto[FieldKey::FIELDS];
 
         $fields = $this->addFieldDefaults($fields);
         $fields = $this->resolveFieldTypes($fields, $dtoName, $namespace);
 
-        $dto['fields'] = $fields;
+        $dto[FieldKey::FIELDS] = $fields;
 
         return $dto;
     }
@@ -93,7 +93,7 @@ class FieldCompletor
      */
     public function completeMeta(array $dto, string $namespace): array
     {
-        $fields = $dto['fields'];
+        $fields = $dto[FieldKey::FIELDS];
 
         foreach ($fields as $key => $field) {
             $fields[$key] = $this->completeFieldTypeHints($field, $namespace);
@@ -103,9 +103,9 @@ class FieldCompletor
             $fields[$key] = $this->completeSingularTypeHints($fields[$key]);
         }
 
-        $dto['fields'] = $fields;
+        $dto[FieldKey::FIELDS] = $fields;
         $dto += [
-            'deprecated' => null,
+            FieldKey::DEPRECATED => null,
         ];
 
         return $dto;

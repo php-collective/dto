@@ -185,22 +185,22 @@ class Builder
             $dto = $this->fieldCompletor->completeMeta($dto, $namespace);
 
             $dto += [
-                'immutable' => $this->config['immutable'],
-                'readonlyProperties' => false,
-                'namespace' => $namespace . '\Dto',
-                'className' => $name . $this->getConfigOrFail('suffix'),
-                'extends' => '\\PhpCollective\\Dto\\Dto\\AbstractDto',
-                'traits' => [],
+                FieldKey::IMMUTABLE => $this->config[FieldKey::IMMUTABLE],
+                FieldKey::READONLY_PROPERTIES => false,
+                FieldKey::NAMESPACE => $namespace . '\Dto',
+                FieldKey::CLASS_NAME => $name . $this->getConfigOrFail('suffix'),
+                FieldKey::EXTENDS => '\\PhpCollective\\Dto\\Dto\\AbstractDto',
+                FieldKey::TRAITS => [],
             ];
 
-            $dto['traits'] = $this->normalizeTraits($dto['traits']);
+            $dto[FieldKey::TRAITS] = $this->normalizeTraits($dto[FieldKey::TRAITS]);
 
-            if (!empty($dto['readonlyProperties'])) {
-                $dto['immutable'] = true;
+            if (!empty($dto[FieldKey::READONLY_PROPERTIES])) {
+                $dto[FieldKey::IMMUTABLE] = true;
             }
 
-            if (!empty($dto['immutable']) && $dto['extends'] === '\\PhpCollective\\Dto\\Dto\\AbstractDto') {
-                $dto['extends'] = '\\PhpCollective\\Dto\\Dto\\AbstractImmutableDto';
+            if (!empty($dto[FieldKey::IMMUTABLE]) && $dto[FieldKey::EXTENDS] === '\\PhpCollective\\Dto\\Dto\\AbstractDto') {
+                $dto[FieldKey::EXTENDS] = '\\PhpCollective\\Dto\\Dto\\AbstractImmutableDto';
             }
 
             $config[$name] = $dto;
@@ -219,8 +219,8 @@ class Builder
 
         // Phase 5: Add array shapes for PHPDoc
         foreach ($config as $name => $dto) {
-            $config[$name]['arrayShape'] = $this->arrayShapeBuilder->buildArrayShape($dto['fields'], $config, $dto);
-            $config[$name]['metaData'] = $this->metaData($dto['fields']);
+            $config[$name][FieldKey::ARRAY_SHAPE] = $this->arrayShapeBuilder->buildArrayShape($dto[FieldKey::FIELDS], $config, $dto);
+            $config[$name][FieldKey::META_DATA] = $this->metaData($dto[FieldKey::FIELDS]);
         }
 
         return $config;

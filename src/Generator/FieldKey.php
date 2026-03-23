@@ -35,6 +35,36 @@ final class FieldKey
      */
     public const TRAITS = 'traits';
 
+    /**
+     * @var string
+     */
+    public const CLASS_NAME = 'className';
+
+    /**
+     * @var string
+     */
+    public const NAMESPACE = 'namespace';
+
+    /**
+     * @var string
+     */
+    public const DESCRIPTION = 'description';
+
+    /**
+     * @var string
+     */
+    public const READONLY_PROPERTIES = 'readonlyProperties';
+
+    /**
+     * @var string
+     */
+    public const ARRAY_SHAPE = 'arrayShape';
+
+    /**
+     * @var string
+     */
+    public const META_DATA = 'metaData';
+
     // Core field attributes
     /**
      * @var string
