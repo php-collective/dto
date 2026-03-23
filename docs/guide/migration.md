@@ -391,7 +391,7 @@ See [Validation](./validation) for integration examples.
 | **Approach** | Runtime | Runtime | Runtime | Generated |
 | **Immutable** | No | Optional | Yes | Optional |
 | **Collections** | Manual | Built-in | Built-in | Built-in |
-| **Validation** | Basic | Full | Good | Required only |
+| **Validation** | Basic | Full | Good | Common built-in rules |
 | **TypeScript** | No | Yes | No | Yes |
 | **Key conversion** | No | Manual | No | Built-in |
 | **IDE support** | Good | Good | Good | Excellent |

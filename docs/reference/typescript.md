@@ -162,7 +162,7 @@ email: string | null;  // explicit null union
 
 ### Advantages of Config-Based Generation
 
-1. **No PHP Runtime Required** - Can generate TypeScript in CI without executing PHP code
+1. **No application code execution required** - Generation uses DTO config files instead of reflecting over your app's DTO classes
 2. **Single Source of Truth** - Both PHP and TypeScript generated from same config
 3. **Full Type Information** - Required fields, defaults, and collections preserved
 4. **Framework Agnostic** - Works without Laravel, Symfony, etc.

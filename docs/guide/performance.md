@@ -127,9 +127,19 @@ $order->getCustomer()->getAddress()->getCity()->getName();
 $order->getCustomerCity();  // Computed during creation
 ```
 
-### 8. Lazy Loading Alternative
+### 8. Use Built-in Lazy DTO Fields When Nested Data Is Optional
 
-php-collective/dto doesn't support lazy properties, but you can implement lazy loading in your service layer:
+php-collective/dto supports lazy DTO and collection fields via `asLazy()`, which lets you defer nested hydration until the data is actually accessed:
+
+```php
+Dto::create('Order')->fields(
+    Field::int('id')->required(),
+    Field::dto('customer', 'Customer')->asLazy(),
+    Field::collection('items', 'OrderItem')->singular('item')->asLazy(),
+)
+```
+
+This is useful when you forward or serialize nested payloads without always traversing them. For larger application-level loading concerns, you can still combine DTOs with service-layer caching:
 
 ```php
 class OrderService
