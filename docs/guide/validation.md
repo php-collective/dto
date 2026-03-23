@@ -124,17 +124,20 @@ use Illuminate\Translation\Translator;
 $loader = new ArrayLoader();
 $translator = new Translator($loader, 'en');
 $factory = new Factory($translator);
+$dtoRules = $userDto->validationRules();
 
 $validator = $factory->make($userDto->toArray(), [
     'email' => 'required|email',
     'age' => 'required|integer|min:18|max:120',
-    'name' => 'required|string|min:2|max:100',
+    'name' => 'required|string|min:' . ($dtoRules['name']['minLength'] ?? 2) . '|max:' . ($dtoRules['name']['maxLength'] ?? 100),
 ]);
 
 if ($validator->fails()) {
     $errors = $validator->errors()->all();
 }
 ```
+
+`validationRules()` returns framework-agnostic metadata, not Laravel-ready rule strings. Read from it and translate it into Laravel's rule format when you want to reuse DTO constraints.
 
 ### Respect/Validation
 
@@ -258,10 +261,6 @@ $rules = $dto->validationRules();
 // ]
 ```
 
+The returned structure is intentionally simple. Frameworks like Laravel or Symfony still need a small adapter layer if you want to turn this metadata into native validator rules or constraints.
+
 Only fields with at least one active rule are included. The returned keys match the config rule names: `required`, `minLength`, `maxLength`, `min`, `max`, `pattern`.
-
-The framework integration plugins provide ready-made bridges:
-
-- **CakePHP:** `DtoValidator::fromDto($dto)` → `Cake\Validation\Validator`
-- **Laravel:** `DtoValidationRules::fromDto($dto)` → Laravel rule arrays
-- **Symfony:** `DtoConstraintBuilder::fromDto($dto)` → `Symfony\Component\Validator\Constraints\Collection`

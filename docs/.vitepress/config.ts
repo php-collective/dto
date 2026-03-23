@@ -54,6 +54,7 @@ export default defineConfig({
           text: 'Configuration',
           items: [
             { text: 'Config Builder', link: '/guide/config-builder' },
+            { text: 'Runtime API', link: '/guide/runtime-api' },
             { text: 'Validation', link: '/guide/validation' },
             { text: 'Advanced Types', link: '/guide/advanced-types' },
             { text: 'Shaped Arrays', link: '/guide/shaped-arrays' },
@@ -65,6 +66,7 @@ export default defineConfig({
           text: 'Advanced',
           items: [
             { text: 'Advanced Patterns', link: '/guide/advanced-patterns' },
+            { text: 'Circular Dependencies', link: '/guide/circular-dependencies' },
             { text: 'Framework Integration', link: '/guide/framework-integration' },
             { text: 'Separating Generated Code', link: '/guide/separating-generated-code' },
             { text: 'Design Decisions', link: '/guide/design-decisions' },
@@ -86,6 +88,7 @@ export default defineConfig({
           items: [
             { text: 'CLI Reference', link: '/reference/cli' },
             { text: 'TypeScript Generation', link: '/reference/typescript' },
+            { text: 'JSON Schema Generation', link: '/reference/jsonschema' },
             { text: 'Schema Importer', link: '/reference/importer' },
           ]
         }

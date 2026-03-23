@@ -44,6 +44,8 @@ Generate JSON Schema from configuration files.
 vendor/bin/dto jsonschema [options]
 ```
 
+See [JSON Schema Generation](/reference/jsonschema) for schema structure, type mapping, and programmatic options.
+
 ## Common Options
 
 Options available for all commands:
