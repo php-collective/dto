@@ -14,13 +14,14 @@ These features are intentionally out of scope:
 
 ## Validation
 
-The library provides minimal built-in validation:
+The library provides focused built-in validation:
 - Required Fields
 - Type Checking
+- Common field constraints (`minLength`, `maxLength`, `min`, `max`, `pattern`)
 
 For more complex validation, you can use a service like [Respect/Validation](https://respect-validation.readthedocs.io/en/latest/).
 
-We dont want to bloat the library with complex validation rules that are better handled by dedicated libraries.
+We don't want to bloat the library with a full validation DSL when dedicated validators already solve richer use cases better.
 
 ### Best Practices
 
@@ -60,15 +61,15 @@ Additional casters add complexity without real benefit.
 
 ## Readonly Properties (PHP 8.1+)
 
-- Generate truly readonly DTO properties.
+Readonly properties are supported, but they are a deliberate tradeoff rather than the default recommendation.
 
-Low value for this library because:
+Tradeoffs:
 
-1. Breaks current patterns - fromArray(), setFromArray(), touched tracking don't work with readonly
-1. Already have immutable DTOs - with*() pattern works and is more flexible
-1. Public properties - Forces public visibility (debatable if good, we don't think so)
+1. They change the generated API shape by exposing `public readonly` properties instead of the usual protected-property plus accessor pattern.
+2. They are stricter than the default mutable model, so they fit best when the DTO is fully initialized up front.
+3. Immutable DTOs with `with*()` methods remain the more flexible default for most applications.
 
-Verdict: Nope. The current immutable DTO with with*() methods is more flexible for this use case.
+Verdict: supported for teams that want language-level readonly semantics, but immutable DTOs are still the more ergonomic default in this library.
 
 ### Best Practices
 1. Use immutable DTOs for readonly behavior.

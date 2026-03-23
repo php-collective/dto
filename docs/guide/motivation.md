@@ -56,7 +56,7 @@ This library takes a fundamentally different approach: **code generation instead
 
 Other libraries leverage declared properties and reflection/introspection at runtime to finalize the DTO. What if we let a generator do that for us? Taking the maximum performance benefit from creating a customized object, while having all the addons we want on top for free?
 
-We generate optimized DTOs where all inflection, reflection, validation and asserting is done at generation time. Using them is just as simple as with basic arrays, only with tons of benefits on top.
+We generate optimized DTOs where class structure, inflection maps, and most boilerplate are prepared at generation time. Runtime use stays simple and explicit, while validation and hydration still happen in the generated code where needed.
 
 **Key advantages of code generation:**
 - **Zero runtime reflection** - no performance overhead per instantiation
@@ -73,12 +73,12 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 | **IDE Autocomplete**    |     Excellent      |     Good     |   Good   |        Good        |      Good      | Excellent  |
 | **Static Analysis**     |     Excellent      |     Good     | Excellent |        Good        |      Good      | Excellent  |
 | **Runtime Performance** |        Best        |   Moderate   | Moderate |      Moderate      |    Moderate    |    Best    |
-| **Validation**          |   Required only    |     Full     |   Good   |      Partial       |    Partial     |    None    |
+| **Validation**          | Built-in common rules |     Full     |   Good   |      Partial       |    Partial     |    None    |
 | **TypeScript Gen**      |        Yes         |     Yes      |    No    |         No         |       No       |     No     |
 | **Collections**         |      Built-in      |   Built-in   | Built-in |       Manual       |    Built-in    |   Manual   |
 | **Inflection**          |      Built-in      |    Manual    |  Manual  |       Manual       |     Manual     |   Manual   |
 | **Immutable DTOs**      |      Built-in      |   Built-in   | Built-in |       Manual       |     Manual     |   Manual   |
-| **Lazy Properties**     |         No         |     Yes      |    No    |         No         |       No       |     No     |
+| **Lazy Properties**     |        Yes         |     Yes      |    No    |         No         |       No       |     No     |
 | **Generics Support**    |    PHPDoc only     |   Partial    | Excellent|      Partial       |    Partial     |     No     |
 | **Error Messages**      |       Good         |     Good     | Excellent|        Good        |      Good      |    N/A     |
 | **Framework**           |        Any         |   Laravel    |   Any    |      Symfony       |      Any       |    Any     |
@@ -108,14 +108,14 @@ We generate optimized DTOs where all inflection, reflection, validation and asse
 
 | Feature              | php-collective/dto | laravel-data | valinor  | jms/serializer |
 |----------------------|:------------------:|:------------:|:--------:|:--------------:|
-| Validation Rules     |   Required only    |     Full     |   Good   |    Partial     |
-| Lazy Properties      |         No         |     Yes      |    No    |       No       |
+| Validation Rules     | Common built-in rules |     Full     |   Good   |    Partial     |
+| Lazy Properties      |        Yes         |     Yes      |    No    |       No       |
 | Integer Ranges       |         No         |      No      |   Yes    |       No       |
 | API Versioning       |         No         |      No      |    No    |      Yes       |
 | Eloquent Integration |      Not Yet       |     Yes      |    No    |       No       |
 | Streaming/Large Data |         No         |      No      |    No    |       No       |
 
-**Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance (25-60x faster) and IDE support. Choose runtime libraries if you need advanced validation, lazy loading, or framework-specific integration.
+**Verdict:** php-collective/dto is the **only code-generation approach** in the PHP DTO ecosystem, giving it unique advantages for performance (25-60x faster) and IDE support. Choose runtime libraries if you need broader validation ecosystems, normalization features, or framework-specific integration.
 
 ## Why Not Immutable by Default?
 
