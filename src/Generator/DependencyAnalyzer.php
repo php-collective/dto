@@ -72,6 +72,12 @@ class DependencyAnalyzer
         $fields = $dto['fields'] ?? [];
 
         foreach ($fields as $field) {
+            // Skip lazy fields - they don't create circular dependencies at runtime
+            // because they defer instantiation until first access
+            if (!empty($field['lazy'])) {
+                continue;
+            }
+
             $type = $field['type'] ?? '';
 
             // Extract DTO name from type (handles Foo, Foo[], ?Foo[], etc.)
