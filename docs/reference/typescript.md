@@ -28,6 +28,8 @@ TypeScript Options:
   --file-case=CASE     File naming: pascal, dashed, snake (default: pascal)
 ```
 
+See [CLI Reference](/reference/cli) for the full command overview and shared options.
+
 ## Examples
 
 ### Single File Output (Default)
@@ -126,6 +128,20 @@ With `--strict-nulls`:
 email: string | null;  // explicit null union
 ```
 
+### Union Types and Imports
+
+PHP unions are converted to TypeScript unions:
+
+```php
+Field::union('result', 'User', 'Address')->required()
+```
+
+```typescript
+result: UserDto | AddressDto;
+```
+
+In multi-file mode, referenced DTOs inside unions get the necessary `import type` statements automatically.
+
 ## Type Mapping
 
 | PHP Type | TypeScript Type |
@@ -208,3 +224,19 @@ $tsGenerator = new TypeScriptGenerator($io, [
 
 $tsGenerator->generate($definitions, 'frontend/src/types/');
 ```
+
+### Programmatic Options
+
+`TypeScriptGenerator` supports a few advanced options beyond the CLI flags:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `singleFile` | `true` | Generate `dto.ts` instead of per-type files |
+| `fileNameCase` | `'pascal'` | File naming for multi-file mode: `pascal`, `dashed`, `snake` |
+| `readonly` | `false` | Mark all fields readonly |
+| `strictNulls` | `false` | Emit `| null` instead of optional `?` syntax |
+| `exportStyle` | `'interface'` | Emit `interface` or `type` declarations |
+| `dateType` | `'string'` | Emit date-like PHP types as `string` or `Date` |
+| `suffix` | `'Dto'` | Custom suffix for generated interface names |
+
+The CLI currently exposes `singleFile`, `readonly`, `strictNulls`, and `fileNameCase`. The remaining options are available through programmatic usage.

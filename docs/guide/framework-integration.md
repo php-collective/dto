@@ -6,10 +6,10 @@ title: Framework Integration
 
 This library is **framework-agnostic** by design. It works with any PHP framework without requiring wrapper packages, while still offering deep integration possibilities.
 
-Do We Need Wrapper Libraries?
+## Do We Need Wrapper Libraries?
 
 | Feature            | Without Wrapper    | With Wrapper                |
-  |--------------------|--------------------|-----------------------------|
+|--------------------|--------------------|-----------------------------|
 | Basic usage        | ✅ Works           | ✅ Works                    |
 | Collection factory | 1 line setup       | Auto-configured             |
 | Code generation    | bin/dto generate   | artisan dto:generate        |
@@ -193,18 +193,39 @@ class UsersController extends AppController
 
 ## Validation
 
-The library doesn't include validation - use your framework's validator.
+The library includes built-in DTO validation for:
+
+- required fields
+- PHP-native type enforcement
+- common field rules such as `minLength`, `maxLength`, `min`, `max`, and `pattern`
+
+Framework validators still matter for request validation, business rules, custom messages, and cross-field constraints. A practical setup is:
+
+1. Let the DTO handle structural validation and type-safe hydration.
+2. Use your framework validator for request-specific or domain-specific rules.
+3. Optionally map `validationRules()` into framework-native rules if you want to reuse DTO metadata.
 
 ### Laravel
 
 ```php
 use Illuminate\Support\Facades\Validator;
 
-$dto = new UserDto($request->all(), ignoreMissing: true);
+$dto = UserDto::createFromArray($request->all(), ignoreMissing: true);
+
+$dtoRules = $dto->validationRules();
 
 $validator = Validator::make($dto->toArray(), [
-    'name' => 'required|string|max:255',
-    'email' => 'required|email|unique:users',
+    'name' => [
+        'required',
+        'string',
+        'min:' . ($dtoRules['name']['minLength'] ?? 0),
+        'max:' . ($dtoRules['name']['maxLength'] ?? 255),
+    ],
+    'email' => [
+        'required',
+        'email',
+        'unique:users',
+    ],
 ]);
 
 if ($validator->fails()) {
@@ -212,9 +233,12 @@ if ($validator->fails()) {
 }
 ```
 
+`validationRules()` returns framework-agnostic metadata such as `minLength` and `pattern`. Laravel does not consume that structure directly, so map it into Laravel rule strings or objects first.
+
 ### Symfony
 
 ```php
+use Symfony\Component\Validator\Constraints as Assert;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class UserController extends AbstractController
@@ -223,7 +247,8 @@ class UserController extends AbstractController
     {
         $dto = new UserDto(json_decode($request->getContent(), true));
 
-        // Validate the DTO array representation
+        // DTO construction already applies built-in field validation.
+        // Use Symfony Validator for richer request or business rules.
         $violations = $validator->validate($dto->toArray(), new Assert\Collection([
             'name' => [new Assert\NotBlank(), new Assert\Length(['max' => 255])],
             'email' => [new Assert\NotBlank(), new Assert\Email()],
@@ -246,10 +271,10 @@ The CLI tool works the same way in any framework:
 
 ```bash
 # Generate DTOs from config
-bin/dto generate config/dto.php src/Dto App\\Dto
+vendor/bin/dto generate --config-path=config/ --src-path=src/ --namespace=App
 
 # Or with XML
-bin/dto generate config/dto.xml src/Dto App\\Dto
+vendor/bin/dto generate --config-path=config/ --src-path=src/ --namespace=App --format=xml
 ```
 
 ### Framework-Specific Paths
@@ -267,7 +292,7 @@ Add to your `composer.json` for convenience:
 ```json
 {
     "scripts": {
-        "dto:generate": "bin/dto generate config/dto.php src/Dto App\\Dto"
+        "dto:generate": "vendor/bin/dto generate --config-path=config/ --src-path=src/ --namespace=App"
     }
 }
 ```

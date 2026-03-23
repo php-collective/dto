@@ -649,7 +649,7 @@ $profile = new ProfileDto(['bio' => null, 'followers' => null]);  // OK
 
 // Non-null values are validated
 $profile = new ProfileDto(['bio' => str_repeat('x', 501)]);
-// Exception: Field 'bio' must be at most 500 characters
+// Exception: Validation failed in App\Dto\ProfileDto: bio must be at most 500 characters
 ```
 
 ### Extracting Validation Rules
@@ -667,8 +667,11 @@ $rules = $dto->validationRules();
 //     'age' => ['min' => 0, 'max' => 150],
 // ]
 
-// Use with framework validators
-$validator = new FrameworkValidator($rules);
+// Map to framework-native validation rules or constraints
+$frameworkRules = [
+    'username' => ['required', 'string', 'min:' . $rules['username']['minLength']],
+    'email' => ['required', 'email'],
+];
 ```
 
 ## Lazy Loading

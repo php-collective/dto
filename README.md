@@ -74,7 +74,7 @@ return Schema::create()
         Field::string('content'),
         Field::dto('author', 'Author')->required(),
         Field::collection('tags', 'Tag')->singular('tag'),
-        Field::bool('published')->defaultValue(false),
+        Field::bool('published')->default(false),
         Field::string('publishedAt'),
     ))
     ->dto(Dto::immutable('Author')->fields(
@@ -201,8 +201,11 @@ Full documentation available at **[php-collective.github.io/dto](https://php-col
 
 - [Getting Started](https://php-collective.github.io/dto/guide/) - Quick start guide with examples
 - [Configuration Builder](https://php-collective.github.io/dto/guide/config-builder) - Fluent API for defining DTOs
+- [Runtime API](https://php-collective.github.io/dto/guide/runtime-api) - Core DTO methods and global runtime options
 - [Examples](https://php-collective.github.io/dto/guide/examples) - Practical usage patterns
+- [Circular Dependencies](https://php-collective.github.io/dto/guide/circular-dependencies) - How generation-time cycle detection works
 - [TypeScript Generation](https://php-collective.github.io/dto/reference/typescript) - Generate TypeScript interfaces
+- [JSON Schema Generation](https://php-collective.github.io/dto/reference/jsonschema) - Generate JSON Schema for DTO definitions
 - [Schema Importer](https://php-collective.github.io/dto/reference/importer) - Bootstrap DTOs from JSON data/schema
 - [Performance](https://php-collective.github.io/dto/guide/performance) - Benchmarks and optimization tips
 

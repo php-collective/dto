@@ -227,13 +227,15 @@ $importer->import($json, ['format' => 'xml']);
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<dtos xmlns="https://php-collective.github.io/dto/schema">
+<dtos xmlns="cakephp-dto">
     <dto name="User">
         <field name="name" type="string" required="true"/>
         <field name="email" type="string"/>
     </dto>
 </dtos>
 ```
+
+The XML importer currently emits the historical `cakephp-dto` namespace. This reflects the current implementation output.
 
 ### YAML
 

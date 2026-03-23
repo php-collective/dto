@@ -29,7 +29,7 @@ Create `config/dto.xml`:
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
-<dtos xmlns="https://github.com/php-collective/dto">
+<dtos xmlns="php-collective-dto">
     <dto name="User">
         <field name="id" type="int" required="true"/>
         <field name="name" type="string" required="true"/>
@@ -87,7 +87,7 @@ Choose your preferred format—all generate identical DTOs:
 
 ```xml [XML]
 <?xml version="1.0" encoding="UTF-8"?>
-<dtos xmlns="https://github.com/php-collective/dto">
+<dtos xmlns="php-collective-dto">
     <dto name="User">
         <field name="name" type="string" required="true"/>
         <field name="email" type="string"/>
@@ -271,5 +271,8 @@ parameters:
 
 - [Examples](./examples) — Real-world usage patterns
 - [Config Builder](./config-builder) — Fluent PHP API reference
+- [Runtime API](./runtime-api) — Core DTO methods, serialization, and global options
 - [Validation](./validation) — Field constraints and rules
+- [Circular Dependencies](./circular-dependencies) — How to model recursive DTO graphs safely
 - [TypeScript Generation](../reference/typescript) — Frontend type sync
+- [JSON Schema Generation](../reference/jsonschema) — Export JSON Schema from DTO definitions
