@@ -7,10 +7,10 @@ namespace PhpCollective\Dto\Dto;
 use ArrayAccess;
 use ArrayObject;
 use Countable;
-use Error;
 use InvalidArgumentException;
 use JsonSerializable;
 use PhpCollective\Dto\Utility\Json;
+use ReflectionProperty;
 use RuntimeException;
 use Throwable;
 use Traversable;
@@ -899,12 +899,11 @@ abstract class Dto implements JsonSerializable
             }
         }
 
-        // Try public property access
+        // Try public property access using reflection
         if (property_exists($object, $key)) {
-            try {
+            $reflection = new ReflectionProperty($object, $key);
+            if ($reflection->isPublic()) {
                 return $object->$key;
-            } catch (Error $e) {
-                // Property might not be publicly accessible
             }
         }
 
