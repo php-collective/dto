@@ -350,7 +350,9 @@
 {% endif %}
 {% if fieldsWithDefaults | length > 0 %}
 {% for field in fieldsWithDefaults %}
-{% if field.nullable %}
+{% if field.lazy|default(false) %}
+		if ($this->{{ field.name }} === null && !array_key_exists('{{ field.name }}', $this->_lazyData)) {
+{% elseif field.nullable %}
 		if ($this->{{ field.name }} === null) {
 {% else %}
 		if (!isset($this->{{ field.name }})) {

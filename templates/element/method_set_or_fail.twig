@@ -18,6 +18,9 @@
 			throw new RuntimeException('Value not present (expected to be not null)');
 		}
 {% endif %}
+{% if lazy|default(false) %}
+		unset($this->_lazyData['{{ name }}']);
+{% endif %}
 		$this->{{ name }} = ${{ name }};
 		$this->_touchedFields[static::FIELD_{{ name | stripLeadingUnderscore | camelize | underscore | upper }}] = true;
 

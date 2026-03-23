@@ -19,6 +19,9 @@
 		}
 {% endif %}
 		$new = clone $this;
+{% if lazy|default(false) %}
+		unset($new->_lazyData['{{ name }}']);
+{% endif %}
 {% if isArray or typeHint == 'array' %}
 		$new->{{ name }} = $new->cloneArray(${{ name }});
 {% else %}

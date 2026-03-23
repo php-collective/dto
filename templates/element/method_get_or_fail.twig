@@ -10,9 +10,10 @@
 	public function get{{ name|stripLeadingUnderscore|camelize }}OrFail(){% if returnTypeHint %}: {{ returnTypeHint }}{% endif %}
 
 	{
-		if ($this->{{ name }} === null) {
+		$value = $this->get{{ name|stripLeadingUnderscore|camelize }}();
+		if ($value === null) {
 			throw new RuntimeException('Value not set for field `{{ name }}` (expected to be not null)');
 		}
 
-		return $this->{{ name }};
+		return $value;
 	}

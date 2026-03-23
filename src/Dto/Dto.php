@@ -1061,7 +1061,8 @@ abstract class Dto implements JsonSerializable
     protected function setDefaults()
     {
         foreach ($this->_metadata as $name => $field) {
-            if ($field['defaultValue'] === null || $this->$name !== null) {
+            // Skip if no default, property is set, or lazy data exists
+            if ($field['defaultValue'] === null || $this->$name !== null || array_key_exists($name, $this->_lazyData)) {
                 continue;
             }
 
@@ -1080,7 +1081,7 @@ abstract class Dto implements JsonSerializable
     {
         $errors = [];
         foreach ($this->_metadata as $name => $field) {
-            if ($field['required'] && $this->$name === null) {
+            if ($field['required'] && $this->$name === null && !array_key_exists($name, $this->_lazyData)) {
                 $errors[] = $name;
             }
         }
