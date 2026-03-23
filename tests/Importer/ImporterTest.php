@@ -138,6 +138,7 @@ class ImporterTest extends TestCase
         $definitions = $this->importer->parse($json);
         $output = $this->importer->buildSchema($definitions, ['format' => 'xml']);
 
+        $this->assertStringContainsString('<dtos xmlns="php-collective-dto">', $output);
         $this->assertStringContainsString('<dto name="Object">', $output);
         $this->assertStringContainsString('name="name" type="string"', $output);
         $this->assertStringContainsString('name="age" type="int"', $output);

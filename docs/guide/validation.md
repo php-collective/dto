@@ -139,6 +139,51 @@ if ($validator->fails()) {
 
 `validationRules()` returns framework-agnostic metadata, not Laravel-ready rule strings. Read from it and translate it into Laravel's rule format when you want to reuse DTO constraints.
 
+### Adapting DTO Rules
+
+The practical way to reuse DTO metadata is to translate it in one place:
+
+```php
+function laravelRulesFromDto(UserDto $dto): array
+{
+    $dtoRules = $dto->validationRules();
+
+    return [
+        'name' => array_filter([
+            !empty($dtoRules['name']['required']) ? 'required' : null,
+            'string',
+            isset($dtoRules['name']['minLength']) ? 'min:' . $dtoRules['name']['minLength'] : null,
+            isset($dtoRules['name']['maxLength']) ? 'max:' . $dtoRules['name']['maxLength'] : null,
+        ]),
+        'email' => ['required', 'email'],
+    ];
+}
+```
+
+For Symfony, the same idea applies with constraints:
+
+```php
+use Symfony\Component\Validator\Constraints as Assert;
+
+function symfonyConstraintsFromDto(UserDto $dto): Assert\Collection
+{
+    $dtoRules = $dto->validationRules();
+
+    return new Assert\Collection([
+        'name' => array_filter([
+            !empty($dtoRules['name']['required']) ? new Assert\NotBlank() : null,
+            isset($dtoRules['name']['minLength']) || isset($dtoRules['name']['maxLength'])
+                ? new Assert\Length(
+                    min: $dtoRules['name']['minLength'] ?? null,
+                    max: $dtoRules['name']['maxLength'] ?? null,
+                )
+                : null,
+        ]),
+        'email' => [new Assert\NotBlank(), new Assert\Email()],
+    ]);
+}
+```
+
 ### Respect/Validation
 
 ```php
