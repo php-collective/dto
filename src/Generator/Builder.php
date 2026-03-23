@@ -63,6 +63,11 @@ class Builder
     protected DependencyAnalyzer $dependencyAnalyzer;
 
     /**
+     * @var \PhpCollective\Dto\Generator\TemplateDataPreparer
+     */
+    protected TemplateDataPreparer $templateDataPreparer;
+
+    /**
      * Needed for Dto to work dynamically.
      *
      * @see FieldKey::metadataKeys()
@@ -99,6 +104,7 @@ class Builder
         );
         $this->extendsResolver = new ExtendsResolver($this->config['suffix']);
         $this->dependencyAnalyzer = new DependencyAnalyzer($this->config['suffix']);
+        $this->templateDataPreparer = new TemplateDataPreparer();
     }
 
     /**
@@ -221,6 +227,11 @@ class Builder
         foreach ($config as $name => $dto) {
             $config[$name][FieldKey::ARRAY_SHAPE] = $this->arrayShapeBuilder->buildArrayShape($dto[FieldKey::FIELDS], $config, $dto);
             $config[$name][FieldKey::META_DATA] = $this->metaData($dto[FieldKey::FIELDS]);
+        }
+
+        // Phase 6: Prepare template rendering data
+        foreach ($config as $name => $dto) {
+            $config[$name] = $this->templateDataPreparer->prepare($dto);
         }
 
         return $config;

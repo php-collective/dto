@@ -1,11 +1,33 @@
 {% set blank = "\n" -%}
 {% for field in fields -%}
 {% set fieldVars = field|merge({'scalarAndReturnTypes': scalarAndReturnTypes, 'readonlyProperties': readonlyProperties|default(false)}) -%}
-{% if immutable %}{% include 'element/method_with.twig' with fieldVars only %}{% else %}{% include 'element/method_set.twig' with fieldVars only %}{% endif -%}
-{% if field.nullable and immutable %}{{ blank }}{% include 'element/method_with_or_fail.twig' with fieldVars only %}{% elseif field.nullable %}{{ blank }}{% include 'element/method_set_or_fail.twig' with fieldVars only %}{% endif -%}
+{# Setter method (with* for immutable, set* for mutable) #}
+{% if field.useWithMethod %}
+{% include 'element/method_with.twig' with fieldVars only %}
+{% else %}
+{% include 'element/method_set.twig' with fieldVars only %}
+{% endif -%}
+{# OrFail setter variant #}
+{% if field.needsOrFailMethod %}
+{{ blank }}{% if field.useWithMethod %}{% include 'element/method_with_or_fail.twig' with fieldVars only %}{% else %}{% include 'element/method_set_or_fail.twig' with fieldVars only %}{% endif %}
+{% endif -%}
+{# Getter method #}
 {{ blank }}{% include 'element/method_get.twig' with fieldVars only -%}
-{% if field.nullable %}{{ blank }}{% include 'element/method_get_or_fail.twig' with fieldVars only %}{% endif -%}
-{% if field.nullable or field.defaultValue is null %}{{ blank }}{% include 'element/method_has.twig' with fieldVars only %}{% endif -%}
-{% if immutable %}{% if field.collection %}{{ blank }}{% include 'element/method_with_added.twig' with fieldVars only %}{{ blank }}{% include 'element/method_with_removed.twig' with fieldVars only %}{% endif %}{% else %}{% if field.collectionType and field.singular %}{{ blank }}{% include 'element/method_add.twig' with fieldVars only %}{{ blank }}{% include 'element/method_remove.twig' with fieldVars only %}{% endif %}{% endif -%}
+{# OrFail getter variant #}
+{% if field.needsOrFailMethod %}
+{{ blank }}{% include 'element/method_get_or_fail.twig' with fieldVars only %}
+{% endif -%}
+{# Has method #}
+{% if field.needsHasMethod %}
+{{ blank }}{% include 'element/method_has.twig' with fieldVars only %}
+{% endif -%}
+{# Collection methods (add/remove or withAdded/withRemoved) #}
+{% if field.useImmutableCollectionMethods %}
+{{ blank }}{% include 'element/method_with_added.twig' with fieldVars only %}
+{{ blank }}{% include 'element/method_with_removed.twig' with fieldVars only %}
+{% elseif field.useMutableCollectionMethods %}
+{{ blank }}{% include 'element/method_add.twig' with fieldVars only %}
+{{ blank }}{% include 'element/method_remove.twig' with fieldVars only %}
+{% endif -%}
 {% if not loop.last %}{{ blank }}{% endif -%}
 {% endfor -%}
