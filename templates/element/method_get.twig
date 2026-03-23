@@ -10,7 +10,7 @@
 
 	{
 {% if lazy|default(false) %}
-		if (isset($this->_lazyData['{{ name }}'])) {
+		if (array_key_exists('{{ name }}', $this->_lazyData)) {
 			$raw = $this->_lazyData['{{ name }}'];
 			unset($this->_lazyData['{{ name }}']);
 {% if dto %}

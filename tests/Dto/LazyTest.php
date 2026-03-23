@@ -127,4 +127,80 @@ class LazyTest extends TestCase
         $this->assertCount(2, $arr['items']);
         $this->assertSame('X', $arr['items'][0]['name']);
     }
+
+    public function testClonePreservesLazyData(): void
+    {
+        $dto = new LazyDto([
+            'title' => 'Test',
+            'nested' => ['name' => 'Nested', 'count' => 5],
+        ]);
+
+        // Clone before accessing lazy field
+        $clone = $dto->clone();
+
+        // Both should have the lazy data
+        $this->assertTrue($clone->hasNested());
+
+        // Original should still work
+        $original = $dto->getNested();
+        $this->assertInstanceOf(SimpleDto::class, $original);
+        $this->assertSame('Nested', $original->getName());
+
+        // Clone should also hydrate correctly
+        $cloneNested = $clone->getNested();
+        $this->assertInstanceOf(SimpleDto::class, $cloneNested);
+        $this->assertSame('Nested', $cloneNested->getName());
+
+        // They should be different instances
+        $this->assertNotSame($original, $cloneNested);
+    }
+
+    public function testClonePreservesLazyCollection(): void
+    {
+        $dto = new LazyDto([
+            'title' => 'Test',
+            'items' => [
+                ['name' => 'A', 'count' => 1],
+                ['name' => 'B', 'count' => 2],
+            ],
+        ]);
+
+        // Clone before accessing lazy collection
+        $clone = $dto->clone();
+
+        // Clone should have the lazy data
+        $this->assertTrue($clone->hasItems());
+
+        // Access items on clone
+        $cloneItems = $clone->getItems();
+        $this->assertCount(2, $cloneItems);
+        $this->assertSame('A', $cloneItems[0]->getName());
+
+        // Original should also still work
+        $originalItems = $dto->getItems();
+        $this->assertCount(2, $originalItems);
+        $this->assertSame('A', $originalItems[0]->getName());
+
+        // They should be different instances
+        $this->assertNotSame($originalItems[0], $cloneItems[0]);
+    }
+
+    public function testLazyNullValueIsDetectedCorrectly(): void
+    {
+        // This tests that array_key_exists is used instead of isset
+        // because isset returns false for null values
+        $dto = new LazyDto([
+            'title' => 'Test',
+            'nested' => null,
+        ]);
+
+        // hasNested should return true because the key exists (even though value is null)
+        $this->assertTrue($dto->hasNested());
+
+        // getNested should return null
+        $this->assertNull($dto->getNested());
+
+        // After accessing, hasNested should still work
+        $this->assertFalse($dto->hasNested());
+    }
 }
