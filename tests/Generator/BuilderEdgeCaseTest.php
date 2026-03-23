@@ -1526,4 +1526,165 @@ PHP;
         $this->assertArrayHasKey('_matchingData', $definitions['Entity']['fields']);
         $this->assertArrayHasKey('regularField', $definitions['Entity']['fields']);
     }
+
+    // ========== CONFIG MERGE TESTS ==========
+
+    /**
+     * Test that when the same DTO is defined in multiple config files,
+     * fields are properly merged instead of overwritten.
+     */
+    public function testConfigMergePreservesFieldsFromMultipleFiles(): void
+    {
+        // First config file with base fields
+        $configContent1 = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'name' => 'string',
+            'email' => 'string',
+            'password' => 'string',
+        ],
+    ],
+];
+PHP;
+
+        // Second config file adds validation to email and adds a new field
+        $configContent2 = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'email' => [
+                'type' => 'string',
+                'required' => true,
+                'minLength' => 5,
+            ],
+            'phone' => 'string',
+        ],
+    ],
+];
+PHP;
+
+        // Create dto subdirectory for multiple config files
+        mkdir($this->tempDir . '/config/dto', 0777, true);
+        file_put_contents($this->tempDir . '/config/dto/01-user.php', $configContent1);
+        file_put_contents($this->tempDir . '/config/dto/02-user-validation.php', $configContent2);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('User', $definitions);
+        $fields = $definitions['User']['fields'];
+
+        // All fields from both files should be present
+        $this->assertArrayHasKey('name', $fields, 'Field from first file should be preserved');
+        $this->assertArrayHasKey('email', $fields, 'Field from both files should be present');
+        $this->assertArrayHasKey('password', $fields, 'Field from first file should be preserved');
+        $this->assertArrayHasKey('phone', $fields, 'Field from second file should be added');
+
+        // Validation attributes from second file should be applied
+        $this->assertTrue($fields['email']['required'], 'Required attribute from second file should be applied');
+        $this->assertSame(5, $fields['email']['minLength'], 'MinLength from second file should be applied');
+    }
+
+    /**
+     * Test that DTO-level attributes are properly merged.
+     */
+    public function testConfigMergeDtoLevelAttributes(): void
+    {
+        $configContent1 = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'fields' => [
+            'id' => 'int',
+        ],
+    ],
+];
+PHP;
+
+        $configContent2 = <<<'PHP'
+<?php
+return [
+    'User' => [
+        'deprecated' => 'Use CustomerDto instead',
+        'fields' => [
+            'name' => 'string',
+        ],
+    ],
+];
+PHP;
+
+        mkdir($this->tempDir . '/config/dto', 0777, true);
+        file_put_contents($this->tempDir . '/config/dto/01-user.php', $configContent1);
+        file_put_contents($this->tempDir . '/config/dto/02-user-deprecated.php', $configContent2);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('User', $definitions);
+        $this->assertSame('Use CustomerDto instead', $definitions['User']['deprecated']);
+        $this->assertArrayHasKey('id', $definitions['User']['fields']);
+        $this->assertArrayHasKey('name', $definitions['User']['fields']);
+    }
+
+    /**
+     * Test that field attribute merging works correctly (later values override earlier).
+     */
+    public function testConfigMergeFieldAttributeOverride(): void
+    {
+        $configContent1 = <<<'PHP'
+<?php
+return [
+    'Product' => [
+        'fields' => [
+            'price' => [
+                'type' => 'float',
+                'min' => 0,
+                'max' => 1000,
+            ],
+        ],
+    ],
+];
+PHP;
+
+        $configContent2 = <<<'PHP'
+<?php
+return [
+    'Product' => [
+        'fields' => [
+            'price' => [
+                'type' => 'float',
+                'max' => 5000,
+            ],
+        ],
+    ],
+];
+PHP;
+
+        mkdir($this->tempDir . '/config/dto', 0777, true);
+        file_put_contents($this->tempDir . '/config/dto/01-product.php', $configContent1);
+        file_put_contents($this->tempDir . '/config/dto/02-product-override.php', $configContent2);
+
+        $config = new ArrayConfig(['namespace' => 'App']);
+        $engine = new PhpEngine();
+        $builder = new Builder($engine, $config);
+
+        $definitions = $builder->build($this->tempDir . '/config/');
+
+        $this->assertArrayHasKey('Product', $definitions);
+        $priceField = $definitions['Product']['fields']['price'];
+
+        // min should be preserved from first file
+        $this->assertSame(0, $priceField['min'], 'min from first file should be preserved');
+        // max should be overridden by second file
+        $this->assertSame(5000, $priceField['max'], 'max should be overridden by second file');
+    }
 }
