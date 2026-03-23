@@ -268,6 +268,10 @@ abstract class Dto implements JsonSerializable
      */
     public function read(array $path, $default = null)
     {
+        if ($path === []) {
+            return $default;
+        }
+
         $data = null;
         foreach ($path as $key) {
             if ($data === null && !$this->has($key)) {
@@ -1459,6 +1463,8 @@ abstract class Dto implements JsonSerializable
      * @param string $field The field name to look up enum class from metadata
      * @param \BackedEnum|\UnitEnum|string|int|null $value
      *
+     * @throws \InvalidArgumentException If the value is not a valid enum case
+     *
      * @return \BackedEnum|\UnitEnum|null
      */
     protected function createEnum(string $field, $value)
@@ -1475,13 +1481,45 @@ abstract class Dto implements JsonSerializable
         $class = $this->_metadata[$field]['type'];
 
         if ($this->_metadata[$field]['enum'] === 'unit') {
-            assert(is_string($value));
+            if (!is_string($value)) {
+                throw new InvalidArgumentException(sprintf(
+                    'Invalid value for unit enum field `%s`: expected string, got %s.',
+                    $field,
+                    get_debug_type($value),
+                ));
+            }
 
-            return constant($class . "::{$value}");
+            // Validate that the case exists before using constant()
+            $cases = $class::cases();
+            foreach ($cases as $case) {
+                if ($case->name === $value) {
+                    return $case;
+                }
+            }
+
+            throw new InvalidArgumentException(sprintf(
+                'Invalid value `%s` for unit enum field `%s`. Valid cases: %s.',
+                $value,
+                $field,
+                implode(', ', array_map(fn ($c) => $c->name, $cases)),
+            ));
         }
 
-        /** @var class-string<\BackedEnum> $class */
-        return $class::tryFrom($value);
+        /** @var class-string<\BackedEnum> $backedEnumClass */
+        $backedEnumClass = $class;
+        $result = $backedEnumClass::tryFrom($value);
+        if ($result === null) {
+            $cases = $backedEnumClass::cases();
+
+            throw new InvalidArgumentException(sprintf(
+                'Invalid value `%s` for backed enum field `%s`. Valid values: %s.',
+                (string)$value,
+                $field,
+                implode(', ', array_map(fn ($c) => (string)$c->value, $cases)),
+            ));
+        }
+
+        return $result;
     }
 
     /**
