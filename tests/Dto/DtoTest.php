@@ -637,14 +637,32 @@ class DtoTest extends TestCase
         $this->assertSame(IntBackedEnum::High, $dto->getPriority());
     }
 
-    public function testBackedEnumInvalidValueReturnsNull(): void
+    public function testBackedEnumInvalidValueThrowsException(): void
     {
-        $dto = new AdvancedDto([
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid value `999` for backed enum field `priority`');
+
+        new AdvancedDto([
             'priority' => 999,
         ]);
+    }
 
-        // tryFrom returns null for invalid values
-        $this->assertNull($dto->getPriority());
+    public function testUnitEnumInvalidValueThrowsException(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Invalid value `INVALID_CASE` for unit enum field `status`');
+
+        new SerializableDto([
+            'status' => 'INVALID_CASE',
+        ]);
+    }
+
+    public function testReadWithEmptyPathReturnsDefault(): void
+    {
+        $dto = new SimpleDto(['name' => 'test', 'count' => 5]);
+
+        $this->assertSame('my_default', $dto->read([], 'my_default'));
+        $this->assertNull($dto->read([]));
     }
 
     public function testCreateWithConstructor(): void
