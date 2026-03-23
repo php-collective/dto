@@ -80,10 +80,11 @@ class DependencyAnalyzer
 
             $type = $field['type'] ?? '';
 
-            // Extract DTO name from type (handles Foo, Foo[], ?Foo[], etc.)
-            $dtoName = $this->extractDtoNameFromType($type);
-            if ($dtoName && in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
-                $dependencies[] = $dtoName;
+            // Extract DTO names from type (handles Foo, Foo[], ?Foo[], and union types like Foo|Bar)
+            foreach ($this->extractDtoNamesFromType($type) as $dtoName) {
+                if (in_array($dtoName, $knownDtos, true) && $dtoName !== $dto['name']) {
+                    $dependencies[] = $dtoName;
+                }
             }
 
             // Check singular type for collections
@@ -113,6 +114,30 @@ class DependencyAnalyzer
         }
 
         return array_unique($dependencies);
+    }
+
+    /**
+     * Extract all DTO names from a type string, handling union types.
+     *
+     * @param string $type
+     *
+     * @return array<string>
+     */
+    protected function extractDtoNamesFromType(string $type): array
+    {
+        $dtoNames = [];
+
+        // Handle union types by splitting on |
+        $types = str_contains($type, '|') ? explode('|', $type) : [$type];
+
+        foreach ($types as $singleType) {
+            $dtoName = $this->extractDtoNameFromType(trim($singleType));
+            if ($dtoName !== null) {
+                $dtoNames[] = $dtoName;
+            }
+        }
+
+        return $dtoNames;
     }
 
     /**

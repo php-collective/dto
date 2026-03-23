@@ -691,7 +691,7 @@ class DependencyAnalyzerTest extends TestCase
     /**
      * Test that union types with DTOs are correctly analyzed for circular dependencies.
      *
-     * Note: Union types like 'UserDto|AdminDto' should be split and each type checked.
+     * Union types like 'UserDto|AdminDto' are split and each type is checked.
      *
      * @return void
      */
@@ -705,7 +705,7 @@ class DependencyAnalyzerTest extends TestCase
                 'fields' => [
                     'item' => [
                         'name' => 'item',
-                        'type' => 'ItemADto|ItemBDto', // Union type
+                        'type' => 'ItemADto|ItemBDto', // Union type - both types are checked
                         'lazy' => false,
                     ],
                 ],
@@ -732,13 +732,11 @@ class DependencyAnalyzerTest extends TestCase
             ],
         ];
 
-        // Currently union types are NOT parsed for dependencies.
-        // This test documents current behavior - it should NOT throw,
-        // but ideally it SHOULD throw because Container -> ItemA -> Container is a cycle.
-        // This is a known limitation tracked separately.
-        $analyzer->analyze($dtos);
+        // Union types are now parsed - Container -> ItemA -> Container is detected as a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
 
-        $this->assertTrue(true);
+        $analyzer->analyze($dtos);
     }
 
     /**
@@ -779,6 +777,188 @@ class DependencyAnalyzerTest extends TestCase
         ];
 
         // Lazy union types should be skipped entirely
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that union types without circular dependencies work correctly.
+     *
+     * @return void
+     */
+    public function testUnionTypeWithoutCircularDependency(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto|ItemBDto', // Union type
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'value' => [
+                        'name' => 'value',
+                        'type' => 'int',
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'name' => [
+                        'name' => 'name',
+                        'type' => 'string',
+                    ],
+                ],
+            ],
+        ];
+
+        // No circular dependency - should not throw
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that union types with nullable and array notations are parsed.
+     *
+     * @return void
+     */
+    public function testUnionTypeWithNullableAndArrayNotation(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'items' => [
+                        'name' => 'items',
+                        'type' => '?ItemADto[]|ItemBDto', // Nullable array union
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [],
+            ],
+        ];
+
+        // Container -> ItemA -> Container is a cycle
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test union type with mixed scalar and DTO types.
+     *
+     * @return void
+     */
+    public function testUnionTypeWithMixedScalarAndDto(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'value' => [
+                        'name' => 'value',
+                        'type' => 'string|int|ItemDto', // Mixed union with scalars
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'Item' => [
+                'name' => 'Item',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Container -> Item -> Container is a cycle (via ItemDto in union)
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that union type with one lazy part still breaks the cycle.
+     *
+     * When the entire field is lazy, all union type parts are skipped.
+     *
+     * @return void
+     */
+    public function testUnionTypeFieldLazyBreaksCycle(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto|ItemBDto',
+                        'lazy' => true, // Lazy field - entire union is skipped
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Container's union field is lazy, so both cycles are broken
         $analyzer->analyze($dtos);
 
         $this->assertTrue(true);
