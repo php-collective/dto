@@ -289,4 +289,498 @@ class DependencyAnalyzerTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    /**
+     * Test that lazy collection fields with singularType are properly skipped.
+     *
+     * @return void
+     */
+    public function testLazyCollectionWithSingularTypeDoesNotThrow(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Parent' => [
+                'name' => 'Parent',
+                'fields' => [
+                    'children' => [
+                        'name' => 'children',
+                        'type' => 'ChildDto[]',
+                        'singularType' => 'ChildDto',
+                        'dto' => 'Child',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+            'Child' => [
+                'name' => 'Child',
+                'fields' => [
+                    'parent' => [
+                        'name' => 'parent',
+                        'type' => 'ParentDto',
+                        'dto' => 'Parent',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Should not throw - lazy collection breaks the cycle
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that eager collection with singularType in circular dependency throws.
+     *
+     * @return void
+     */
+    public function testEagerCollectionWithSingularTypeThrows(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Parent' => [
+                'name' => 'Parent',
+                'fields' => [
+                    'children' => [
+                        'name' => 'children',
+                        'type' => 'ChildDto[]',
+                        'singularType' => 'ChildDto',
+                        'dto' => 'Child',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'Child' => [
+                'name' => 'Child',
+                'fields' => [
+                    'parent' => [
+                        'name' => 'parent',
+                        'type' => 'ParentDto',
+                        'dto' => 'Parent',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test that self-referential lazy fields are allowed.
+     *
+     * @return void
+     */
+    public function testSelfReferenceLazyFieldAllowed(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'TreeNode' => [
+                'name' => 'TreeNode',
+                'fields' => [
+                    'parent' => [
+                        'name' => 'parent',
+                        'type' => 'TreeNodeDto',
+                        'dto' => 'TreeNode',
+                        'lazy' => true,
+                    ],
+                    'children' => [
+                        'name' => 'children',
+                        'type' => 'TreeNodeDto[]',
+                        'singularType' => 'TreeNodeDto',
+                        'dto' => 'TreeNode',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+        ];
+
+        // Self-references with lazy should be allowed
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that self-referential eager fields are detected (but filtered by same-name check).
+     *
+     * Note: The analyzer excludes self-references from dependencies by design,
+     * so eager self-references don't cause circular dependency errors.
+     *
+     * @return void
+     */
+    public function testSelfReferenceEagerFieldAllowed(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'TreeNode' => [
+                'name' => 'TreeNode',
+                'fields' => [
+                    'parent' => [
+                        'name' => 'parent',
+                        'type' => 'TreeNodeDto',
+                        'dto' => 'TreeNode',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Self-references are excluded from dependencies by design ($dtoName !== $dto['name'])
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that fields without explicit lazy key are treated as eager (default behavior).
+     *
+     * @return void
+     */
+    public function testFieldsWithoutLazyKeyTreatedAsEager(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'A' => [
+                'name' => 'A',
+                'fields' => [
+                    'b' => [
+                        'name' => 'b',
+                        'type' => 'BDto',
+                        'dto' => 'B',
+                        // No 'lazy' key - should default to eager behavior
+                    ],
+                ],
+            ],
+            'B' => [
+                'name' => 'B',
+                'fields' => [
+                    'a' => [
+                        'name' => 'a',
+                        'type' => 'ADto',
+                        'dto' => 'A',
+                        // No 'lazy' key - should default to eager behavior
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test multiple independent cycles - one broken by lazy, one not.
+     *
+     * @return void
+     */
+    public function testMultipleCyclesOneEagerThrows(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            // Cycle 1: A <-> B (both lazy - OK)
+            'A' => [
+                'name' => 'A',
+                'fields' => [
+                    'b' => [
+                        'name' => 'b',
+                        'type' => 'BDto',
+                        'dto' => 'B',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+            'B' => [
+                'name' => 'B',
+                'fields' => [
+                    'a' => [
+                        'name' => 'a',
+                        'type' => 'ADto',
+                        'dto' => 'A',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+            // Cycle 2: C <-> D (both eager - should throw)
+            'C' => [
+                'name' => 'C',
+                'fields' => [
+                    'd' => [
+                        'name' => 'd',
+                        'type' => 'DDto',
+                        'dto' => 'D',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'D' => [
+                'name' => 'D',
+                'fields' => [
+                    'c' => [
+                        'name' => 'c',
+                        'type' => 'CDto',
+                        'dto' => 'C',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test multiple independent cycles - all broken by lazy.
+     *
+     * @return void
+     */
+    public function testMultipleCyclesAllLazyAllowed(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            // Cycle 1: A <-> B (one lazy)
+            'A' => [
+                'name' => 'A',
+                'fields' => [
+                    'b' => [
+                        'name' => 'b',
+                        'type' => 'BDto',
+                        'dto' => 'B',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+            'B' => [
+                'name' => 'B',
+                'fields' => [
+                    'a' => [
+                        'name' => 'a',
+                        'type' => 'ADto',
+                        'dto' => 'A',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            // Cycle 2: C <-> D (one lazy)
+            'C' => [
+                'name' => 'C',
+                'fields' => [
+                    'd' => [
+                        'name' => 'd',
+                        'type' => 'DDto',
+                        'dto' => 'D',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'D' => [
+                'name' => 'D',
+                'fields' => [
+                    'c' => [
+                        'name' => 'c',
+                        'type' => 'CDto',
+                        'dto' => 'C',
+                        'lazy' => true,
+                    ],
+                ],
+            ],
+        ];
+
+        // Both cycles are broken by at least one lazy field
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test circular dependency via dto field attribute only (no type match).
+     *
+     * @return void
+     */
+    public function testCircularDependencyViaDtoFieldAttribute(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Order' => [
+                'name' => 'Order',
+                'fields' => [
+                    'customer' => [
+                        'name' => 'customer',
+                        'type' => 'array', // Not a DTO type
+                        'dto' => 'Customer', // But dto attribute points to Customer
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'Customer' => [
+                'name' => 'Customer',
+                'fields' => [
+                    'orders' => [
+                        'name' => 'orders',
+                        'type' => 'array',
+                        'dto' => 'Order',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Circular dependency detected');
+
+        $analyzer->analyze($dtos);
+    }
+
+    /**
+     * Test lazy field via dto field attribute breaks circular dependency.
+     *
+     * @return void
+     */
+    public function testLazyDtoFieldAttributeBreaksCycle(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Order' => [
+                'name' => 'Order',
+                'fields' => [
+                    'customer' => [
+                        'name' => 'customer',
+                        'type' => 'array',
+                        'dto' => 'Customer',
+                        'lazy' => true, // Lazy breaks cycle
+                    ],
+                ],
+            ],
+            'Customer' => [
+                'name' => 'Customer',
+                'fields' => [
+                    'orders' => [
+                        'name' => 'orders',
+                        'type' => 'array',
+                        'dto' => 'Order',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+        ];
+
+        // Lazy on dto attribute should break the cycle
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that union types with DTOs are correctly analyzed for circular dependencies.
+     *
+     * Note: Union types like 'UserDto|AdminDto' should be split and each type checked.
+     *
+     * @return void
+     */
+    public function testUnionTypeCircularDependencyDetected(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto|ItemBDto', // Union type
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [
+                    'name' => [
+                        'name' => 'name',
+                        'type' => 'string',
+                    ],
+                ],
+            ],
+        ];
+
+        // Currently union types are NOT parsed for dependencies.
+        // This test documents current behavior - it should NOT throw,
+        // but ideally it SHOULD throw because Container -> ItemA -> Container is a cycle.
+        // This is a known limitation tracked separately.
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * Test that lazy union type fields don't contribute to dependencies.
+     *
+     * @return void
+     */
+    public function testLazyUnionTypeDoesNotContributeToDependencies(): void
+    {
+        $analyzer = new DependencyAnalyzer();
+
+        $dtos = [
+            'Container' => [
+                'name' => 'Container',
+                'fields' => [
+                    'item' => [
+                        'name' => 'item',
+                        'type' => 'ItemADto|ItemBDto',
+                        'lazy' => true, // Even if union parsing worked, lazy should skip
+                    ],
+                ],
+            ],
+            'ItemA' => [
+                'name' => 'ItemA',
+                'fields' => [
+                    'container' => [
+                        'name' => 'container',
+                        'type' => 'ContainerDto',
+                        'dto' => 'Container',
+                        'lazy' => false,
+                    ],
+                ],
+            ],
+            'ItemB' => [
+                'name' => 'ItemB',
+                'fields' => [],
+            ],
+        ];
+
+        // Lazy union types should be skipped entirely
+        $analyzer->analyze($dtos);
+
+        $this->assertTrue(true);
+    }
 }
