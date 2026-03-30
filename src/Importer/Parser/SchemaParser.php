@@ -708,7 +708,7 @@ class SchemaParser implements ParserInterface
      * Apply format specifier to field details.
      *
      * Maps JSON Schema format values to appropriate DTO types:
-     * - date-time, date → \DateTimeInterface class
+     * - date-time, date → \DateTimeInterface class with \DateTime factory
      * - Other formats remain as their base type (string)
      *
      * @param array<string, mixed> $fieldDetails
@@ -724,7 +724,10 @@ class SchemaParser implements ParserInterface
         }
 
         return match ($format) {
-            'date-time', 'date' => array_merge($fieldDetails, ['type' => '\\DateTimeInterface']),
+            'date-time', 'date' => array_merge($fieldDetails, [
+                'type' => '\\DateTimeInterface',
+                'factory' => '\\DateTime',
+            ]),
             default => $fieldDetails,
         };
     }

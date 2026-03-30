@@ -706,6 +706,7 @@ class SchemaParserTest extends TestCase
         $result = $this->parser->parse($schema)->result();
 
         $this->assertSame('\\DateTimeInterface', $result['Object']['createdAt']['type']);
+        $this->assertSame('\\DateTime', $result['Object']['createdAt']['factory']);
     }
 
     /**
@@ -723,6 +724,7 @@ class SchemaParserTest extends TestCase
         $result = $this->parser->parse($schema)->result();
 
         $this->assertSame('\\DateTimeInterface', $result['Object']['birthDate']['type']);
+        $this->assertSame('\\DateTime', $result['Object']['birthDate']['factory']);
     }
 
     /**
