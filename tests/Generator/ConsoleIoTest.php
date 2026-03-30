@@ -145,4 +145,13 @@ class ConsoleIoTest extends TestCase
         $this->assertSame('', $this->getStdoutOutput());
         $this->assertStringContainsString('Error message', $this->getStderrOutput());
     }
+
+    public function testWarningGoesToStderr(): void
+    {
+        $io = new ConsoleIo(IoInterface::NORMAL, $this->stdout, $this->stderr);
+        $io->warning('Warning message');
+
+        $this->assertSame('', $this->getStdoutOutput());
+        $this->assertStringContainsString('Warning message', $this->getStderrOutput());
+    }
 }
