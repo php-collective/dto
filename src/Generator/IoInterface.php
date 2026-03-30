@@ -85,4 +85,14 @@ interface IoInterface
      * @return void
      */
     public function abort(string $message, int $exitCode = 1): void;
+
+    /**
+     * Outputs a warning message.
+     *
+     * @param string|null $message
+     * @param int $newlines
+     *
+     * @return int|null
+     */
+    public function warning(?string $message = null, int $newlines = 1): ?int;
 }

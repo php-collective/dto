@@ -106,6 +106,19 @@ class ConsoleIo implements IoInterface
     }
 
     /**
+     * @inheritDoc
+     */
+    public function warning(?string $message = null, int $newlines = 1): ?int
+    {
+        $output = $message ?? '';
+        if ($this->supportsColor($this->stderr)) {
+            $output = "\033[33m" . $output . "\033[0m";
+        }
+
+        return $this->write($output, $newlines, $this->stderr);
+    }
+
+    /**
      * Write message to stream.
      *
      * @param array<string>|string $message

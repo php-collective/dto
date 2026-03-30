@@ -82,6 +82,12 @@ class Generator
             $this->io->abort($e->getMessage());
         }
 
+        // Output any warnings from field validation
+        foreach ($this->builder->getWarnings() as $warning) {
+            $this->io->warning($warning);
+        }
+        $this->builder->clearWarnings();
+
         $dtos = $this->generateDtos($definitions);
         $foundDtos = [];
         if (!$options['force']) {

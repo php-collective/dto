@@ -6,6 +6,7 @@ namespace PhpCollective\Dto\Generator;
 
 use InvalidArgumentException;
 use PhpCollective\Dto\Utility\Inflector;
+use ReflectionClass;
 
 /**
  * Completes and enriches field definitions with computed values.
@@ -41,6 +42,13 @@ class FieldCompletor
      * @var bool
      */
     protected bool $scalarAndReturnTypes;
+
+    /**
+     * Collected warnings during field completion.
+     *
+     * @var array<string>
+     */
+    protected array $warnings = [];
 
     /**
      * @param \PhpCollective\Dto\Generator\TypeValidator $typeValidator
@@ -186,6 +194,9 @@ class FieldCompletor
                 }
 
                 $fields[$key]['enum'] = $this->typeResolver->enumType($field['type']);
+
+                // Warn if type is interface/abstract without factory (cannot be instantiated)
+                $this->validateInstantiable($field['type'], $key, $dtoName, $fields[$key]);
 
                 continue;
             }
@@ -459,5 +470,77 @@ class FieldCompletor
         $field['keyType'] = !empty($field['associative']) ? 'string' : 'int';
 
         return $field;
+    }
+
+    /**
+     * Validate that a class type can be instantiated.
+     *
+     * Adds a warning if the type is an interface or abstract class without a factory.
+     *
+     * @param string $type
+     * @param string $fieldName
+     * @param string $dtoName
+     * @param array<string, mixed> $field
+     *
+     * @return void
+     */
+    protected function validateInstantiable(string $type, string $fieldName, string $dtoName, array $field): void
+    {
+        // Skip if factory is set - user knows what they're doing
+        if (!empty($field['factory'])) {
+            return;
+        }
+
+        // Skip if it's an enum - handled separately
+        if (!empty($field['enum'])) {
+            return;
+        }
+
+        // Check if it's an interface
+        if (interface_exists($type)) {
+            $this->warnings[] = sprintf(
+                'Warning: Field `%s` in `%s` DTO uses interface type `%s` without a factory. '
+                . 'Interfaces cannot be instantiated. Add a `factory` option (e.g., factory: \\DateTime for DateTimeInterface).',
+                $fieldName,
+                $dtoName,
+                $type,
+            );
+
+            return;
+        }
+
+        // Check if it's an abstract class
+        if (class_exists($type)) {
+            $reflection = new ReflectionClass($type);
+            if ($reflection->isAbstract()) {
+                $this->warnings[] = sprintf(
+                    'Warning: Field `%s` in `%s` DTO uses abstract class `%s` without a factory. '
+                    . 'Abstract classes cannot be instantiated. Add a `factory` option with a concrete class.',
+                    $fieldName,
+                    $dtoName,
+                    $type,
+                );
+            }
+        }
+    }
+
+    /**
+     * Get collected warnings.
+     *
+     * @return array<string>
+     */
+    public function getWarnings(): array
+    {
+        return $this->warnings;
+    }
+
+    /**
+     * Clear collected warnings.
+     *
+     * @return void
+     */
+    public function clearWarnings(): void
+    {
+        $this->warnings = [];
     }
 }

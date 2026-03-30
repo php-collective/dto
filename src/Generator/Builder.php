@@ -401,4 +401,24 @@ class Builder
             return $trait;
         }, array_filter($traits));
     }
+
+    /**
+     * Get warnings collected during field completion.
+     *
+     * @return array<string>
+     */
+    public function getWarnings(): array
+    {
+        return $this->fieldCompletor->getWarnings();
+    }
+
+    /**
+     * Clear collected warnings.
+     *
+     * @return void
+     */
+    public function clearWarnings(): void
+    {
+        $this->fieldCompletor->clearWarnings();
+    }
 }
