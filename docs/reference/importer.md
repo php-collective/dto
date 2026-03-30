@@ -349,13 +349,13 @@ $schema = $importer->importArray($data, ['format' => 'php']);
 
 ### Format Specifiers
 
-| JSON Schema Format | DTO Type |
-|--------------------|----------|
-| `date-time` | `\DateTimeInterface` |
-| `date` | `\DateTimeInterface` |
-| `email`, `uri`, `uuid`, etc. | `string` (unchanged) |
+| JSON Schema Format | DTO Type | Factory |
+|--------------------|----------|---------|
+| `date-time` | `\DateTimeInterface` | `\DateTime` |
+| `date` | `\DateTimeInterface` | `\DateTime` |
+| `email`, `uri`, `uuid`, etc. | `string` (unchanged) | - |
 
-Note: Only `date-time` and `date` formats are mapped to class types. Other formats like `email`, `uri`, `uuid` remain as `string` since they are validation hints rather than type indicators.
+Note: Only `date-time` and `date` formats are mapped to class types. Other formats like `email`, `uri`, `uuid` remain as `string` since they are validation hints rather than type indicators. The `\DateTime` factory is automatically added to ensure proper instantiation from string values.
 
 ### Enums with `x-enum-class`
 
