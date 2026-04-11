@@ -87,20 +87,19 @@ final class ObjectFactory
     /**
      * Hydrate the target DTO class from the configured source.
      *
-     * @template T of \PhpCollective\Dto\Dto\Dto
+     * For static return-type inference, prefer the `Dto::from()` shortcut on
+     * the target DTO class — it returns `static` and does not need template
+     * annotations at the call site.
      *
-     * @param class-string<T> $target
+     * @param string $target Fully-qualified DTO subclass name.
      *
      * @throws \InvalidArgumentException If the target is not a DTO class.
      *
-     * @return T
+     * @return \PhpCollective\Dto\Dto\Dto
      */
     public function to(string $target): Dto
     {
-        // Runtime guard: the template type is only enforced statically.
-        // Callers passing an unrelated class name at runtime hit this branch.
-        /** @phpstan-ignore function.alreadyNarrowedType */
-        if (!is_subclass_of($target, Dto::class)) {
+        if (!is_a($target, Dto::class, true)) {
             throw new InvalidArgumentException(sprintf(
                 'Target "%s" must be a subclass of %s.',
                 $target,
