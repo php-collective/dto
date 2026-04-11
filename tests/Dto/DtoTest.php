@@ -1854,4 +1854,57 @@ class DtoTest extends TestCase
         $dto = new AdvancedDto(['plainData' => 'val']);
         $this->assertSame('normalized:val', $dto->getPlainData()?->value);
     }
+
+    public function testSerializerMatchesByInheritance(): void
+    {
+        TransformerRegistry::addSerializer(
+            Stringable::class,
+            fn (Stringable $value): string => 'iface:' . (string)$value,
+        );
+
+        $dto = new AdvancedDto();
+        $factoryData = new FactoryClass('x');
+        $dto->setFactoryData($factoryData);
+        // FactoryClass is not Stringable, so the interface-based serializer must not fire.
+        $output = $dto->toArray(null, ['factoryData']);
+        $this->assertSame($factoryData, $output['factoryData']);
+
+        // StringableClass fixture implements Stringable.
+        $stringable = new StringableClass('abc');
+        TransformerRegistry::addSerializer(StringableClass::class, fn ($v): string => 'exact:' . (string)$v);
+        $this->assertSame(
+            'exact:abc',
+            (TransformerRegistry::findSerializer($stringable))($stringable),
+        );
+    }
+
+    public function testRemoveSerializerAndHasSerializer(): void
+    {
+        $this->assertFalse(TransformerRegistry::hasSerializer(PlainClass::class));
+        $this->assertFalse(TransformerRegistry::hasAny());
+
+        TransformerRegistry::addSerializer(
+            PlainClass::class,
+            fn (PlainClass $value): string => 'keep:' . $value->value,
+        );
+        $this->assertTrue(TransformerRegistry::hasSerializer(PlainClass::class));
+        $this->assertTrue(TransformerRegistry::hasAny());
+
+        TransformerRegistry::removeSerializer(PlainClass::class);
+        $this->assertFalse(TransformerRegistry::hasSerializer(PlainClass::class));
+        $this->assertFalse(TransformerRegistry::hasAny());
+        $this->assertNull(TransformerRegistry::findSerializer(new PlainClass('x')));
+    }
+
+    public function testFindCasterReturnsNullForUnknownType(): void
+    {
+        $this->assertNull(TransformerRegistry::findCaster(PlainClass::class));
+
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass((string)$value),
+        );
+
+        $this->assertNull(TransformerRegistry::findCaster('Non\\Existent\\Class\\Name'));
+    }
 }
