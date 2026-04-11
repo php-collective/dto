@@ -245,6 +245,114 @@ Dto::setCollectionFactory(fn (array $items) => collect($items));
 
 This is useful for framework-native collection classes in Laravel, CakePHP, or Symfony integrations.
 
+## Mapping From Arbitrary Sources
+
+Generated DTOs expose typed factories (`createFromArray`, `fromUnserialized`) and
+a constructor that takes an array. When your source could be any of several
+shapes — a request payload, another DTO, a plain object, a JSON string — the
+`Mapper` facade and the `Dto::from()` shortcut provide a single entry point so
+the caller doesn't have to pick the right method per source.
+
+### `Dto::from()` — typed shortcut
+
+For the common DTO-in, DTO-out case, call `from()` directly on the target DTO.
+It returns `static`, so the concrete DTO type is inferred without template
+annotations and your IDE auto-completes methods on the result:
+
+```php
+use App\Dto\UserDto;
+
+$user = UserDto::from($request->getParsedBody());
+$copy = UserDto::from($existingUserDto);
+$fromJson = UserDto::from('{"name":"Alice","email":"a@example.com"}');
+```
+
+`Dto::from()` defaults to `ignoreMissing = true` so request payloads with
+extra keys pass through without pre-filtering. If you need strict mode or
+other modifiers, use the `Mapper::map()` facade instead.
+
+### `Mapper::map()` — fluent facade
+
+```php
+use PhpCollective\Dto\Dto\Dto;
+use PhpCollective\Dto\Mapper;
+
+$dto = Mapper::map($source)
+    ->ignoreMissing(false)
+    ->withKeyType(Dto::TYPE_UNDERSCORED)
+    ->only(['name', 'email'])
+    ->to(UserDto::class);
+```
+
+Modifiers:
+
+| Method | Default | Purpose |
+|--------|---------|---------|
+| `ignoreMissing(bool $ignore = true)` | `true` | Silently drop unknown source keys. |
+| `withKeyType(?string $type)` | `null` | Declare the inflection of the source keys (`TYPE_UNDERSCORED`, `TYPE_DASHED`, ...). |
+| `only(array $fields)` | `null` | Hydrate only the listed fields. |
+
+### Supported sources
+
+Both `Dto::from()` and `Mapper::map()` accept:
+
+| Source | Extraction |
+|--------|------------|
+| `array` | pass-through |
+| `Dto` instance | `touchedToArray()` — only fields that were set |
+| `FromArrayToArrayInterface` implementor | `toArray()` |
+| `JsonSerializable` implementor | `jsonSerialize()` (must return an array or object) |
+| JSON `string` | `json_decode(..., true)` |
+| plain `object` | `get_object_vars()` — public properties only |
+
+Unsupported sources (numbers, booleans, unparseable strings, resources) throw
+`InvalidArgumentException` with a descriptive message.
+
+### DTO-to-DTO copies
+
+Because DTO sources extract via `touchedToArray()`, copying only propagates
+fields that were actually set on the source. Fields left untouched remain
+`null` on the copy and the copy's own `touchedFields()` reflects only what was
+carried over:
+
+```php
+$source = new UserDto();
+$source->setName('Alice');       // only 'name' is touched
+
+$copy = UserDto::from($source);
+$copy->getName();                 // 'Alice'
+$copy->getEmail();                // null — never set on source
+```
+
+### Framework examples
+
+**CakePHP controller:**
+
+```php
+public function add(): ?Response
+{
+    $user = UserDto::from($this->request->getData());
+    // ... use $user as a typed payload
+}
+```
+
+**Laravel form request:**
+
+```php
+public function store(CreateUserRequest $request)
+{
+    $user = UserDto::from($request->validated());
+}
+```
+
+**Query string with dashed keys:**
+
+```php
+$filters = Mapper::map($request->getQueryParams())
+    ->withKeyType(Dto::TYPE_DASHED)
+    ->to(FilterDto::class);
+```
+
 ### Resetting Global Runtime State
 
 Because collection factories and default key types are static global settings, tests should reset them explicitly:

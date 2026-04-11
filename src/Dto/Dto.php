@@ -9,6 +9,7 @@ use ArrayObject;
 use Countable;
 use InvalidArgumentException;
 use JsonSerializable;
+use PhpCollective\Dto\Mapper;
 use PhpCollective\Dto\Utility\Json;
 use ReflectionProperty;
 use RuntimeException;
@@ -129,6 +130,32 @@ abstract class Dto implements JsonSerializable
         $jsonUtil = new Json();
 
         return new static($jsonUtil->decode($data, true), $ignoreMissing);
+    }
+
+    /**
+     * Typed shortcut for `Mapper::map($source)->to(static::class)`.
+     *
+     * Accepts any source supported by `Mapper::toArray()` — array, DTO,
+     * `FromArrayToArrayInterface`, `JsonSerializable`, JSON string, or plain
+     * object — and returns an instance of the concrete DTO subclass `from`
+     * is called on. The return type is `static`, so static analysers infer
+     * the exact DTO class without template annotations:
+     *
+     * ```php
+     * $user = UserDto::from($request->getParsedBody());
+     * $copy = UserDto::from($otherUserDto);
+     * ```
+     *
+     * For fluent modifiers (`ignoreMissing(false)`, `withKeyType(...)`,
+     * `only([...])`) use the `Mapper::map()` facade instead.
+     *
+     * @param mixed $source
+     *
+     * @return static
+     */
+    public static function from(mixed $source): static
+    {
+        return static::createFromArray(Mapper::toArray($source), true);
     }
 
     /**
