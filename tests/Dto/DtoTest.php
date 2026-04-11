@@ -31,8 +31,10 @@ use PhpCollective\Dto\Test\TestDto\TransformDto;
 use PhpCollective\Dto\Test\TestDto\TraversableDto;
 use PhpCollective\Dto\Test\TestDto\ValidatedDto;
 use PhpCollective\Dto\Test\TestDto\WrongFactoryReturnDto;
+use PhpCollective\Dto\Transformer\TransformerRegistry;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
+use Stringable;
 use TypeError;
 
 class DtoTest extends TestCase
@@ -42,6 +44,7 @@ class DtoTest extends TestCase
         parent::tearDown();
         Dto::setDefaultKeyType(null);
         Dto::setCollectionFactory(null);
+        TransformerRegistry::clear();
     }
 
     public function testCreate(): void
@@ -1750,5 +1753,105 @@ class DtoTest extends TestCase
                 $e->getMessage(),
             );
         }
+    }
+
+    public function testGlobalCasterAppliesToClassField(): void
+    {
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('cast:' . (string)$value),
+        );
+
+        $dto = new AdvancedDto(['plainData' => 'hello']);
+
+        $plain = $dto->getPlainData();
+        $this->assertInstanceOf(PlainClass::class, $plain);
+        $this->assertSame('cast:hello', $plain->value);
+    }
+
+    public function testGlobalSerializerAppliesToObjectValue(): void
+    {
+        TransformerRegistry::addSerializer(
+            PlainClass::class,
+            fn (PlainClass $value): string => 'serialized:' . $value->value,
+        );
+
+        $dto = new AdvancedDto();
+        $dto->setPlainData(new PlainClass('abc'));
+
+        $this->assertSame(
+            ['plainData' => 'serialized:abc'],
+            $dto->toArray(null, ['plainData']),
+        );
+    }
+
+    public function testPerFieldFactoryWinsOverGlobalCaster(): void
+    {
+        $registryCalled = false;
+        TransformerRegistry::addCaster(
+            FactoryClass::class,
+            function (mixed $value) use (&$registryCalled): FactoryClass {
+                $registryCalled = true;
+
+                return new FactoryClass('registry:' . (string)$value);
+            },
+        );
+
+        $dto = new AdvancedDto(['factoryData' => 'direct']);
+
+        $this->assertFalse($registryCalled, 'Global caster must not run when per-field factory is set');
+        $this->assertSame('direct', $dto->getFactoryData()?->value);
+    }
+
+    public function testGlobalCasterMatchesParentClassByInheritance(): void
+    {
+        TransformerRegistry::addCaster(
+            Stringable::class,
+            fn (mixed $value): PlainClass => new PlainClass('parent:' . (string)$value),
+        );
+
+        // PlainClass is not Stringable, so no match expected here.
+        $dto = new AdvancedDto(['plainData' => 'x']);
+        $this->assertSame('x', $dto->getPlainData()?->value);
+
+        TransformerRegistry::clear();
+
+        // Register caster for the exact concrete type: should apply.
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('exact:' . (string)$value),
+        );
+
+        $dto = new AdvancedDto(['plainData' => 'x']);
+        $this->assertSame('exact:x', $dto->getPlainData()?->value);
+    }
+
+    public function testRemoveAndClearCaster(): void
+    {
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('cast:' . (string)$value),
+        );
+        $this->assertTrue(TransformerRegistry::hasCaster(PlainClass::class));
+
+        TransformerRegistry::removeCaster(PlainClass::class);
+        $this->assertFalse(TransformerRegistry::hasCaster(PlainClass::class));
+
+        // After removal, default constructor fallback kicks in again.
+        $dto = new AdvancedDto(['plainData' => 'plain']);
+        $this->assertSame('plain', $dto->getPlainData()?->value);
+    }
+
+    public function testNormalizesLeadingBackslash(): void
+    {
+        TransformerRegistry::addCaster(
+            '\\' . PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('normalized:' . (string)$value),
+        );
+
+        $this->assertTrue(TransformerRegistry::hasCaster(PlainClass::class));
+
+        $dto = new AdvancedDto(['plainData' => 'val']);
+        $this->assertSame('normalized:val', $dto->getPlainData()?->value);
     }
 }
