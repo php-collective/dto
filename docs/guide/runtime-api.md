@@ -353,13 +353,43 @@ $filters = Mapper::map($request->getQueryParams())
     ->to(FilterDto::class);
 ```
 
+## Transformers
+
+### `TransformerRegistry`
+
+Register global, type-based casters (array → object) and serializers (object → array/scalar)
+that apply to every DTO field whose declared type matches. This avoids repeating per-field
+`factory` / `serialize` declarations for common value object types like `DateTimeImmutable`,
+`Money`, or framework `DateTime` wrappers.
+
+```php
+use PhpCollective\Dto\Transformer\TransformerRegistry;
+
+TransformerRegistry::addCaster(
+    \DateTimeImmutable::class,
+    fn (string $value): \DateTimeImmutable => new \DateTimeImmutable($value),
+);
+
+TransformerRegistry::addSerializer(
+    \DateTimeInterface::class,
+    fn (\DateTimeInterface $value): string => $value->format(DATE_ATOM),
+);
+```
+
+Per-field `factory` and `serialize` metadata always win over the registry. Lookups match
+the exact type first, then walk parent classes and interfaces. See
+[Custom Casters](./custom-casters#global-type-based-transformers) for the full precedence
+rules and framework integration examples.
+
 ### Resetting Global Runtime State
 
-Because collection factories and default key types are static global settings, tests should reset them explicitly:
+Because collection factories, default key types, and transformers are static global settings,
+tests should reset them explicitly:
 
 ```php
 Dto::setCollectionFactory(null);
 Dto::setDefaultKeyType(null);
+TransformerRegistry::clear();
 ```
 
 ## Runtime Exceptions Worth Knowing

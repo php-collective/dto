@@ -10,6 +10,7 @@ use Countable;
 use InvalidArgumentException;
 use JsonSerializable;
 use PhpCollective\Dto\Mapper;
+use PhpCollective\Dto\Transformer\TransformerRegistry;
 use PhpCollective\Dto\Utility\Json;
 use ReflectionProperty;
 use RuntimeException;
@@ -273,7 +274,7 @@ abstract class Dto implements JsonSerializable
     public function __construct(?array $data = null, bool $ignoreMissing = false, ?string $type = null)
     {
         if ($data) {
-            if ($type === null && static::HAS_FAST_PATH) {
+            if ($type === null && static::HAS_FAST_PATH && !TransformerRegistry::hasAny()) {
                 if (!$ignoreMissing) {
                     $this->validateFieldNames($data);
                 }
@@ -336,7 +337,11 @@ abstract class Dto implements JsonSerializable
      */
     protected function _toArrayInternal(?string $type = null, ?array $fields = null, bool $touched = false): array
     {
-        if (!$touched && $fields === null && static::HAS_FAST_PATH && ($type === null || $type === static::TYPE_CAMEL || $type === static::TYPE_DEFAULT)) {
+        if (
+            !$touched && $fields === null && static::HAS_FAST_PATH
+            && ($type === null || $type === static::TYPE_CAMEL || $type === static::TYPE_DEFAULT)
+            && !TransformerRegistry::hasAny()
+        ) {
             return $this->toArrayFast();
         }
 
@@ -380,6 +385,11 @@ abstract class Dto implements JsonSerializable
                         throw new InvalidArgumentException('Expected UnitEnum instance');
                     }
                     $value = $this->transformEnum($value);
+                } else {
+                    $serializer = TransformerRegistry::findSerializer($value);
+                    if ($serializer !== null) {
+                        $value = $serializer($value);
+                    }
                 }
 
                 if ($transformTo !== null) {
@@ -574,7 +584,12 @@ abstract class Dto implements JsonSerializable
             } elseif (!empty($fieldMeta['isClass']) && !empty($fieldMeta['enum'])) {
                 $value = $this->createEnum($field, $value);
             } elseif (!empty($fieldMeta['isClass']) && !is_object($value)) {
-                $value = $this->createWithConstructor($field, $value, $fieldMeta);
+                $caster = TransformerRegistry::findCaster($fieldMeta['type']);
+                if ($caster !== null) {
+                    $value = $caster($value);
+                } else {
+                    $value = $this->createWithConstructor($field, $value, $fieldMeta);
+                }
             }
 
             if (!$immutable) {
