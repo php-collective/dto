@@ -67,9 +67,9 @@ class MapperTest extends TestCase
     public function testMapFromArrayToArrayInterfaceSource(): void
     {
         $source = new class implements FromArrayToArrayInterface {
-            public static function createFromArray(array $array): static
+            public static function createFromArray(array $array): self
             {
-                return new static();
+                return new self();
             }
 
             public function toArray(): array
