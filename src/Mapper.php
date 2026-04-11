@@ -72,6 +72,8 @@ final class Mapper
     public static function toArray(mixed $source): array
     {
         if (is_array($source)) {
+            self::assertAssociative($source, 'array');
+
             return $source;
         }
 
@@ -86,6 +88,8 @@ final class Mapper
         if ($source instanceof JsonSerializable) {
             $data = $source->jsonSerialize();
             if (is_array($data)) {
+                self::assertAssociative($data, 'JsonSerializable payload');
+
                 return $data;
             }
             if (is_object($data)) {
@@ -113,6 +117,7 @@ final class Mapper
                     'String source could not be decoded as a JSON object into an array.',
                 );
             }
+            self::assertAssociative($decoded, 'JSON string');
 
             return $decoded;
         }
@@ -125,5 +130,43 @@ final class Mapper
             'Cannot map source of type "%s" — expected array, object, or JSON string.',
             get_debug_type($source),
         ));
+    }
+
+    /**
+     * Reject list arrays (e.g. `[1, 2, 3]` or JSON `"[1, 2]"`). DTO hydration
+     * operates on associative `array<string, mixed>` payloads and would later
+     * produce a confusing `TypeError` from `Dto::hasField(string)` if given an
+     * integer-keyed sequence. Failing here yields a clearer error at the
+     * actual misuse site.
+     *
+     * @param array<array-key, mixed> $data
+     * @param string $sourceDescription Human-readable source label for the message.
+     *
+     * @throws \InvalidArgumentException If `$data` is a list or has any non-string keys.
+     *
+     * @return void
+     */
+    private static function assertAssociative(array $data, string $sourceDescription): void
+    {
+        if ($data === []) {
+            return;
+        }
+
+        if (array_is_list($data)) {
+            throw new InvalidArgumentException(sprintf(
+                'Cannot map %s: expected an associative array keyed by field names, got a list.',
+                $sourceDescription,
+            ));
+        }
+
+        foreach ($data as $key => $_) {
+            if (!is_string($key)) {
+                throw new InvalidArgumentException(sprintf(
+                    'Cannot map %s: all keys must be strings, got "%s".',
+                    $sourceDescription,
+                    get_debug_type($key),
+                ));
+            }
+        }
     }
 }

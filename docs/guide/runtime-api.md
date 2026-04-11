@@ -290,7 +290,7 @@ Modifiers:
 |--------|---------|---------|
 | `ignoreMissing(bool $ignore = true)` | `true` | Silently drop unknown source keys. |
 | `withKeyType(?string $type)` | `null` | Declare the inflection of the source keys (`TYPE_UNDERSCORED`, `TYPE_DASHED`, ...). |
-| `only(array $fields)` | `null` | Hydrate only the listed fields. |
+| `only(array $fields)` | `null` | Hydrate only the listed fields. Matched against **source keys as they appear in the input** (not against canonical DTO field names), so with `withKeyType(TYPE_UNDERSCORED)` you pass `['first_name']`, not `['firstName']`. |
 
 ### Supported sources
 
@@ -306,7 +306,11 @@ Both `Dto::from()` and `Mapper::map()` accept:
 | plain `object` | `get_object_vars()` — public properties only |
 
 Unsupported sources (numbers, booleans, unparseable strings, resources) throw
-`InvalidArgumentException` with a descriptive message.
+`InvalidArgumentException` with a descriptive message. The same applies to
+**list arrays** (e.g. `[1, 2, 3]` or JSON `"[1, 2]"`): DTO hydration operates
+on associative `array<string, mixed>` payloads, so list-shaped inputs are
+rejected up front rather than producing a confusing `TypeError` deeper in the
+hydration stack.
 
 ### DTO-to-DTO copies
 

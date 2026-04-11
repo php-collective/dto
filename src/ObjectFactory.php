@@ -73,6 +73,13 @@ final class ObjectFactory
      * partial updates where the source contains more data than you want
      * to apply to the target.
      *
+     * NOTE: `$fields` is matched against the **source keys as they appear
+     * in the input**, not against the canonical DTO field names. When
+     * combined with `withKeyType()` you must pass the inflected source
+     * form — e.g. with `withKeyType(Dto::TYPE_UNDERSCORED)` pass
+     * `['first_name']`, not `['firstName']`. Filtering happens before
+     * key-type normalization so the payload contract stays predictable.
+     *
      * @param array<string> $fields
      *
      * @return $this

@@ -208,4 +208,70 @@ class MapperTest extends TestCase
         $dto = SimpleDto::from(['name' => 'X', 'bogus_field' => 'ignored']);
         $this->assertSame('X', $dto->getName());
     }
+
+    public function testMapRejectsListArray(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('expected an associative array');
+
+        Mapper::map([1, 2, 3])->to(SimpleDto::class);
+    }
+
+    public function testMapRejectsJsonListString(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('expected an associative array');
+
+        Mapper::map('[1, 2, 3]')->to(SimpleDto::class);
+    }
+
+    public function testMapRejectsArrayWithIntegerKeys(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('all keys must be strings');
+
+        // Not a list (gap in keys) but still has int keys — reject.
+        Mapper::map([0 => 'a', 2 => 'b'])->to(SimpleDto::class);
+    }
+
+    public function testMapRejectsJsonSerializableReturningList(): void
+    {
+        $source = new class implements JsonSerializable {
+            public function jsonSerialize(): array
+            {
+                return [1, 2, 3];
+            }
+        };
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('expected an associative array');
+
+        Mapper::map($source)->to(SimpleDto::class);
+    }
+
+    public function testMapAcceptsEmptyArray(): void
+    {
+        // Empty array is ambiguous (both list and associative) — allow it.
+        $dto = Mapper::map([])->to(SimpleDto::class);
+        $this->assertNull($dto->getName());
+    }
+
+    public function testOnlyMatchesSourceKeysBeforeKeyTypeInflection(): void
+    {
+        // With withKeyType(TYPE_UNDERSCORED) the source keys are underscored,
+        // and only() filters on those raw source keys — NOT on camelCase DTO
+        // field names. Passing 'plainData' filters everything out; passing
+        // 'plain_data' correctly selects the field.
+        $dtoWrongKey = Mapper::map(['plain_data' => 'x'])
+            ->withKeyType(Dto::TYPE_UNDERSCORED)
+            ->only(['plainData'])
+            ->to(AdvancedDto::class);
+        $this->assertNull($dtoWrongKey->getPlainData());
+
+        $dtoRightKey = Mapper::map(['plain_data' => 'x'])
+            ->withKeyType(Dto::TYPE_UNDERSCORED)
+            ->only(['plain_data'])
+            ->to(AdvancedDto::class);
+        $this->assertSame('x', $dtoRightKey->getPlainData()?->value);
+    }
 }
