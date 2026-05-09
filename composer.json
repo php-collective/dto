@@ -20,7 +20,7 @@
             "homepage": "https://github.com/php-collective"
         }
     ],
-    "homepage": "https://github.com/php-collective/dto",
+    "homepage": "https://php-collective.github.io/dto/",
     "require": {
         "php": "^8.2",
         "sebastian/diff": "^6.0 || ^7.0 || ^8.0",
