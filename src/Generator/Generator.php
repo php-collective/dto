@@ -243,17 +243,25 @@ class Generator
 
         $directory = new RecursiveDirectoryIterator($path);
         $iterator = new RecursiveIteratorIterator($directory);
+        $suffix = $this->config->get('suffix', 'Dto');
+        // Match both `src/Dto/...` (Linux/macOS) and `src\Dto\...` (Windows).
+        // RecursiveDirectoryIterator yields paths using the host OS separator,
+        // so the previous forward-slash-only pattern never matched on Windows
+        // and the "delete DTOs no longer in the spec" pass silently no-op'd,
+        // leaving stale generated files behind.
+        $pattern = '#[/\\\\]src[/\\\\]Dto[/\\\\](.+)' . preg_quote($suffix, '#') . '\.php$#';
         foreach ($iterator as $fileInfo) {
             $file = $fileInfo->getPathname();
-            $suffix = $this->config->get('suffix', 'Dto');
-            if (!preg_match('#src/Dto/(.+)' . preg_quote($suffix, '#') . '\.php$#', $file, $matches)) {
+            if (!preg_match($pattern, $file, $matches)) {
                 continue;
             }
             // Skip mapper files
             if (str_contains($file, DIRECTORY_SEPARATOR . 'Mapper' . DIRECTORY_SEPARATOR)) {
                 continue;
             }
-            $name = $matches[1];
+            // Normalize captured nested paths so `Sub/Foo` and `Sub\\Foo`
+            // don't both land in the result map as separate entries.
+            $name = strtr($matches[1], '\\', '/');
             $files[$name] = $file;
         }
 
@@ -275,13 +283,15 @@ class Generator
 
         $directory = new RecursiveDirectoryIterator($path);
         $iterator = new RecursiveIteratorIterator($directory);
+        $suffix = $this->config->get('suffix', 'Dto');
+        // Same DS-tolerant pattern as findExistingDtos — see comment there.
+        $pattern = '#[/\\\\]Mapper[/\\\\](.+)' . preg_quote($suffix, '#') . 'Mapper\.php$#';
         foreach ($iterator as $fileInfo) {
             $file = $fileInfo->getPathname();
-            $suffix = $this->config->get('suffix', 'Dto');
-            if (!preg_match('#Mapper/(.+)' . preg_quote($suffix, '#') . 'Mapper\.php$#', $file, $matches)) {
+            if (!preg_match($pattern, $file, $matches)) {
                 continue;
             }
-            $name = $matches[1];
+            $name = strtr($matches[1], '\\', '/');
             $files[$name] = $file;
         }
 
