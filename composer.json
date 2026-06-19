@@ -23,7 +23,7 @@
     "homepage": "https://php-collective.github.io/dto/",
     "require": {
         "php": "^8.2",
-        "sebastian/diff": "^6.0 || ^7.0 || ^8.0",
+        "sebastian/diff": "^6.0 || ^7.0 || ^8.0 || ^9.0",
         "twig/twig": "^3.0"
     },
     "require-dev": {
