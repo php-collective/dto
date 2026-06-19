@@ -358,7 +358,7 @@ class FieldBuilder
     /**
      * Set minimum numeric value validation.
      */
-    public function min(int|float $value): static
+    public function min(float|int $value): static
     {
         $this->min = $value;
 
@@ -368,7 +368,7 @@ class FieldBuilder
     /**
      * Set maximum numeric value validation.
      */
-    public function max(int|float $value): static
+    public function max(float|int $value): static
     {
         $this->max = $value;
 

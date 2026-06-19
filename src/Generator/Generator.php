@@ -84,7 +84,6 @@ class Generator
 
         // Output any warnings from field validation
         foreach ($this->builder->getWarnings() as $warning) {
-            /** @phpstan-ignore function.alreadyNarrowedType (runtime check for custom IoInterface implementations) */
             if (method_exists($this->io, 'warning')) {
                 $this->io->warning($warning);
             }

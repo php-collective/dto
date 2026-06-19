@@ -382,7 +382,7 @@ class Builder
      *
      * @return array<string>
      */
-    protected function normalizeTraits(string|array|null $traits): array
+    protected function normalizeTraits(array|string|null $traits): array
     {
         if ($traits === null || $traits === '' || $traits === []) {
             return [];
