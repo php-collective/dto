@@ -25,7 +25,7 @@
 {% if field.lazy|default(false) %}
 		if (array_key_exists('{{ field.name }}', $data)) {
 {% if field.transformFrom %}
-			$this->_lazyData['{{ field.name }}'] = $this->transformValue('{{ field.transformFrom }}', $data['{{ field.name }}']);
+			$this->_lazyData['{{ field.name }}'] = {{ transformExpr(field.transformFrom, "$data['" ~ field.name ~ "']", true)|raw }};
 {% else %}
 			$this->_lazyData['{{ field.name }}'] = $data['{{ field.name }}'];
 {% endif %}
@@ -35,7 +35,7 @@
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
-			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+			$value = {{ transformExpr(field.transformFrom, '$value', false)|raw }};
 {% endif %}
 			if (is_array($value)) {
 				$value = new {{ field.typeHint }}($value);
@@ -52,7 +52,7 @@
 			$items = $data['{{ field.name }}'];
 			foreach ($items as $key => $item) {
 {% if field.transformFrom %}
-				$item = $this->transformValue('{{ field.transformFrom }}', $item);
+				$item = {{ transformExpr(field.transformFrom, '$item', true)|raw }};
 {% endif %}
 {% if field.singularClass is defined and field.singularClass %}
 				if (is_array($item)) {
@@ -82,7 +82,7 @@
 			$items = $data['{{ field.name }}'];
 			foreach ($items as $key => $item) {
 {% if field.transformFrom %}
-				$item = $this->transformValue('{{ field.transformFrom }}', $item);
+				$item = {{ transformExpr(field.transformFrom, '$item', true)|raw }};
 {% endif %}
 				if (is_array($item)) {
 					$item = new {{ field.singularClass }}($item);
@@ -96,7 +96,7 @@
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
-			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+			$value = {{ transformExpr(field.transformFrom, '$value', false)|raw }};
 {% endif %}
 			if (!$value instanceof \UnitEnum) {
 {% if field.enum == 'unit' %}
@@ -112,7 +112,7 @@
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
-			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+			$value = {{ transformExpr(field.transformFrom, '$value', false)|raw }};
 {% endif %}
 			if (!$value instanceof {{ field.typeHint }}) {
 {% if '::' in field.factory %}
@@ -129,7 +129,7 @@
 		if (isset($data['{{ field.name }}'])) {
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
-			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+			$value = {{ transformExpr(field.transformFrom, '$value', false)|raw }};
 {% endif %}
 			if (!$value instanceof {{ field.typeHint }}) {
 				$value = new {{ field.typeHint }}($value);
@@ -142,7 +142,7 @@
 			/** @var {{ field.docBlockType ?? field.typeHint }}{% if field.nullable %}|null{% endif %} $value */
 			$value = $data['{{ field.name }}'];
 {% if field.transformFrom %}
-			$value = $this->transformValue('{{ field.transformFrom }}', $value);
+			$value = {{ transformExpr(field.transformFrom, '$value', false)|raw }};
 {% endif %}
 			$this->{{ field.name }} = $value;
 			$this->_touchedFields['{{ field.name }}'] = true;
@@ -163,20 +163,20 @@
 {% set key = field.mapTo is not null ? field.mapTo : field.name %}
 {% if field.lazy|default(false) %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->_lazyData['{{ field.name }}'] ?? ($this->{{ field.name }} !== null ? {% if field.dto %}$this->{{ field.name }}->toArray(){% elseif field.collection and field.collectionType != 'array' %}(static function (\Traversable $c): array { $r = []; foreach ($c as $k => $v) { $r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v; } return $r; })($this->{{ field.name }}){% else %}$this->{{ field.name }}{% endif %} : null)),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->_lazyData['" ~ field.name ~ "'] ?? ($this->" ~ field.name ~ " !== null ? " ~ (field.dto ? "$this->" ~ field.name ~ "->toArray()" : (field.collection and field.collectionType != 'array' ? "(static function (\\Traversable $c): array { $r = []; foreach ($c as $k => $v) { $r[$k] = is_object($v) && $v instanceof \\PhpCollective\\Dto\\Dto\\Dto ? $v->toArray() : $v; } return $r; })($this->" ~ field.name ~ ")" : "$this->" ~ field.name)) ~ " : null)", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->_lazyData['{{ field.name }}'] ?? ($this->{{ field.name }} !== null ? {% if field.dto %}$this->{{ field.name }}->toArray(){% elseif field.collection and field.collectionType != 'array' %}(static function (\Traversable $c): array { $r = []; foreach ($c as $k => $v) { $r[$k] = is_object($v) && $v instanceof \PhpCollective\Dto\Dto\Dto ? $v->toArray() : $v; } return $r; })($this->{{ field.name }}){% else %}$this->{{ field.name }}{% endif %} : null),
 {% endif %}
 {% elseif field.dto %}
 {% if field.nullable %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ " !== null ? $this->" ~ field.name ~ "->toArray() : null", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->toArray()),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "->toArray()", false)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->toArray(),
 {% endif %}
@@ -261,13 +261,13 @@
 {% if field.nullable %}
 {% if field.enum == 'unit' %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}?->name),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "?->name", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}?->name,
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}?->value),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "?->value", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}?->value,
 {% endif %}
@@ -275,13 +275,13 @@
 {% else %}
 {% if field.enum == 'unit' %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->name),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "->name", false)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->name,
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->value),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "->value", false)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->value,
 {% endif %}
@@ -290,13 +290,13 @@
 {% elseif field.isClass and field.serialize == 'string' %}
 {% if field.nullable %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? (string)$this->{{ field.name }} : null),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ " !== null ? (string)$this->" ~ field.name ~ " : null", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? (string)$this->{{ field.name }} : null,
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', (string)$this->{{ field.name }}),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "(string)$this->" ~ field.name, false)|raw }},
 {% else %}
 			'{{ key }}' => (string)$this->{{ field.name }},
 {% endif %}
@@ -304,20 +304,20 @@
 {% elseif field.isClass and (field.serialize == 'array' or field.serialize == 'FromArrayToArray') %}
 {% if field.nullable %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ " !== null ? $this->" ~ field.name ~ "->toArray() : null", true)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }} !== null ? $this->{{ field.name }}->toArray() : null,
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}->toArray()),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name ~ "->toArray()", false)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }}->toArray(),
 {% endif %}
 {% endif %}
 {% else %}
 {% if field.transformTo %}
-			'{{ key }}' => $this->transformValue('{{ field.transformTo }}', $this->{{ field.name }}),
+			'{{ key }}' => {{ transformExpr(field.transformTo, "$this->" ~ field.name, field.nullable)|raw }},
 {% else %}
 			'{{ key }}' => $this->{{ field.name }},
 {% endif %}

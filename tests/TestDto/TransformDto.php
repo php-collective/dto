@@ -8,6 +8,11 @@ use PhpCollective\Dto\Dto\AbstractDto;
 
 class TransformDto extends AbstractDto
 {
+    /**
+     * @var bool
+     */
+    protected const HAS_FAST_PATH = true;
+
     protected ?string $email = null;
 
     /**
@@ -60,6 +65,32 @@ class TransformDto extends AbstractDto
     public function hasEmail(): bool
     {
         return $this->email !== null;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return void
+     */
+    protected function setFromArrayFast(array $data): void
+    {
+        if (isset($data['email'])) {
+            /** @var string|null $value */
+            $value = $data['email'];
+            $value = TransformHelper::normalizeEmail($value);
+            $this->email = $value;
+            $this->_touchedFields['email'] = true;
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function toArrayFast(): array
+    {
+        return [
+            'email' => ($this->email === null ? null : TransformHelper::maskEmail($this->email)),
+        ];
     }
 
     public function toArray(?string $type = null, ?array $fields = null, bool $touched = false): array
