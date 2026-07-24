@@ -19,6 +19,7 @@ use PhpCollective\Dto\Test\TestDto\AdvancedDto;
 use PhpCollective\Dto\Test\TestDto\AssociativeCollectionDto;
 use PhpCollective\Dto\Test\TestDto\CollectionDto;
 use PhpCollective\Dto\Test\TestDto\CustomCollectionDto;
+use PhpCollective\Dto\Test\TestDto\FastPathCasterDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableCollectionDto;
 use PhpCollective\Dto\Test\TestDto\ImmutableDto;
 use PhpCollective\Dto\Test\TestDto\MapFromDto;
@@ -1753,6 +1754,60 @@ class DtoTest extends TestCase
                 $e->getMessage(),
             );
         }
+    }
+
+    public function testGlobalCasterAppliesToClassFieldOnFastPathFromArray(): void
+    {
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('cast:' . (string)$value),
+        );
+
+        $dto = (new FastPathCasterDto())->fromArray(['plainData' => 'hello']);
+
+        $plain = $dto->getPlainData();
+        $this->assertInstanceOf(PlainClass::class, $plain);
+        $this->assertSame('cast:hello', $plain->value);
+    }
+
+    public function testGlobalCasterAppliesToClassFieldOnFastPathConstructor(): void
+    {
+        TransformerRegistry::addCaster(
+            PlainClass::class,
+            fn (mixed $value): PlainClass => new PlainClass('cast:' . (string)$value),
+        );
+
+        $dto = new FastPathCasterDto(['plainData' => 'hello']);
+
+        $plain = $dto->getPlainData();
+        $this->assertInstanceOf(PlainClass::class, $plain);
+        $this->assertSame('cast:hello', $plain->value);
+    }
+
+    public function testGlobalSerializerAppliesToFastPathToArray(): void
+    {
+        TransformerRegistry::addSerializer(
+            PlainClass::class,
+            fn (PlainClass $value): string => 'serialized:' . $value->value,
+        );
+
+        $dto = (new FastPathCasterDto())->setPlainData(new PlainClass('abc'));
+
+        $this->assertSame(['plainData' => 'serialized:abc'], $dto->toArray());
+    }
+
+    public function testGlobalSerializerDoesNotDisableFastPathHydration(): void
+    {
+        TransformerRegistry::addSerializer(
+            PlainClass::class,
+            fn (PlainClass $value): string => 'serialized:' . $value->value,
+        );
+
+        $dto = (new FastPathCasterDto())->fromArray(['plainData' => 'hello']);
+
+        $plain = $dto->getPlainData();
+        $this->assertInstanceOf(PlainClass::class, $plain);
+        $this->assertSame('hello', $plain->value);
     }
 
     public function testGlobalCasterAppliesToClassField(): void

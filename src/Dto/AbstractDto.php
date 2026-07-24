@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PhpCollective\Dto\Dto;
 
+use PhpCollective\Dto\Transformer\TransformerRegistry;
 use PhpCollective\Dto\Utility\Json;
 use RuntimeException;
 
@@ -18,7 +19,7 @@ abstract class AbstractDto extends Dto
      */
     public function fromArray(array $data, bool $ignoreMissing = false, ?string $type = null): static
     {
-        if ($type === null && static::HAS_FAST_PATH) {
+        if ($type === null && static::HAS_FAST_PATH && !TransformerRegistry::hasAnyCaster()) {
             if (!$ignoreMissing) {
                 $this->validateFieldNames($data);
             }

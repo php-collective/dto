@@ -274,7 +274,7 @@ abstract class Dto implements JsonSerializable
     public function __construct(?array $data = null, bool $ignoreMissing = false, ?string $type = null)
     {
         if ($data) {
-            if ($type === null && static::HAS_FAST_PATH && !TransformerRegistry::hasAny()) {
+            if ($type === null && static::HAS_FAST_PATH && !TransformerRegistry::hasAnyCaster()) {
                 if (!$ignoreMissing) {
                     $this->validateFieldNames($data);
                 }
@@ -340,7 +340,7 @@ abstract class Dto implements JsonSerializable
         if (
             !$touched && $fields === null && static::HAS_FAST_PATH
             && ($type === null || $type === static::TYPE_CAMEL || $type === static::TYPE_DEFAULT)
-            && !TransformerRegistry::hasAny()
+            && !TransformerRegistry::hasAnySerializer()
         ) {
             return $this->toArrayFast();
         }
