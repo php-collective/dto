@@ -175,6 +175,28 @@ class TransformerRegistry
     }
 
     /**
+     * Check whether any caster is currently registered.
+     * Used to bypass generated fast paths on input (hydration).
+     *
+     * @return bool
+     */
+    public static function hasAnyCaster(): bool
+    {
+        return self::$casters !== [];
+    }
+
+    /**
+     * Check whether any serializer is currently registered.
+     * Used to bypass generated fast paths on output (serialization).
+     *
+     * @return bool
+     */
+    public static function hasAnySerializer(): bool
+    {
+        return self::$serializers !== [];
+    }
+
+    /**
      * @param string $type
      *
      * @return bool
