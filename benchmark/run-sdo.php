@@ -236,9 +236,11 @@ foreach ($scenarios as $label => [$oursCallback, $theirsCallback]) {
     }
 }
 
+$opcacheStatus = function_exists('opcache_get_status') ? opcache_get_status(false) : false;
+$jitEnabled = is_array($opcacheStatus) && ($opcacheStatus['jit']['enabled'] ?? false);
+
 echo "php-collective/dto vs std-out/simple-data-objects\n";
-echo 'PHP ' . PHP_VERSION . ', JIT ' . (function_exists('opcache_get_status')
-    && (opcache_get_status(false)['jit']['enabled'] ?? false) ? 'on' : 'off') . "\n";
+echo 'PHP ' . PHP_VERSION . ', JIT ' . ($jitEnabled ? 'on' : 'off') . "\n";
 echo "iterations: {$iterations} (warmup {$warmup})\n\n";
 
 printf("%-34s %16s %16s %10s\n", 'scenario', 'php-collective', 'simple-data-obj', 'ratio');
