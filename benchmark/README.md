@@ -28,17 +28,44 @@ cd ..
 php benchmark/run-external.php
 ```
 
-The external suite covers simple and nested creation comparisons for spatie/data-transfer-object, cuyz/valinor, and symfony/serializer (standalone).
+The external suite covers simple and nested creation comparisons for spatie/data-transfer-object, cuyz/valinor, symfony/serializer, and std-out/simple-data-objects (all standalone). Each library is auto-detected, so any that are not installed are simply skipped.
+
+std-out/simple-data-objects requires PHP 8.4+, so it is not in `require-dev` (that would break `composer install` on PHP 8.2/8.3). Install it opt-in when you want it in the comparison:
+
+```bash
+cd benchmark
+composer require --dev std-out/simple-data-objects
+```
+
+### Head-to-head: std-out/simple-data-objects
+
+`run-external.php` only measures hydration, which is where simple-data-objects leads. For the fuller picture - hydration, serialization, field transforms, and per-instance memory - use the dedicated script:
+
+```bash
+php benchmark/generate.php            # regenerate DTOs with strictTypes (needed for transform inlining)
+php benchmark/run-sdo.php 20000
+```
+
+Enable opcache on the CLI so simple-data-objects runs on its compiled-cache path, matching production:
+
+```bash
+php -d opcache.enable_cli=1 benchmark/run-sdo.php 20000
+```
+
+The two libraries trade blows: simple-data-objects wins hydration and per-instance memory, php-collective/dto wins serialization and (with `strictTypes`) compiled transforms. Absolute numbers vary by hardware; run it on your own box.
 
 ## Files
 
 | File                | Description                                                   |
 |---------------------|---------------------------------------------------------------|
 | `run.php`           | Main benchmark: php-collective/dto vs Plain PHP vs Arrays     |
-| `run-external.php`  | Comparison with other DTO libraries (spatie, valinor, symfony)|
+| `run-external.php`  | Comparison with other DTO libraries (spatie, valinor, symfony, simple-data-objects) |
+| `run-sdo.php`       | Head-to-head vs std-out/simple-data-objects (hydration, serialization, transforms, memory) |
+| `generate.php`      | Regenerates the benchmark DTOs with `strictTypes` enabled     |
 | `SUMMARY.md`        | Detailed results and analysis                                 |
 | `config/dto.php`    | DTO definitions for benchmarks                                |
 | `src/PlainDto/`     | Plain PHP readonly DTOs for comparison                        |
+| `src/SimpleDataObjects/` | std-out/simple-data-objects mirror DTOs                  |
 | `src/Dto/`          | Generated DTOs (gitignored, regenerate as needed)             |
 
 ## What's Tested

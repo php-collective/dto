@@ -53,4 +53,20 @@ return [
             'active' => ['type' => 'bool', 'defaultValue' => true],
         ],
     ],
+    'TransformUser' => [
+        'fields' => [
+            'id' => ['type' => 'int', 'required' => true],
+            'name' => ['type' => 'string', 'required' => true, 'transformFrom' => 'trim'],
+            'email' => ['type' => 'string', 'required' => true, 'transformFrom' => 'Benchmark\\Support\\Transform::normalizeEmail'],
+            'city' => ['type' => 'string', 'transformFrom' => 'Benchmark\\Support\\Transform::ucfirstTrim'],
+            'code' => ['type' => 'string', 'transformFrom' => 'Benchmark\\Support\\Transform::upperTrim'],
+        ],
+    ],
+    'Mini' => [
+        'fields' => [
+            'id' => ['type' => 'int', 'required' => true],
+            'name' => ['type' => 'string', 'required' => true],
+            'active' => ['type' => 'bool', 'required' => true],
+        ],
+    ],
 ];
