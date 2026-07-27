@@ -24,6 +24,18 @@ use StdOut\SimpleDataObjects\Support\MetadataRegistry;
 
 require __DIR__ . '/vendor/autoload.php';
 
+if (!class_exists(MetadataRegistry::class)) {
+    fwrite(STDERR, "std-out/simple-data-objects is not installed (it requires PHP 8.4+).\n");
+    fwrite(STDERR, "Install it first:\n\n  cd benchmark && composer require --dev std-out/simple-data-objects\n");
+    exit(1);
+}
+
+if (!class_exists(UserDto::class)) {
+    fwrite(STDERR, "Benchmark DTOs are not generated yet.\n");
+    fwrite(STDERR, "Generate them first:\n\n  php benchmark/generate.php\n");
+    exit(1);
+}
+
 $iterations = (int)($argv[1] ?? 20000);
 $warmup = 2000;
 
@@ -191,6 +203,37 @@ foreach ([20, 200, 2000] as $size) {
         fn () => $ours->toArray(),
         fn () => $theirs->toArray(),
     ];
+}
+
+/**
+ * Normalize a callback result to a comparable array so both libraries can be checked for
+ * equivalent output before timing.
+ *
+ * @param mixed $value
+ *
+ * @return mixed
+ */
+function normalizeResult(mixed $value): mixed
+{
+    if (is_object($value) && method_exists($value, 'toArray')) {
+        return $value->toArray();
+    }
+
+    return $value;
+}
+
+// Fail fast if a scenario would compare non-equivalent work, e.g. a mismatched transform or a
+// library changing its output shape. The benchmark ratios are only meaningful when both sides
+// produce the same result.
+foreach ($scenarios as $label => [$oursCallback, $theirsCallback]) {
+    $ours = json_encode(normalizeResult($oursCallback()));
+    $theirs = json_encode(normalizeResult($theirsCallback()));
+    if ($ours !== $theirs) {
+        fwrite(STDERR, "Scenario \"{$label}\" compares non-equivalent output:\n");
+        fwrite(STDERR, "  php-collective/dto: {$ours}\n");
+        fwrite(STDERR, "  simple-data-objects: {$theirs}\n");
+        exit(1);
+    }
 }
 
 echo "php-collective/dto vs std-out/simple-data-objects\n";
