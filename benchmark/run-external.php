@@ -108,8 +108,9 @@ $libraries = [
 // cache dir so the benchmark measures the warm path, matching how it runs in production.
 if ($libraries['std-out/simple-data-objects']) {
     $sdoCacheDir = sys_get_temp_dir() . '/sdo-benchmark-cache';
-    if (!is_dir($sdoCacheDir)) {
-        mkdir($sdoCacheDir, 0777, true);
+    if (!is_dir($sdoCacheDir) && !mkdir($sdoCacheDir, 0777, true) && !is_dir($sdoCacheDir)) {
+        fwrite(STDERR, "Could not create cache directory: {$sdoCacheDir}\n");
+        exit(1);
     }
     \StdOut\SimpleDataObjects\Support\MetadataRegistry::setStoragePath($sdoCacheDir);
 }

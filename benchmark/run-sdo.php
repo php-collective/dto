@@ -37,11 +37,16 @@ if (!class_exists(UserDto::class)) {
 }
 
 $iterations = (int)($argv[1] ?? 20000);
+if ($iterations < 1) {
+    fwrite(STDERR, "Iterations must be a positive integer, got: {$iterations}\n");
+    exit(1);
+}
 $warmup = 2000;
 
 $cacheDir = sys_get_temp_dir() . '/sdo-bench-cache';
-if (!is_dir($cacheDir)) {
-    mkdir($cacheDir, 0777, true);
+if (!is_dir($cacheDir) && !mkdir($cacheDir, 0777, true) && !is_dir($cacheDir)) {
+    fwrite(STDERR, "Could not create cache directory: {$cacheDir}\n");
+    exit(1);
 }
 MetadataRegistry::setStoragePath($cacheDir);
 
@@ -216,7 +221,19 @@ foreach ([20, 200, 2000] as $size) {
 function normalizeResult(mixed $value): mixed
 {
     if (is_object($value) && method_exists($value, 'toArray')) {
-        return $value->toArray();
+        $value = $value->toArray();
+    }
+
+    // Sort associative keys recursively so the comparison is about data, not key order.
+    if (is_array($value)) {
+        foreach ($value as &$item) {
+            $item = normalizeResult($item);
+        }
+        unset($item);
+
+        if ($value !== array_values($value)) {
+            ksort($value);
+        }
     }
 
     return $value;
@@ -226,8 +243,8 @@ function normalizeResult(mixed $value): mixed
 // library changing its output shape. The benchmark ratios are only meaningful when both sides
 // produce the same result.
 foreach ($scenarios as $label => [$oursCallback, $theirsCallback]) {
-    $ours = json_encode(normalizeResult($oursCallback()));
-    $theirs = json_encode(normalizeResult($theirsCallback()));
+    $ours = json_encode(normalizeResult($oursCallback()), JSON_THROW_ON_ERROR);
+    $theirs = json_encode(normalizeResult($theirsCallback()), JSON_THROW_ON_ERROR);
     if ($ours !== $theirs) {
         fwrite(STDERR, "Scenario \"{$label}\" compares non-equivalent output:\n");
         fwrite(STDERR, "  php-collective/dto: {$ours}\n");
