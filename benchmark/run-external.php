@@ -101,7 +101,19 @@ $libraries = [
     'cuyz/valinor' => class_exists(\CuyZ\Valinor\MapperBuilder::class),
     'symfony/serializer' => class_exists(\Symfony\Component\Serializer\Serializer::class),
     'jms/serializer' => class_exists(\JMS\Serializer\SerializerBuilder::class),
+    'std-out/simple-data-objects' => class_exists(\StdOut\SimpleDataObjects\BaseData::class),
 ];
+
+// simple-data-objects compiles a closure per class and can persist it to disk. Point it at a
+// cache dir so the benchmark measures the warm path, matching how it runs in production.
+if ($libraries['std-out/simple-data-objects']) {
+    $sdoCacheDir = sys_get_temp_dir() . '/sdo-benchmark-cache';
+    if (!is_dir($sdoCacheDir) && !mkdir($sdoCacheDir, 0777, true) && !is_dir($sdoCacheDir)) {
+        fwrite(STDERR, "Could not create cache directory: {$sdoCacheDir}\n");
+        exit(1);
+    }
+    \StdOut\SimpleDataObjects\Support\MetadataRegistry::setStoragePath($sdoCacheDir);
+}
 
 foreach ($libraries as $lib => $available) {
     $status = $available ? '✓ Available' : '✗ Not installed';
@@ -262,6 +274,19 @@ if ($libraries['jms/serializer']) {
 
         return $serializer->deserialize($jsonData, 'array', 'json');
     }, min(1000, $iterations / 10));
+    echo formatResult($r) . "\n";
+}
+
+// ============================================================================
+// std-out/simple-data-objects
+// ============================================================================
+
+if ($libraries['std-out/simple-data-objects']) {
+    printSection('std-out/simple-data-objects');
+
+    $results['simple-data-objects'] = $r = benchmark('simple-data-objects from()', function () use ($simpleUserData) {
+        return \Benchmark\SimpleDataObjects\UserData::from($simpleUserData);
+    }, $iterations);
     echo formatResult($r) . "\n";
 }
 
@@ -448,6 +473,15 @@ if ($libraries['symfony/serializer']) {
     $symfonyOrderClass = BenchmarkExternalSymfonyOrder::class;
     $nestedResults['symfony-nested'] = $r = benchmark('Symfony denormalize() Order', function () use ($nestedSerializer, $complexOrderData, $symfonyOrderClass) {
         return $nestedSerializer->denormalize($complexOrderData, $symfonyOrderClass);
+    }, $iterations);
+    echo formatResult($r) . "\n";
+}
+
+if ($libraries['std-out/simple-data-objects']) {
+    printSection('std-out/simple-data-objects - Nested');
+
+    $nestedResults['simple-data-objects-nested'] = $r = benchmark('simple-data-objects from() Order', function () use ($complexOrderData) {
+        return \Benchmark\SimpleDataObjects\OrderData::from($complexOrderData);
     }, $iterations);
     echo formatResult($r) . "\n";
 }
