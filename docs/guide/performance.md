@@ -53,7 +53,34 @@ opcache.max_accelerated_files=20000
 opcache.validate_timestamps=0  ; Disable in production
 ```
 
-### 2. Prefer touchedToArray() for Partial Data
+### 2. Enable strictTypes so Transforms Get Compiled
+
+Fields using `transformFrom` / `transformTo` are compiled into a direct call in the generated
+fast-path methods:
+
+``` php
+// generated with strictTypes enabled
+$value = \App\Transform\Email::normalize($value);
+
+// generated without it
+$value = $this->transformValue('App\Transform\Email::normalize', $value);
+```
+
+The runtime form pays a method call, a null check, an `is_callable()` lookup and a dynamic
+invocation for every transformed field on every hydration and serialization - roughly 4x the
+cost of the direct call.
+
+Inlining requires `strictTypes`, because an inlined call takes its argument coercion from the
+generated file rather than from the library, and dropping strict types there would silently
+change how scalar type hints on your transform callables behave.
+
+::: tip
+A transform that cannot be resolved while generating (typo, class not autoloadable at bake
+time) keeps the runtime form on purpose, so the error still surfaces as
+`InvalidArgumentException` instead of a raw `Error`.
+:::
+
+### 3. Prefer touchedToArray() for Partial Data
 
 ```php
 // Slower: serializes all fields
@@ -65,7 +92,7 @@ $data = $dto->touchedToArray();
 
 Especially important for DTOs with many optional fields.
 
-### 3. Use ignoreMissing for Partial Input
+### 4. Use ignoreMissing for Partial Input
 
 ```php
 // Slower: validates every field exists
@@ -75,7 +102,7 @@ $dto = new UserDto($partialData);
 $dto = new UserDto($partialData, ignoreMissing: true);
 ```
 
-### 4. Batch Operations
+### 5. Batch Operations
 
 When processing many items, create DTOs in batches:
 
@@ -89,7 +116,7 @@ foreach ($items as $item) {
 $dtos = array_map(fn($item) => new ItemDto($item), $items);
 ```
 
-### 5. Avoid Unnecessary Cloning
+### 6. Avoid Unnecessary Cloning
 
 ```php
 // Unnecessary clone
@@ -103,7 +130,7 @@ $original->setName('New');
 $modified = $original->withName('New');
 ```
 
-### 6. Use Appropriate Collection Types
+### 7. Use Appropriate Collection Types
 
 ```php
 // ArrayObject: Good for iteration, modification
@@ -115,7 +142,7 @@ $modified = $original->withName('New');
 
 For read-heavy workloads, array collections are slightly faster.
 
-### 7. Minimize Nested Depth
+### 8. Minimize Nested Depth
 
 Deeply nested DTOs have cumulative overhead:
 
@@ -127,7 +154,7 @@ $order->getCustomer()->getAddress()->getCity()->getName();
 $order->getCustomerCity();  // Computed during creation
 ```
 
-### 8. Use Built-in Lazy DTO Fields When Nested Data Is Optional
+### 9. Use Built-in Lazy DTO Fields When Nested Data Is Optional
 
 php-collective/dto supports lazy DTO and collection fields via `asLazy()`, which lets you defer nested hydration until the data is actually accessed:
 

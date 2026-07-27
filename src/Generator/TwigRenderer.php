@@ -77,6 +77,7 @@ class TwigRenderer implements RendererInterface
     protected function registerFunctions(): void
     {
         $this->twig->addFunction(new TwigFunction('getCollectionAdapter', [$this, 'getCollectionAdapter']));
+        $this->twig->addFunction(new TwigFunction('transformExpr', [$this, 'transformExpr'], ['needs_context' => true]));
     }
 
     /**
@@ -111,6 +112,24 @@ class TwigRenderer implements RendererInterface
     public function getCollectionAdapter(string $collectionType): CollectionAdapterInterface
     {
         return CollectionAdapterRegistry::getOrDefault($collectionType);
+    }
+
+    /**
+     * Compile a field transform into a generated PHP expression.
+     *
+     * Reads `strictTypes` from the render context because inlining is only safe in a
+     * generated file that declares strict types.
+     *
+     * @param array<string, mixed> $context
+     * @param string|null $callable Transform callable from the schema
+     * @param string $expr Generated PHP expression to transform
+     * @param bool $guardNull Whether null values must bypass the transform
+     *
+     * @return string
+     */
+    public function transformExpr(array $context, ?string $callable, string $expr, bool $guardNull = false): string
+    {
+        return TransformCompiler::compile($callable, $expr, $guardNull, (bool)($context['strictTypes'] ?? false));
     }
 
     /**

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PhpCollective\Dto\Test\Generator;
 
 use PhpCollective\Dto\Generator\TwigRenderer;
+use PhpCollective\Dto\Test\TestDto\TransformHelper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -85,6 +86,73 @@ class TwigRendererTest extends TestCase
         $withOutput = $this->renderer->generate('element/method_with');
         $this->assertStringContainsString('public function withJoinData(', $withOutput);
         $this->assertStringNotContainsString('with_joinData', $withOutput);
+    }
+
+    public function testOptimizationsInlineTransformCalls(): void
+    {
+        $helper = TransformHelper::class;
+        $this->renderer->set(self::optimizationsData($helper . '::normalizeEmail', $helper . '::maskEmail'));
+
+        $output = $this->renderer->generate('element/optimizations');
+
+        $this->assertStringContainsString('$value = \\' . $helper . '::normalizeEmail($value);', $output);
+        $this->assertStringContainsString('\\' . $helper . '::maskEmail($this->email)', $output);
+        $this->assertStringNotContainsString('transformValue(', $output);
+    }
+
+    public function testOptimizationsDoNotInlineWithoutStrictTypes(): void
+    {
+        $helper = TransformHelper::class;
+        $this->renderer->set(self::optimizationsData($helper . '::normalizeEmail', $helper . '::maskEmail', false));
+
+        $output = $this->renderer->generate('element/optimizations');
+
+        $this->assertStringContainsString('$this->transformValue(', $output);
+        $this->assertStringNotContainsString('$value = \\' . $helper . '::normalizeEmail($value);', $output);
+    }
+
+    public function testOptimizationsFallBackToRuntimeTransformForUnsafeCallable(): void
+    {
+        $this->renderer->set(self::optimizationsData("foo(); echo 'x'", null));
+
+        $output = $this->renderer->generate('element/optimizations');
+
+        $this->assertStringContainsString('$this->transformValue(\'foo(); echo \\\'x\\\'\', $value)', $output);
+    }
+
+    /**
+     * @param string|null $transformFrom
+     * @param string|null $transformTo
+     * @param bool $strictTypes
+     *
+     * @return array<string, mixed>
+     */
+    private static function optimizationsData(?string $transformFrom, ?string $transformTo, bool $strictTypes = true): array
+    {
+        return [
+            'immutable' => false,
+            'strictTypes' => $strictTypes,
+            'fields' => [
+                [
+                    'name' => 'email',
+                    'type' => 'string',
+                    'nullable' => true,
+                    'typeHint' => 'string',
+                    'nullableTypeHint' => '?string',
+                    'docBlockType' => 'string',
+                    'collection' => false,
+                    'collectionType' => null,
+                    'dto' => false,
+                    'isClass' => false,
+                    'enum' => null,
+                    'factory' => null,
+                    'serialize' => null,
+                    'mapTo' => null,
+                    'transformFrom' => $transformFrom,
+                    'transformTo' => $transformTo,
+                ],
+            ],
+        ];
     }
 
     public function testRegularFieldGeneratesCorrectMethodNames(): void
