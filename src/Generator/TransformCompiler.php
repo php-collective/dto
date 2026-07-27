@@ -46,14 +46,16 @@ class TransformCompiler
             return self::fallback($callable, $expr);
         }
 
+        // A guarded, non-simple expression cannot be inlined without evaluating it twice, so
+        // fall back before resolving the callable to avoid a needless autoload.
+        if ($guardNull && !preg_match(self::SIMPLE_EXPR_PATTERN, $expr)) {
+            return self::fallback($callable, $expr);
+        }
+
         // Only inline what resolves while generating. Anything unresolved keeps the runtime
         // dispatch so a typo in the schema still surfaces as InvalidArgumentException instead
         // of a raw Error from the generated code.
         if (!is_callable($callable)) {
-            return self::fallback($callable, $expr);
-        }
-
-        if ($guardNull && !preg_match(self::SIMPLE_EXPR_PATTERN, $expr)) {
             return self::fallback($callable, $expr);
         }
 
