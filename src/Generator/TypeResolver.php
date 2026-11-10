@@ -94,9 +94,9 @@ class TypeResolver
         }
 
         if (
-            !$this->validator->isValidSimpleType($type) &&
-            !$this->validator->isValidDto($type) &&
-            !$this->validator->isValidInterfaceOrClass($type)
+            !$this->validator->isValidSimpleType($type)
+            && !$this->validator->isValidDto($type)
+            && !$this->validator->isValidInterfaceOrClass($type)
         ) {
             return null;
         }

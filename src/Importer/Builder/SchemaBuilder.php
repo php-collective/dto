@@ -310,9 +310,9 @@ PHP;
             }
 
             $type = $fieldDetails['type'] ?? 'mixed';
-            $hasOptions = !empty($fieldDetails['required']) ||
-                !empty($fieldDetails['singular']) ||
-                !empty($fieldDetails['associative']);
+            $hasOptions = !empty($fieldDetails['required'])
+                || !empty($fieldDetails['singular'])
+                || !empty($fieldDetails['associative']);
 
             if ($hasOptions) {
                 $lines[] = "    {$fieldName}:";
@@ -385,9 +385,9 @@ PHP;
             }
 
             $type = $fieldDetails['type'] ?? 'mixed';
-            $hasOptions = !empty($fieldDetails['required']) ||
-                !empty($fieldDetails['singular']) ||
-                !empty($fieldDetails['associative']);
+            $hasOptions = !empty($fieldDetails['required'])
+                || !empty($fieldDetails['singular'])
+                || !empty($fieldDetails['associative']);
 
             if ($hasOptions) {
                 $lines[] = "\t\t{$fieldName}:";
