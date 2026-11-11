@@ -406,24 +406,24 @@ class FieldBuilder
     {
         // Simple case: just a type string
         if (
-            !$this->required &&
-            !$this->hasDefaultValue &&
-            !$this->collection &&
-            $this->singular === null &&
-            !$this->associative &&
-            $this->deprecated === null &&
-            $this->factory === null &&
-            $this->serialize === null &&
-            $this->mapFrom === null &&
-            $this->mapTo === null &&
-            $this->transformFrom === null &&
-            $this->transformTo === null &&
-            $this->minLength === null &&
-            $this->maxLength === null &&
-            $this->min === null &&
-            $this->max === null &&
-            $this->pattern === null &&
-            !$this->lazy
+            !$this->required
+            && !$this->hasDefaultValue
+            && !$this->collection
+            && $this->singular === null
+            && !$this->associative
+            && $this->deprecated === null
+            && $this->factory === null
+            && $this->serialize === null
+            && $this->mapFrom === null
+            && $this->mapTo === null
+            && $this->transformFrom === null
+            && $this->transformTo === null
+            && $this->minLength === null
+            && $this->maxLength === null
+            && $this->min === null
+            && $this->max === null
+            && $this->pattern === null
+            && !$this->lazy
         ) {
             return $this->type;
         }
